@@ -1,0 +1,13 @@
+{
+  "name": "Minha Fonte",
+  "downloads": [
+    {
+      "title": "Meu Jogo",
+      "uploadDate": "2026-08-14T00:00:00.000Z",
+      "fileSize": "10 GB",
+      "uris": [
+        "LINK_DO_ARQUIVO_OU_MAGNET"
+      ]
+    }
+  ]
+}

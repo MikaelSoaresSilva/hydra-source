@@ -4,12 +4,14 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // BASE_PATH permite publicar em subcaminho (ex.: GitHub Pages: /nome-do-repo/).
 const base = process.env.BASE_PATH ?? '/';
+// Build para o APK (Capacitor): caminhos relativos e sem service worker.
+const native = process.env.NATIVE === '1';
 
 export default defineConfig({
-  base,
+  base: native ? './' : base,
   plugins: [
     react(),
-    VitePWA({
+    !native && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {

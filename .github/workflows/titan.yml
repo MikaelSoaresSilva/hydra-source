@@ -64,3 +64,33 @@ jobs:
         with: { path: titan/dist }
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  apk:
+    # Gera o APK Android assinado. Rode manualmente em Actions → "Titan — testes e publicação" → Run workflow.
+    # Secrets necessários: TITAN_KEYSTORE_B64 (base64 do .jks) e TITAN_KEYSTORE_PASSWORD.
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: titan } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: titan/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Chave de assinatura
+        env:
+          KS_B64: ${{ secrets.TITAN_KEYSTORE_B64 }}
+          KS_PW: ${{ secrets.TITAN_KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/titan.jks"
+          printf "storeFile=%s\nstorePassword=%s\nkeyAlias=titan\nkeyPassword=%s\n" "$RUNNER_TEMP/titan.jks" "$KS_PW" "$KS_PW" > android/keystore.properties
+      - run: npm run build:android
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+      - run: cd android && ./gradlew assembleRelease
+      - uses: actions/upload-artifact@v4
+        with: { name: titan-apk, path: titan/android/app/build/outputs/apk/release/app-release.apk }

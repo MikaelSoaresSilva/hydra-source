@@ -1,10 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
 import './ui/styles.css';
 
-registerSW({ immediate: true });
+// O service worker só existe no build web (no APK os arquivos já estão no aparelho).
+if (import.meta.env.VITE_NATIVE !== '1') {
+  void import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true })).catch(() => {});
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

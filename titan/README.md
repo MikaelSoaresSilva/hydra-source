@@ -74,6 +74,28 @@ O workflow `.github/workflows/titan.yml` roda os testes e, a cada push na `main`
 
 Para hospedar em outro lugar: `BASE_PATH=/ npx vite build` e envie `dist/` (qualquer hospedagem estática com HTTPS).
 
+## APK para Android
+
+O app também é empacotado como APK nativo (Capacitor 8, pacote `com.titan.transformacao`, Android 7+).
+
+**Instalar:** copie `Titan.apk` para o celular → abra → permita "instalar apps desta fonte" → Instalar. O Play Protect pode avisar que o app é desconhecido (não está na Play Store); toque em "Instalar mesmo assim".
+
+**Dados no APK:**
+- Gerado **sem** chaves do Supabase → modo local: tudo fica salvo no próprio celular (continua após fechar o app ou reiniciar), mas **é apagado se desinstalar** e não sincroniza com o PC. Faça backup em Perfil → Exportar JSON.
+- Gerado **com** `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` no `.env.local` (ou nas variables do repositório, pelo CI) → conta na nuvem, igual à versão web.
+
+**Gerar um novo APK** (precisa de JDK 21 e Android SDK 36):
+
+```bash
+cd titan
+# android/keystore.properties (fora do git): storeFile, storePassword, keyAlias=titan, keyPassword
+npm run apk     # → android/app/build/outputs/apk/release/app-release.apk
+```
+
+Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.jks`) e `TITAN_KEYSTORE_PASSWORD`, e rode o workflow manualmente; o APK sai como artefato.
+
+**Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
+
 ## Privacidade e segurança
 
 - Cada usuário só acessa as próprias linhas (RLS testado: outro usuário não lê, não altera, não insere em nome alheio, não usa programa alheio, não envia foto para a pasta alheia; anônimo não lê nada).

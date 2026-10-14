@@ -1,0 +1,79 @@
+import { expect, test } from '@playwright/test';
+
+// Fluxo completo em modo local (build sem chaves do Supabase).
+test('onboarding → treino com séries → persistência → nutrição → pele → medidas', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+
+  // Onboarding
+  await expect(page.getByRole('heading', { name: 'Você' })).toBeVisible();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await expect(page.getByRole('alert')).toContainText('Confirme');
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await expect(page.getByRole('heading', { name: 'Treino', exact: true })).toBeVisible();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click(); // treino
+  await page.getByRole('button', { name: 'Pular' }).click(); // nutrição (pulada: mantém padrões já salvos)
+  await page.getByRole('button', { name: 'Principia GL-02' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click(); // pele
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click(); // cabelo
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+
+  // Painel diário
+  await expect(page.getByRole('heading', { name: 'O que fazer hoje' })).toBeVisible();
+  await page.screenshot({ path: `test-results/hoje-${info.project.name}.png`, fullPage: true });
+
+  // Treino
+  await page.getByRole('link', { name: 'Treino' }).first().click();
+  await expect(page.getByText(/Próxima sessão:/)).toBeVisible();
+  await page.getByRole('button', { name: 'Iniciar treino' }).click();
+  await page.getByLabel('Carga série 1').first().fill('60');
+  await page.getByLabel('Repetições série 1').first().fill('8');
+  await page.getByLabel('RIR série 1').first().fill('3');
+  await page.getByRole('button', { name: 'Concluir série 1' }).first().click();
+  await expect(page.getByRole('timer')).toBeVisible();
+  await page.screenshot({ path: `test-results/treino-${info.project.name}.png` });
+
+  // Recarrega: série continua salva
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Concluir série 1' }).first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Carga série 1').first()).toHaveValue('60');
+  await page.getByRole('button', { name: 'Concluir treino' }).click();
+  await expect(page.getByText('Treino concluído e salvo!')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Ver' }).first()).toBeVisible();
+
+  // Nutrição: meta calculada a partir do perfil (80 kg, 180 cm, 19 anos, moderado → 3000 kcal)
+  await page.getByRole('link', { name: 'Nutrição' }).first().click();
+  await page.getByRole('tab', { name: 'Metas' }).click();
+  await expect(page.locator('.stat-v').first()).toHaveText('3000');
+  await page.getByRole('tab', { name: 'Plano' }).click();
+  await page.getByRole('button', { name: 'Comi isso' }).first().click();
+  await page.getByRole('tab', { name: 'Hoje' }).click();
+  await expect(page.getByText('Registrado hoje')).toBeVisible();
+  await expect(page.locator('.list li').filter({ hasText: 'Café da manhã' }).first()).toBeVisible();
+
+  // Pele: gerar e editar rotina; produto do onboarding aparece como pausado
+  await page.getByRole('link', { name: 'Cuidados' }).first().click();
+  await page.getByRole('button', { name: 'Gerar rotina base' }).click();
+  await expect(page.getByRole('heading', { name: 'Manhã' }).first()).toBeVisible();
+  await expect(page.locator('li strong', { hasText: 'Principia GL-02' })).toBeVisible();
+  await page.getByRole('button', { name: 'Editar' }).last().click();
+  await page.getByLabel('Passo').fill('Hidratante gel leve');
+  await page.getByRole('button', { name: 'Salvar' }).first().click();
+  await expect(page.getByText('Hidratante gel leve').first()).toBeVisible();
+
+  // Evolução: medidas + gráfico com dado real
+  await page.getByRole('link', { name: 'Evolução' }).first().click();
+  await page.getByLabel('Peso (kg)').fill('80,4');
+  await page.getByLabel('Braço direito (cm)').fill('38,5');
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.getByRole('cell', { name: '80,4' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Gráficos' }).click();
+  await expect(page.locator('.recharts-surface').first()).toBeVisible();
+
+  // Persistência após "sair e entrar" (nova página, mesmo navegador)
+  await page.goto('/#/treino');
+  await expect(page.getByRole('link', { name: 'Ver' }).first()).toBeVisible();
+  await page.screenshot({ path: `test-results/evolucao-${info.project.name}.png`, fullPage: true });
+});

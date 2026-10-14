@@ -1,0 +1,66 @@
+name: Titan — testes e publicação
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['titan/**', '.github/workflows/titan.yml']
+  pull_request:
+    paths: ['titan/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: titan } }
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: titan/package-lock.json }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:db
+      - run: npx vite build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright, path: titan/test-results }
+
+  deploy:
+    # Publica no GitHub Pages a cada push na main (Settings → Pages → Source: GitHub Actions).
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions: { pages: write, id-token: write }
+    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    defaults: { run: { working-directory: titan } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: titan/package-lock.json }
+      - run: npm ci
+      - run: npx vite build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+          # Repository variables (Settings → Secrets and variables → Actions → Variables).
+          # A anon key é pública por design; a proteção vem do RLS. NUNCA use a service_role aqui.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: titan/dist }
+      - id: deployment
+        uses: actions/deploy-pages@v4

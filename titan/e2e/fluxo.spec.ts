@@ -28,6 +28,10 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await page.getByRole('link', { name: 'Treino' }).first().click();
   await expect(page.getByText(/Próxima sessão:/)).toBeVisible();
   await page.getByRole('button', { name: 'Iniciar treino' }).click();
+  // Prontidão (TQR) abaixo de 13 → sessão ajustada
+  await page.getByLabel('Prontidão TQR').selectOption('11');
+  await page.getByRole('button', { name: 'Começar' }).click();
+  await expect(page.getByText(/TQR 11 .*abaixo de 13/)).toBeVisible();
   await page.getByLabel('Carga série 1').first().fill('60');
   await page.getByLabel('Repetições série 1').first().fill('8');
   await page.getByLabel('RIR série 1').first().fill('3');
@@ -76,4 +80,45 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await page.goto('/#/treino');
   await expect(page.getByRole('link', { name: 'Ver' }).first()).toBeVisible();
   await page.screenshot({ path: `test-results/evolucao-${info.project.name}.png`, fullPage: true });
+});
+
+test('aparência (questionário sem IA) + biblioteca/calculadora + IA desligada por padrão', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await expect(page.getByRole('heading', { name: 'O que fazer hoje' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Aparência' }).click();
+  await page.getByLabel('length').selectOption('similar');
+  await page.getByLabel('widest').selectOption('equal');
+  await page.getByLabel('jaw').selectOption('angular');
+  await expect(page.getByRole('heading', { name: 'Rosto quadrado' })).toBeVisible();
+  await expect(page.getByText('Assimétrico com pontas desiguais puxadas para a testa').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Salvar no histórico' }).click();
+  await page.getByRole('tab', { name: 'Histórico' }).click();
+  await expect(page.getByText('Rosto: quadrado')).toBeVisible();
+  await page.screenshot({ path: `test-results/aparencia-${info.project.name}.png`, fullPage: true });
+
+  // IA desligada por padrão: nada é enviado sem ligar e consentir
+  await page.getByRole('tab', { name: 'Foto + IA' }).click();
+  await expect(page.getByText('Análise por foto com IA (desligada)')).toBeVisible();
+  await page.getByRole('button', { name: 'Ligar análise por IA' }).click();
+  await expect(page.getByRole('button', { name: 'Enviar e analisar' })).toBeDisabled();
+
+  // Biblioteca: calculadora de 1RM
+  await page.getByRole('link', { name: 'Biblioteca' }).click();
+  await page.getByRole('tab', { name: 'Calculadora' }).click();
+  await page.getByLabel('Carga da série').fill('60');
+  await page.getByLabel('Repetições feitas').fill('10');
+  await expect(page.getByTestId('e1rm')).toHaveText('80 kg');
+  await page.getByRole('tab', { name: 'Sistemas' }).click();
+  await expect(page.getByText('Drop-set')).toBeVisible();
+  await page.screenshot({ path: `test-results/biblioteca-${info.project.name}.png`, fullPage: true });
 });

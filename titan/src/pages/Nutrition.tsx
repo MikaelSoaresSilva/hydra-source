@@ -10,6 +10,7 @@ import type { FoodLogRow, FoodPriceRow, MetricRow, TargetRow, UserFoodRow } from
 import { createTargets, profileReadyForTargets } from '../services';
 import { TrendChart } from '../ui/charts';
 import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Progress, Tabs, fmt, useToast } from '../ui/components';
+import { mealsBelowProtein, proteinPerMealTarget } from '../domain/science';
 
 type Tab = 'hoje' | 'plano' | 'compras' | 'metas';
 
@@ -143,6 +144,14 @@ export function Nutrition() {
                   <button className="btn ghost sm" aria-label={`Excluir ${l.food_name}`} onClick={() => void store.remove('food_logs', [l.id])}>Excluir</button></li>
               ))}</ul>
             )}
+            {todayLogs.length > 0 && profile?.nutrition.weightKg ? (() => {
+              const per = proteinPerMealTarget(profile.nutrition.weightKg!);
+              const low = mealsBelowProtein(todayLogs.map((l) => ({ meal: l.meal, protein_g: Number(l.protein_g) })), per.grams);
+              return (
+                <p className="hint">Proteína por refeição: meta ≥{per.grams} g (0,25 g/kg{per.basis === 'total' ? ' do peso total, já que a massa magra não foi medida' : ' de massa magra'}; Moore et al., 2015).
+                  {low.length ? ` Abaixo: ${low.map((m) => `${m.meal} (${m.protein} g)`).join(', ')}.` : ' Todas as refeições registradas atingiram.'}</p>
+              );
+            })() : null}
           </Card>
         </>
       )}

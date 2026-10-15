@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState, type ReactNode } from 'react';
 import { useProfile, useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
@@ -256,6 +257,8 @@ function Skin({ products, items, logs }: Props) {
         <p><strong>Pare o produto se houver:</strong></p>
         <ul>{STOP_SIGNS.map((s) => <li key={s}><small>{s}</small></li>)}</ul>
         <p className="hint">{DERM_REFERRAL}</p>
+        <p className="hint">Acne com nódulos ou cistos, inflamação extensa ou marcas (grau III em diante): dermatologista. Nunca esprema cravos ou espinhas. Pinta assimétrica, de borda irregular ou que muda: médico.</p>
+        <p className="hint">Pele oleosa: limpar 2×/dia sem exagero (limpar demais dá efeito rebote), esfoliar no máximo 1×/semana, hidratante em gel, gel-creme ou sérum. Protetor: 1 colher de chá (≈ 2 dedos) para rosto e pescoço, reaplicado a cada 2 h no sol. Ganhando massa rápido? Hidrate a pele do corpo para reduzir o risco de estrias. <Link to="/biblioteca">Mais na Biblioteca</Link>.</p>
         <p className="hint">Nenhum cosmético fecha poros, elimina flacidez ou muda a estrutura do rosto. Alegações de marketing sem estudo clínico são tratadas como alegações. O que tem boa evidência para acne/oleosidade: limpeza suave, protetor diário, ácido salicílico, peróxido de benzoíla, ácido azelaico, retinoides (alguns só com prescrição) e niacinamida.</p>
       </Card>
     </>
@@ -289,6 +292,7 @@ function Hair({ products, items, logs }: Props) {
         <p>{scalp.message}</p>
         {scalp.avgItch !== null && <p className="hint">Coceira média (14 dias): {scalp.avgItch}/10 em {scalp.entries} registros.</p>}
         <p className="hint">Coceira persistente, descamação, vermelhidão, feridas ou queda acentuada → dermatologista. O app não recomenda medicamentos capilares sem avaliação.</p>
+        <p className="hint">Couro oleoso: água morna ou fria (quente estimula óleo), sem massagem forte no couro e sem lavar em excesso (efeito rebote). Xampu com pH 4,2–5,8, nada de "2 em 1". Não prenda o cabelo molhado, use o secador a ≥ 20 cm e lave os bonés com frequência.</p>
       </Card>
       {hairItems.length === 0 ? (
         <Card title="Rotina de cabelo"><p>Gerar rotina para cacheado com oleosidade, frizz e volume (editável).</p><button className="btn primary" onClick={() => void generate()}>Gerar rotina</button></Card>
@@ -296,7 +300,7 @@ function Hair({ products, items, logs }: Props) {
         <TodaySlot area="hair" slot={wash ? 'wash' : 'non_wash'} items={scalp.persistentItch ? items.filter((i) => !/gel|creme|leave-in/i.test(i.step) || i.slot !== 'wash') : items} products={products} logs={logs}
           extra={scalp.persistentItch ? <p className="hint">Finalizadores ocultados enquanto a coceira estiver frequente.</p> : null} />
       )}
-      <Card title="Corte e finalização">
+      <Card title="Corte e finalização" action={<Link className="btn sm" to="/aparencia">Sugestão por formato do rosto</Link>}>
         <ul className="list">{cutSuggestions(hp).map((c) => <li key={c}><small>{c}</small></li>)}</ul>
       </Card>
       <ReactionForm area="hair" products={products} />

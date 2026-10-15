@@ -4,6 +4,7 @@ import { decliningExercises, groupHistory } from './progression';
 import { missedCount, projectedEnd } from './schedule';
 import { adjustCalories, weeklyAverages } from './trend';
 import { EXERCISE_BY_KEY } from './exercises';
+import { MIN_WATER_L, waistRisk } from './science';
 import type {
   CareLogRow, CheckinRow, FoodLogRow, MetricRow, ProductRow, Profile, ProgramRow, SessionRow, SetLogRow, TargetRow,
 } from './types';
@@ -94,7 +95,7 @@ export function buildRecommendations(ctx: RecContext): Recommendation[] {
       out.push({
         id: `pain-${k}`, module: 'muscle', priority: 1,
         title: `Dor recorrente: substitua ${EXERCISE_BY_KEY[k]?.name ?? k}`,
-        reason: 'Dor ≥4/10 em duas sessões seguidas. A carga não será aumentada e uma variação deve ser usada. Dor que persiste fora do treino merece avaliação profissional.',
+        reason: 'Dor ≥4/10 em duas sessões seguidas. A carga não será aumentada e uma variação deve ser usada. Regra prática: o exercício deve ser indolor e não piorar a dor no dia seguinte; se piorar, reduza a carga ou a amplitude. Dor que persiste fora do treino merece avaliação de fisioterapeuta ou médico.',
         data: h.map((p) => `${p.date.slice(0, 10)}: dor máx ${Math.max(...p.sets.map((s) => s.pain))}/10`),
         monitor: 'Dor nas próximas sessões com o exercício substituto.',
       });
@@ -197,6 +198,45 @@ export function buildRecommendations(ctx: RecContext): Recommendation[] {
         title: 'Confirme os equipamentos da sua academia',
         reason: 'O plano assume equipamentos comuns. Confirmando a lista, os exercícios indisponíveis são substituídos automaticamente.',
         data: [], monitor: 'Substituições necessárias durante os treinos.',
+      });
+    }
+  }
+
+  // 6b. Prontidão (TQR) baixa em sessões seguidas
+  const lastTwo = [...ctx.sessions].filter((x) => x.readiness).sort((a, b) => (a.started_at ?? '') < (b.started_at ?? '') ? 1 : -1).slice(0, 2);
+  if (lastTwo.length === 2 && lastTwo.every((x) => x.readiness!.tqr < 13)) {
+    out.push({
+      id: 'tqr', module: 'muscle', priority: 1,
+      title: 'Recuperação baixa antes de dois treinos seguidos',
+      reason: 'A escala TQR ficou abaixo de 13 nas duas últimas sessões. O volume já foi reduzido nesses dias; se continuar, antecipe o deload e revise sono, alimentação e estresse.',
+      data: lastTwo.map((x) => `${(x.started_at ?? '').slice(0, 10)}: TQR ${x.readiness!.tqr}`),
+      monitor: 'TQR antes das próximas sessões.',
+    });
+  }
+
+  // 6c. Hidratação
+  const water = ctx.checkins.filter((c) => c.date > addDays(today, -7) && c.water_l !== null && c.water_l !== undefined).map((c) => Number(c.water_l));
+  if (water.length >= 3 && (avg(water) ?? 0) < MIN_WATER_L) {
+    out.push({
+      id: 'water', module: 'evolution', priority: 3,
+      title: 'Água abaixo de 2 L por dia',
+      reason: 'Hidratação baixa prejudica o desempenho e a pele. Deixe uma garrafa à vista e beba nas refeições e no treino. Urina escura indica que falta água.',
+      data: [`Média: ${f1(avg(water)!)} L em ${water.length} dias registrados`], monitor: 'Água registrada no check-in.',
+    });
+  }
+
+  // 6d. Cintura (OMS)
+  const waists = ctx.metrics.filter((m) => m.waist_cm !== null).sort((a, b) => (a.date < b.date ? 1 : -1));
+  if (waists.length && ctx.profile?.sex) {
+    const w = Number(waists[0].waist_cm);
+    const risk = waistRisk(w, ctx.profile.sex);
+    if (risk !== 'normal') {
+      out.push({
+        id: 'waist', module: 'evolution', priority: risk === 'high' ? 1 : 2,
+        title: risk === 'high' ? 'Cintura em faixa de risco muito aumentado' : 'Cintura em faixa de risco aumentado',
+        reason: 'A circunferência da cintura passou do limite da OMS. Durante o ganho de massa, se a cintura sobe rápido, o superávit está alto: o Titan prioriza o ajuste pela tendência de peso, e vale conversar com um médico ou nutricionista.',
+        data: [`Última medida: ${f1(w)} cm em ${waists[0].date}`, ctx.profile.sex === 'male' ? 'Referência (homens): >94 cm aumentado, >102 cm muito aumentado' : 'Referência (mulheres): >80 cm aumentado, >88 cm muito aumentado'],
+        monitor: 'Cintura a cada 2 semanas, junto com o peso.',
       });
     }
   }

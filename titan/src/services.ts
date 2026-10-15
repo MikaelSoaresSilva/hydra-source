@@ -3,6 +3,7 @@ import { getExercise, resolveExercise } from './domain/exercises';
 import { calculateTargets } from './domain/nutrition';
 import { generateProgram, prescribeDay, warmupFor } from './domain/program';
 import { groupHistory, suggestProgression } from './domain/progression';
+import { applyReadiness } from './domain/science';
 import type { DataStore } from './data/store';
 import { uuid } from './data/store';
 import type {
@@ -81,7 +82,7 @@ export function buildSessionPlan(
   });
 }
 
-export async function startSession(store: DataStore, program: ProgramRow, sequence: number, overrides: OverrideRow[], logs: SetLogRow[], recScore: number | null): Promise<SessionRow> {
+export async function startSession(store: DataStore, program: ProgramRow, sequence: number, overrides: OverrideRow[], logs: SetLogRow[], recScore: number | null, tqr: number | null = null): Promise<SessionRow> {
   const perWeek = program.config.days.length;
   const week = Math.floor(sequence / perWeek) + 1;
   const dayPos = sequence % perWeek;
@@ -92,7 +93,13 @@ export async function startSession(store: DataStore, program: ProgramRow, sequen
     scheduled_date: todayISO(), status: 'in_progress', started_at: new Date().toISOString(), completed_at: null,
     fatigue: null, session_rpe: null, pain_notes: null, notes: null,
     exercises: buildSessionPlan(program, week, dayPos, overrides, logs, recScore),
+    readiness: null,
   };
+  if (tqr !== null) {
+    const adj = applyReadiness(row.exercises, tqr);
+    row.exercises = adj.slots.map((e) => (adj.readiness.adjusted ? { ...e, suggestionReason: `Prontidão baixa (TQR ${adj.readiness.tqr}): −1 série, +1 RIR hoje. ${e.suggestionReason}` } : e));
+    row.readiness = adj.readiness;
+  }
   await store.upsert('workout_sessions', row as unknown as Record<string, unknown>);
   return row;
 }

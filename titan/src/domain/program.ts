@@ -1,5 +1,6 @@
 import { EXERCISE_BY_KEY, getExercise, resolveExercise } from './exercises';
-import type { Muscle, ProgramConfig, ProgramDay, SlotPrescription, TrainingProfile } from './types';
+import { MIN_WEEKLY_SETS } from './science';
+import { MUSCLE_LABEL, type Muscle, type ProgramConfig, type ProgramDay, type SlotPrescription, type TrainingProfile } from './types';
 
 type SlotTpl = [exerciseKey: string, sets: number, restSec: number];
 interface DayTpl { name: string; focus: string; slots: SlotTpl[] }
@@ -121,6 +122,7 @@ export function generateProgram({ training, overrides = {}, blocked = new Set() 
     }
     return { dayIndex: trainingDays[i] ?? i + 1, name: tpl.name, focus: tpl.focus, slots };
   });
+  ensurePriorityVolume(days, priorities, sessionMinutes, notes);
   const longest = Math.max(...days.map((d) => estimateMinutes(d.slots)));
   if (longest < sessionMinutes - 15) {
     notes.push(`Sessões estimadas em até ${longest} min (você tem ~${sessionMinutes}). É proposital: o volume já é suficiente e mais séries tendem a piorar a recuperação. Use a sobra para aquecimento, mobilidade ou descanso completo entre séries.`);
@@ -129,6 +131,39 @@ export function generateProgram({ training, overrides = {}, blocked = new Set() 
     notes.push('Mesmo reduzido, algum dia passa do tempo disponível; considere aumentar o tempo ou aceitar menos exercícios.');
   }
   return { version: 1, trainingDays: days.map((d) => d.dayIndex), sessionMinutes, priorities, equipment, days, notes };
+}
+
+/** Séries semanais base (sem bônus de fase): direto = 1, secundário = 0,5. */
+export function baseWeeklySets(days: ProgramDay[]): Partial<Record<Muscle, number>> {
+  const vol: Partial<Record<Muscle, number>> = {};
+  days.forEach((d) => d.slots.forEach((s) => {
+    const ex = getExercise(s.exerciseKey);
+    vol[ex.primary] = (vol[ex.primary] ?? 0) + s.sets;
+    ex.secondary.forEach((m) => { vol[m] = (vol[m] ?? 0) + s.sets * 0.5; });
+  }));
+  return vol;
+}
+
+/**
+ * Garante ≥10 séries semanais nos músculos prioritários (Tabela 6.1, CREF4/SC 2019), somando
+ * 1 série por vez ao exercício direto com menos séries (máx. 4 por exercício) enquanto couber no tempo.
+ */
+export function ensurePriorityVolume(days: ProgramDay[], priorities: Muscle[], sessionMinutes: number, notes: string[]): void {
+  for (const m of priorities) {
+    let guard = 0;
+    while ((baseWeeklySets(days)[m] ?? 0) < MIN_WEEKLY_SETS && guard++ < 20) {
+      const cands = days.flatMap((d) => d.slots.filter((s) => getExercise(s.exerciseKey).primary === m && s.sets < 4).map((s) => ({ d, s })))
+        .filter(({ d, s }) => { s.sets += 1; const ok = estimateMinutes(d.slots) <= sessionMinutes; s.sets -= 1; return ok; })
+        .sort((a, b) => a.s.sets - b.s.sets);
+      if (!cands.length) break;
+      cands[0].s.sets += 1;
+    }
+    const v = baseWeeklySets(days)[m] ?? 0;
+    const hasDirect = days.some((d) => d.slots.some((s) => getExercise(s.exerciseKey).primary === m));
+    if (hasDirect && v < MIN_WEEKLY_SETS) {
+      notes.push(`${MUSCLE_LABEL[m]} ficou com ~${v.toLocaleString('pt-BR')} séries semanais (meta ≥${MIN_WEEKLY_SETS}): o tempo da sessão ou o teto de 4 séries por exercício limitou. Mais minutos por sessão ou mais dias de treino permitiriam completar.`);
+    }
+  }
 }
 
 /** Prescrição da semana: aplica RIR da fase, bônus de séries nos prioritários e deload. */
@@ -162,7 +197,7 @@ export function plannedWeeklyVolume(config: ProgramConfig, week: number, totalWe
 
 export function warmupFor(exKey: string, isFirstCompound: boolean): string {
   const ex = getExercise(exKey);
-  if (ex.kind === 'compound' && isFirstCompound) return '5 min de aquecimento geral + aproximação: ~40% × 8, ~60% × 5, ~80% × 2–3 da carga de trabalho.';
+  if (ex.kind === 'compound' && isFirstCompound) return '5–15 min de aquecimento geral (bike/esteira + mobilidade) + específico: ~40% × 8, ~60% × 5, ~80% × 2–3 da carga de trabalho.';
   if (ex.kind === 'compound') return 'Aproximação: ~60% × 5 e ~80% × 2 da carga de trabalho.';
   return '1 série leve de 10–12 se for o primeiro exercício desse músculo hoje.';
 }

@@ -134,7 +134,7 @@ export function baseSkinRoutine(): BaseStep[] {
     { slot: 'am', order: 1, step: 'Limpeza com gel/sabonete facial suave', category: 'cleanser', amount: '1 aplicação, ~30 s de massagem', days: all },
     { slot: 'am', order: 2, step: 'Niacinamida (opcional, se já tolerada)', category: 'treatment', amount: '2–3 gotas', days: all, notes: 'Ajuda em oleosidade e marcas; boa tolerância na maioria das pessoas.' },
     { slot: 'am', order: 3, step: 'Hidratante leve oil-free', category: 'moisturizer', amount: 'Tamanho de uma ervilha', days: all },
-    { slot: 'am', order: 4, step: 'Protetor solar FPS 30+ (toque seco)', category: 'sunscreen', amount: '~2 dedos (indicador e médio) para rosto e pescoço', days: all, notes: 'Reaplicar a cada ~2 h de exposição e após suor intenso.' },
+    { slot: 'am', order: 4, step: 'Protetor solar FPS 30+ (toque seco)', category: 'sunscreen', amount: '1 colher de chá (≈ 2 dedos, indicador e médio) para rosto e pescoço', days: all, notes: 'Reaplicar a cada ~2 h de exposição e após suor intenso.' },
     { slot: 'pm', order: 1, step: 'Limpeza com gel/sabonete facial suave', category: 'cleanser', amount: '1 aplicação', days: all },
     { slot: 'pm', order: 2, step: 'Ativo para acne (um por vez, com introdução gradual)', category: 'treatment', amount: 'Camada fina / tamanho de ervilha', days: [1, 4],
       notes: 'Ex.: ácido salicílico, ácido azelaico ou retinoide. Comece 2×/semana. Retinoides de prescrição exigem orientação médica.' },

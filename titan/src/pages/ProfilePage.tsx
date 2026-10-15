@@ -5,6 +5,7 @@ import { ACTIVITY_LABEL } from '../domain/nutrition';
 import type { Profile } from '../domain/types';
 import { createTargets, downloadJSON, profileReadyForTargets } from '../services';
 import { Card, ErrorBox, Field, Loading, NumberInput, useToast } from '../ui/components';
+import { apiKeyStore } from '../appearanceClient';
 
 export function ProfilePage() {
   const store = useStore();
@@ -55,9 +56,15 @@ export function ProfilePage() {
         </div>
       </Card>
 
+      <Card title="Integração de IA (análise de aparência)">
+        <label className="check"><input type="checkbox" checked={!!p.preferences.aiAppearance} onChange={(e) => void save({ preferences: { ...p.preferences, aiAppearance: e.target.checked } })} /> Permitir análise de fotos por IA (Claude, da Anthropic)</label>
+        <p className="hint">Desligada, o app nunca envia fotos para IA. A chave da API, se você usar a sua, fica só neste aparelho.</p>
+        {apiKeyStore.get() && <button className="btn ghost sm" onClick={() => { apiKeyStore.clear(); toast('Chave removida deste aparelho.'); }}>Remover chave da API deste aparelho</button>}
+      </Card>
+
       <Card title="Sobre os dados e privacidade">
         <ul className="list">
-          <li><small>Nenhum dado é enviado a serviços de IA. Não há integrações externas além do Supabase (banco/arquivos da sua conta).</small></li>
+          <li><small>Por padrão, nenhum dado é enviado a serviços de IA. A única integração de IA é a análise de aparência por foto: só funciona se você ligar abaixo e confirmar cada envio.</small></li>
           <li><small>Fotos ficam em bucket privado; links de visualização expiram em 1 hora.</small></li>
           <li><small>Sem conexão, os registros ficam numa fila no aparelho e são enviados quando a internet voltar.</small></li>
           <li><small>Preços, rótulos e medidas só existem se você os registrar — o app não inventa valores.</small></li>

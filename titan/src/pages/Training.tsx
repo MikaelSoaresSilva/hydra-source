@@ -10,6 +10,8 @@ import { weeklyVolume } from '../domain/volume';
 import { MUSCLE_LABEL, type CheckinRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { createProgram, overridesMap, recoveryScore, startSession } from '../services';
 import { Card, Empty, ErrorBox, Loading, fmt, useToast } from '../ui/components';
+import { TrendChart } from '../ui/charts';
+import { tqrLabel, weeklyLoads } from '../domain/science';
 
 export function Training() {
   const store = useStore();
@@ -24,6 +26,8 @@ export function Training() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [swapFor, setSwapFor] = useState<string | null>(null);
+  const [askTqr, setAskTqr] = useState(false);
+  const [tqr, setTqr] = useState<number | null>(null);
   const { toast, node } = useToast();
   const program = programs.data[0];
   const today = todayISO();
@@ -55,11 +59,12 @@ export function Training() {
   const planned = plannedWeeklyVolume(program.config, next.week, program.weeks);
   const actual = weeklyVolume(logs.data, weekStart, addDays(weekStart, 6));
   const muscles = (Object.keys(planned) as Muscle[]).filter((m) => (planned[m] ?? 0) >= 2);
+  const loads = weeklyLoads(mine, logs.data).slice(-8);
 
-  async function begin() {
+  async function begin(withTqr: number | null) {
     setBusy(true); setError(null);
     try {
-      const s = inProgress ?? await startSession(store, program, next.sequence, overrides.data, logs.data, recoveryScore(checkins.data));
+      const s = inProgress ?? await startSession(store, program, next.sequence, overrides.data, logs.data, recoveryScore(checkins.data), withTqr);
       nav(`/treino/sessao/${s.id}`);
     } catch (e) { setError((e as Error).message); setBusy(false); }
   }
@@ -137,8 +142,23 @@ export function Training() {
           </ul>
           <ErrorBox error={error} />
           <div className="stack" style={{ marginTop: 10 }}>
-            <button className="btn primary big" disabled={busy} onClick={() => void begin()}>{inProgress ? 'Continuar treino' : 'Iniciar treino'}</button>
-            {!inProgress && <button className="btn ghost sm" onClick={() => void skip()}>Não vou treinar esta sessão</button>}
+            {askTqr && !inProgress ? (
+              <div className="stack readiness">
+                <label className="field">
+                  <span className="field-l">Como está sua recuperação agora? (escala TQR 6–20)</span>
+                  <select aria-label="Prontidão TQR" value={tqr ?? ''} onChange={(e) => setTqr(e.target.value ? Number(e.target.value) : null)}>
+                    <option value="">Escolha…</option>
+                    {Array.from({ length: 15 }, (_, i) => 20 - i).map((v) => <option key={v} value={v}>{v} — {tqrLabel(v)}</option>)}
+                  </select>
+                </label>
+                <p className="hint">Abaixo de 13, o Titan tira 1 série de cada exercício e aumenta o RIR em 1 só hoje (periodização flexível). "Um treino leve é melhor que faltar."</p>
+                <button className="btn primary big" disabled={busy || tqr === null} onClick={() => void begin(tqr)}>Começar</button>
+                <button className="btn ghost sm" disabled={busy} onClick={() => void begin(null)}>Pular esta pergunta</button>
+              </div>
+            ) : (
+              <button className="btn primary big" disabled={busy} onClick={() => (inProgress ? void begin(null) : setAskTqr(true))}>{inProgress ? 'Continuar treino' : 'Iniciar treino'}</button>
+            )}
+            {!inProgress && !askTqr && <button className="btn ghost sm" onClick={() => void skip()}>Não vou treinar esta sessão</button>}
           </div>
         </Card>
       )}
@@ -149,6 +169,19 @@ export function Training() {
           <thead><tr><th>Músculo</th><th>Planejado</th><th>Feito</th></tr></thead>
           <tbody>{muscles.map((m) => <tr key={m}><td>{MUSCLE_LABEL[m]}{program.config.priorities.includes(m) ? ' ★' : ''}</td><td>{fmt(planned[m])}</td><td>{fmt(actual[m] ?? 0)}</td></tr>)}</tbody>
         </table></div>
+      </Card>
+
+      <Card title="Carga de treino por semana" action={<Link className="btn sm" to="/biblioteca">Biblioteca</Link>}>
+        {loads.length === 0 ? <Empty>Conclua treinos informando o esforço (PSE) para ver a carga semanal.</Empty> : (
+          <>
+            <TrendChart label="Carga interna semanal (PSE × minutos)" data={loads.map((w) => ({ week: w.weekStart, load: w.load }))} xKey="week" series={[{ key: 'load', label: 'Carga (UA)' }]} height={180} />
+            <div className="scroll-x"><table className="t">
+              <thead><tr><th>Semana de</th><th>Sessões</th><th>Carga (UA)</th><th>Tonelagem</th></tr></thead>
+              <tbody>{loads.slice(-6).reverse().map((w) => <tr key={w.weekStart}><td>{formatBR(w.weekStart)}</td><td>{w.sessions}</td><td>{w.load}{w.loadMissing ? ` (+${w.loadMissing} sem PSE)` : ''}</td><td>{w.tonnage.toLocaleString('pt-BR')} kg</td></tr>)}</tbody>
+            </table></div>
+          </>
+        )}
+        <p className="hint">Carga interna = PSE da sessão (0–10) × minutos. Tonelagem = séries × repetições × kg. Suba a carga aos poucos: saltos grandes de uma semana para outra aumentam o risco de lesão e de queda de desempenho.</p>
       </Card>
 
       <Card title="Divisão do ciclo">

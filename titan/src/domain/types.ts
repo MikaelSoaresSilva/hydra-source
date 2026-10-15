@@ -86,6 +86,8 @@ export interface GroomingProfile {
 export interface Preferences {
   theme?: 'dark' | 'light' | 'system';
   restTimerSound?: boolean;
+  /** Análise de aparência por IA (envia fotos à Anthropic). Desligada por padrão. */
+  aiAppearance?: boolean;
 }
 
 export interface Profile {
@@ -157,7 +159,11 @@ export interface SessionRow extends Row {
   pain_notes: string | null;
   notes: string | null;
   exercises: PlannedExercise[];
+  readiness?: Readiness | null;
 }
+
+/** Prontidão pré-treino pela escala TQR (6–20) de Kenttä & Hassmén. */
+export interface Readiness { tqr: number; adjusted: boolean; note: string }
 
 export interface SetLogRow extends Row {
   session_id: string;
@@ -184,6 +190,7 @@ export interface CheckinRow extends Row {
   recovery: number | null;
   soreness: number | null;
   stress: number | null;
+  water_l?: number | null;
   notes: string | null;
 }
 
@@ -324,3 +331,11 @@ export const EQUIPMENT_LABEL: Record<Equipment, string> = {
   leg_press: 'Leg press',
   hack_squat: 'Hack squat',
 };
+
+export interface AppearanceRow extends Row {
+  source: 'ai' | 'questionnaire';
+  model: string | null;
+  photo_path: string | null;
+  input: Record<string, unknown>;
+  result: Record<string, unknown>;
+}

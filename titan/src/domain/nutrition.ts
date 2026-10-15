@@ -77,7 +77,7 @@ export function calculateTargets(input: EnergyInput): Targets {
     explanation: [
       `Metabolismo basal (Mifflin-St Jeor): ~${Math.round(bmr)} kcal.`,
       `Gasto total estimado: ~${Math.round(tdee)} kcal (fator ${ACTIVITY_FACTOR[input.activityLevel]}). Fórmulas erram com frequência ±10% ou mais: faixa provável ${Math.round(tdee * 0.9)}–${Math.round(tdee * 1.1)} kcal.`,
-      `Superávit inicial conservador de ${surplus} kcal, mirando ~${pct}% do peso por mês (~${(Math.round(monthlyGainKg * 100) / 100).toLocaleString('pt-BR')} kg/mês).`,
+      `Superávit inicial conservador de ${surplus} kcal (teto de 350 kcal recomendado para hipertrofia, CREF4/SC 2018), mirando ~${pct}% do peso por mês (~${(Math.round(monthlyGainKg * 100) / 100).toLocaleString('pt-BR')} kg/mês).`,
       `Proteína 1,8 g/kg (faixa útil 1,6–2,2), gordura ≥0,9 g/kg e ≥20% das calorias, carboidratos completam o restante para sustentar o treino.`,
       'A meta será revisada pela tendência semanal de peso, não por pesagens isoladas.',
     ],

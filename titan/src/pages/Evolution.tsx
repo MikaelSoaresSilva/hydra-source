@@ -24,6 +24,7 @@ export function CheckinForm({ compact = false }: { compact?: boolean }) {
       {node}
       <Field label="Horas de sono"><NumberInput value={c.sleep_hours ?? null} min={0} max={24} onChange={(v) => setC({ ...c, sleep_hours: v })} /></Field>
       <Scale label="Recuperação" value={c.recovery ?? null} onChange={(v) => setC({ ...c, recovery: v })} low="muito ruim" high="ótima" />
+      <Field label="Água hoje (litros)" hint="Meta: ≥2 L; mais em dias de treino e calor. Urina clara = hidratado."><NumberInput value={c.water_l ?? null} min={0} max={15} onChange={(v) => setC({ ...c, water_l: v })} /></Field>
       {!compact && <>
         <Scale label="Qualidade do sono" value={c.sleep_quality ?? null} onChange={(v) => setC({ ...c, sleep_quality: v })} low="péssima" high="excelente" />
         <Scale label="Dor muscular" value={c.soreness ?? null} onChange={(v) => setC({ ...c, soreness: v })} low="nenhuma" high="muita" />
@@ -33,7 +34,7 @@ export function CheckinForm({ compact = false }: { compact?: boolean }) {
       <button className="btn primary" onClick={async () => {
         await store.upsert('daily_checkins', {
           id: existing?.id ?? uuid(), date: today, sleep_hours: c.sleep_hours ?? null, sleep_quality: c.sleep_quality ?? null, recovery: c.recovery ?? null,
-          soreness: c.soreness ?? null, stress: c.stress ?? null, notes: c.notes ?? null,
+          soreness: c.soreness ?? null, stress: c.stress ?? null, water_l: c.water_l ?? null, notes: c.notes ?? null,
         });
         toast('Check-in salvo.');
       }}>{existing ? 'Atualizar check-in' : 'Salvar check-in'}</button>

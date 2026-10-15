@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useProfile, useRows, useStore } from '../data/AppContext';
+import { useProfile, useRows } from '../data/AppContext';
 import { addDays, formatBR, todayISO, WEEKDAY_LONG, weekday } from '../domain/dates';
 import { getExercise } from '../domain/exercises';
 import { isWashDay } from '../domain/hair';
@@ -11,13 +11,12 @@ import { weeklyAverages } from '../domain/trend';
 import type {
   CareLogRow, CheckinRow, FoodLogRow, MetricRow, OverrideRow, ProductRow, ProgramRow, RoutineItemRow, SessionRow, SetLogRow, TargetRow,
 } from '../domain/types';
-import { buildSessionPlan, recoveryScore, startSession } from '../services';
+import { buildSessionPlan, recoveryScore } from '../services';
 import { Card, Loading, Progress, fmt } from '../ui/components';
 import { CheckinForm } from './Evolution';
 import { usePlan } from './Nutrition';
 
 export function Today() {
-  const store = useStore();
   const nav = useNavigate();
   const { profile } = useProfile();
   const today = todayISO();
@@ -84,8 +83,9 @@ export function Today() {
 
   async function goTrain() {
     if (!program || !next) return;
-    const s = inProgress ?? await startSession(store, program, next.sequence, overrides.data, logs.data, recScore);
-    nav(`/treino/sessao/${s.id}`);
+    // Sessão nova passa pela pergunta de prontidão (TQR) na tela de Treino.
+    if (!inProgress) { nav('/treino'); return; }
+    nav(`/treino/sessao/${inProgress.id}`);
   }
 
   return (
@@ -129,6 +129,7 @@ export function Today() {
         <Card title="Pele e cabelo">
           {skinSlots.length ? <p>Pele: {skinSlots.map((s) => `${s === 'am' ? 'manhã' : 'noite'} ${skinDone(s) ? '✅' : 'pendente'}`).join(' · ')}</p> : <p>Pele: <Link to="/cuidados">gerar rotina</Link></p>}
           <p>Cabelo: {wash ? (hairDone ? 'lavado ✅' : 'dia de lavar e finalizar') : 'sem lavagem — só reativar se precisar'}</p>
+          <Link className="btn sm" to="/aparencia">Sugestões de corte, pele e massagem facial</Link>
         </Card>
 
         <Card title="Recuperação">

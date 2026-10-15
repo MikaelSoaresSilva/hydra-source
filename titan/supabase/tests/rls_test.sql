@@ -10,6 +10,8 @@ insert into public.workout_sessions (id, program_id, week, day_index, sequence) 
 insert into public.set_logs (session_id, exercise_key, exercise_name, muscle, set_index, load_kg, reps, rir)
   values ('aaaaaaaa-0000-0000-0000-000000000002','barbell_curl','Rosca direta','biceps',0,30,10,2);
 insert into public.body_metrics (date, weight_kg) values ('2026-10-14', 80);
+insert into public.appearance_analyses (source, result) values ('questionnaire', '{"faceShape":"oval"}');
+insert into public.daily_checkins (date, water_l) values ('2026-10-14', 2.5);
 insert into storage.objects (bucket_id, name) values ('titan-private','11111111-1111-1111-1111-111111111111/f.jpg');
 
 -- Usuário B não vê nem altera nada de A
@@ -19,6 +21,8 @@ do $$ begin
   if (select count(*) from public.set_logs) <> 0 then raise exception 'B vê séries de A'; end if;
   if (select count(*) from public.body_metrics) <> 0 then raise exception 'B vê medidas de A'; end if;
   if (select count(*) from storage.objects) <> 0 then raise exception 'B vê fotos de A'; end if;
+  if (select count(*) from public.appearance_analyses) <> 0 then raise exception 'B vê análises de A'; end if;
+  delete from public.appearance_analyses;
   update public.body_metrics set weight_kg = 1;
   delete from public.set_logs;
 end $$;
@@ -61,6 +65,7 @@ end $$;
 do $$ begin
   if (select weight_kg from public.body_metrics) <> 80 then raise exception 'peso de A alterado'; end if;
   if (select count(*) from public.set_logs) <> 1 then raise exception 'séries de A apagadas'; end if;
+  if (select count(*) from public.appearance_analyses) <> 1 then raise exception 'análise de A apagada'; end if;
 end $$;
 
 -- Anônimo não lê nada
@@ -81,6 +86,7 @@ select public.delete_my_account();
 reset role;
 do $$ begin
   if (select count(*) from public.set_logs) <> 0 then raise exception 'cascata falhou'; end if;
+  if (select count(*) from public.appearance_analyses) <> 0 then raise exception 'cascata (análises) falhou'; end if;
   if (select count(*) from auth.users) <> 1 then raise exception 'usuário não removido'; end if;
 end $$;
 \echo 'RLS: TODOS OS TESTES PASSARAM'

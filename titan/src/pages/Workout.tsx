@@ -4,6 +4,7 @@ import { useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
 import { alternativesFor, demoSearchUrl, getExercise } from '../domain/exercises';
 import { groupHistory, suggestProgression } from '../domain/progression';
+import { sessionLoad, sessionMinutes, tonnage } from '../domain/science';
 import { MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { Card, ErrorBox, Field, Loading, NumberInput, Scale, fmt, useToast } from '../ui/components';
 
@@ -149,6 +150,7 @@ export function Workout() {
         </div>
         <Link to="/treino" className="btn ghost sm">Sair</Link>
       </div>
+      {session.readiness && <div className={`banner ${session.readiness.adjusted ? '' : 'info'}`} role="status">{session.readiness.note}</div>}
       <p className="hint">Cada série é salva ao tocar em ✓ — pode fechar o app ou ficar sem internet sem perder o que já registrou.</p>
 
       {session.exercises.map((ex, i) => {
@@ -177,6 +179,8 @@ export function Workout() {
               <summary>Aquecimento, técnica e demonstração</summary>
               <p className="hint">{ex.warmup}</p>
               <p className="hint">{meta.cues}</p>
+              <p className="hint"><strong>Respiração:</strong> solte o ar na fase de esforço (subir/empurrar/puxar) e inspire ao voltar. Evite prender o ar, que eleva a pressão arterial.</p>
+              <p className="hint"><strong>Até onde ir:</strong> pare quando a técnica quebrar (falha técnica), mesmo que ainda saia uma repetição roubada. Use amplitude completa, que rende mais que a parcial.{ex.exerciseKey.includes('bench') ? ' Supino com barra livre: nunca vá à falha sem alguém ajudando.' : ''}</p>
               <a href={demoSearchUrl(meta)} target="_blank" rel="noreferrer noopener">Buscar vídeo de demonstração ↗</a>
               <p className="hint">Prefira canais de profissionais de educação física; o link é uma busca, não um vídeo verificado.</p>
             </details>
@@ -209,14 +213,18 @@ export function Workout() {
       {!readOnly ? (
         <Card title="Concluir sessão">
           <Scale label="Fadiga geral agora" value={finish.fatigue} onChange={(v) => setFinish({ ...finish, fatigue: v })} low="muito descansado" high="exausto" />
-          <Field label="Esforço da sessão (RPE 1–10)"><NumberInput value={finish.rpe} min={1} max={10} onChange={(v) => setFinish({ ...finish, rpe: v })} /></Field>
+          <Field label="Esforço da sessão (PSE 1–10)" hint="Pense no treino inteiro: 1 = muito leve, 5 = difícil, 10 = máximo. Junto com a duração, vira a carga interna (PSE × minutos)."><NumberInput value={finish.rpe} min={1} max={10} onChange={(v) => setFinish({ ...finish, rpe: v })} /></Field>
           <Field label="Dores ou desconfortos"><input value={finish.pain} onChange={(e) => setFinish({ ...finish, pain: e.target.value })} /></Field>
           <Field label="Observações"><textarea value={finish.notes} onChange={(e) => setFinish({ ...finish, notes: e.target.value })} /></Field>
           <ErrorBox error={error} />
           <button className="btn primary big" onClick={() => void complete()}>Concluir treino</button>
         </Card>
       ) : (
-        <Card><p>Fadiga: {session.fatigue ?? '—'}/5 · RPE: {session.session_rpe ?? '—'}</p>{session.notes && <p>{session.notes}</p>}</Card>
+        <Card title="Resumo">
+          <p>Fadiga: {session.fatigue ?? '—'}/5 · PSE: {session.session_rpe ?? '—'} · Duração: {sessionMinutes(session) ?? '—'} min</p>
+          <p>Carga interna: <strong>{sessionLoad(session) ?? '—'}</strong> UA · Tonelagem: <strong>{tonnage(myLogs.data).toLocaleString('pt-BR')}</strong> kg</p>
+          {session.notes && <p>{session.notes}</p>}
+        </Card>
       )}
     </div>
   );

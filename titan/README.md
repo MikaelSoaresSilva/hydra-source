@@ -53,7 +53,7 @@ npx vite build && npm run test:e2e   # fluxo completo no Chromium (celular e des
 ## Configurar o Supabase (conta, banco e fotos)
 
 1. Crie um projeto gratuito em <https://supabase.com> (região São Paulo, `sa-east-1`).
-2. **SQL Editor →** execute, na ordem, `supabase/migrations/20261014000001_schema.sql` e `20261014000002_storage.sql`.
+2. **SQL Editor →** execute, na ordem, `supabase/migrations/20261014000001_schema.sql`, `20261014000002_storage.sql` e `20261015000003_knowledge_appearance.sql`.
    (Ou, com a CLI: `supabase link --project-ref SEU_REF && supabase db push`.)
 3. **Authentication → Providers → Email:** habilitado. Recomendado: "Confirm email" ligado e senha mínima de 8 caracteres.
 4. **Authentication → URL Configuration:** em *Site URL* e *Redirect URLs* coloque a URL onde o app será publicado (ex.: `https://SEU-USUARIO.github.io/hydra-source/`) e `http://localhost:5173` para desenvolvimento.
@@ -96,11 +96,21 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Base de conhecimento e análise de aparência
+
+- `src/domain/knowledge.ts` e `src/domain/science.ts` reúnem o conteúdo dos materiais estudados (CREF4/SC 2018 e 2019, Musculação Aplicada, Ministério da Saúde/BVS, Almanaque da pele, apostila de corte masculino), cada ponto com a fonte. Telas: **Biblioteca** (artigos, calculadora de 1RM por %, sistemas de treino, divergências entre fontes) e **Aparência**.
+- O motor de treino agora garante ≥10 séries semanais nos músculos prioritários (quando cabe no tempo), pergunta a prontidão (TQR 6–20) antes da sessão e reduz o volume se < 13, e calcula a carga interna (PSE × minutos) e a tonelagem por semana.
+- **Aparência → Questionário** (sem IA): formato do rosto por autoavaliação, depois cortes pelas regras da apostila, adaptados à curvatura do cabelo, mais massagem facial e cuidados.
+- **Aparência → Foto + IA**: envia 1–3 fotos (reduzidas, sem EXIF) ao modelo `claude-opus-5-5` com saída estruturada em JSON (validada no app com zod) e `fallbacks: "default"` (se o modelo recusar, a API reexecuta no modelo de reserva recomendado pela Anthropic). Dois caminhos:
+  - **Nuvem:** Edge Function `supabase/functions/analyze-appearance` com a chave guardada como segredo:
+    `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` e `supabase functions deploy analyze-appearance`. Limite de 10 análises por usuário por dia.
+  - **Sem nuvem (APK local):** o usuário cola a própria chave da API, que fica só no aparelho e pode ser removida.
+
 ## Privacidade e segurança
 
 - Cada usuário só acessa as próprias linhas (RLS testado: outro usuário não lê, não altera, não insere em nome alheio, não usa programa alheio, não envia foto para a pasta alheia; anônimo não lê nada).
 - Fotos: bucket privado, pasta por usuário, links temporários de 1 h; metadados EXIF/GPS removidos antes do envio; a imagem não é editada.
-- Nenhum dado vai para serviços de IA. A única integração externa é o seu Supabase.
+- Por padrão nenhum dado vai para serviços de IA. A única exceção é a **análise de aparência por foto**, desligada por padrão: só funciona se você ligar (Perfil ou tela Aparência) e confirmar cada envio, vendo antes exatamente quais fotos e dados de perfil serão enviados à Anthropic. A chave da API do usuário (modo sem nuvem) fica só no aparelho e não entra no backup.
 - **Exportar** (JSON com todos os registros) e **Excluir conta e dados** (apaga fotos, linhas e o usuário de autenticação) em Perfil.
 - Logs de erro não incluem conteúdo pessoal (só tabela e código do erro).
 
@@ -111,3 +121,5 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 - Links de demonstração são **buscas** no YouTube, não vídeos verificados.
 - O app não diagnostica pele, couro cabeludo ou lesões; sinaliza quando procurar dermatologista ou outro profissional.
 - Simulações de resultado não existem no app; nenhuma foto é alterada.
+- A análise por IA foi testada com respostas simuladas (formato, validação, recusa, erros); a chamada real à API depende de uma chave válida e não foi executada no desenvolvimento.
+- Formato do rosto e tipo de cabelo são estimativas (questionário ou foto 2D), não medidas.

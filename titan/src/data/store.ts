@@ -5,6 +5,7 @@ import { PHOTO_BUCKET } from './supabase';
 export const TABLES = [
   'profiles', 'programs', 'workout_sessions', 'set_logs', 'exercise_overrides', 'daily_checkins', 'body_metrics',
   'nutrition_targets', 'user_foods', 'food_logs', 'food_prices', 'care_products', 'routine_items', 'care_logs', 'photos',
+  'appearance_analyses',
 ] as const;
 export type Table = (typeof TABLES)[number];
 
@@ -55,7 +56,7 @@ export function applyQuery<T extends AnyRow>(rows: T[], q: Query = {}): T[] {
 function dbName(userId: string) { return `titan-${userId}`; }
 
 async function openUserDB(userId: string): Promise<IDBPDatabase> {
-  return openDB(dbName(userId), 2, {
+  return openDB(dbName(userId), 3, {
     upgrade(db) {
       for (const t of TABLES) if (!db.objectStoreNames.contains(t)) db.createObjectStore(t, { keyPath: keyOf(t) });
       if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'seq', autoIncrement: true });

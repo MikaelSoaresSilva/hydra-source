@@ -13,6 +13,8 @@ import { Nutrition } from './pages/Nutrition';
 import { Care } from './pages/Care';
 import { Evolution } from './pages/Evolution';
 import { ProfilePage } from './pages/ProfilePage';
+import { Library } from './pages/Library';
+import { Appearance } from './pages/Appearance';
 
 function Shell() {
   const { profile, loading } = useProfile();
@@ -48,7 +50,11 @@ function Shell() {
       <main className="main">
         <div className="topbar">
           <span className="brand">TITAN</span>
-          <Link to="/perfil" className="btn ghost sm" aria-label="Perfil e configurações"><IconUser /></Link>
+          <span className="row" style={{ gap: 6 }}>
+            <Link to="/aparencia" className="btn ghost sm">Aparência</Link>
+            <Link to="/biblioteca" className="btn ghost sm">Biblioteca</Link>
+            <Link to="/perfil" className="btn ghost sm" aria-label="Perfil e configurações"><IconUser /></Link>
+          </span>
         </div>
         {store.mode === 'local' && (
           <div className="banner">Modo local: os dados ficam só neste navegador. Para sincronizar entre aparelhos, configure a nuvem (veja Perfil → Sobre os dados).</div>
@@ -63,6 +69,8 @@ function Shell() {
           <Route path="/cuidados" element={<Care />} />
           <Route path="/evolucao" element={<Evolution />} />
           <Route path="/perfil" element={<ProfilePage />} />
+          <Route path="/biblioteca" element={<Library />} />
+          <Route path="/aparencia" element={<Appearance />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

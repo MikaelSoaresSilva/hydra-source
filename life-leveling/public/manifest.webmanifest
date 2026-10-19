@@ -1,0 +1,1 @@
+{ "name": "Life Leveling: Awakening", "short_name": "Life Leveling", "start_url": "./", "display": "standalone", "background_color": "#05060c", "theme_color": "#05060c", "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }] }

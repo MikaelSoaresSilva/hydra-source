@@ -1,0 +1,8 @@
+import { createRoot } from 'react-dom/client';
+import '@fontsource/rajdhani/500.css';
+import '@fontsource/rajdhani/700.css';
+import '@fontsource/share-tech-mono/400.css';
+import './styles.css';
+import { App } from './ui/App';
+
+createRoot(document.getElementById('root')!).render(<App />);

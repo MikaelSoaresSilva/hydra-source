@@ -15,6 +15,26 @@ import { buildSessionPlan, recoveryScore } from '../services';
 import { Card, Loading, Progress, fmt } from '../ui/components';
 import { CheckinForm } from './Evolution';
 import { usePlan } from './Nutrition';
+import { useMissionData } from './Mission';
+import { DAY_PASS, dayStatus, streak } from '../domain/mission';
+
+function MissionCard() {
+  const { profile } = useProfile();
+  const { data, loading } = useMissionData();
+  if (loading || !profile) return null;
+  if (!profile.preferences.missionStart) {
+    return <Card title="Missão Titan — 12 semanas" className="accent"><p>Rosto e corpo no ritmo mais rápido que ainda é seguro, gastando pouco.</p><Link className="btn primary" to="/missao">Ver a missão</Link></Card>;
+  }
+  const today = todayISO();
+  const st = dayStatus(data, today);
+  return (
+    <Card title="Missão de hoje" className={st.score >= DAY_PASS ? '' : 'accent'} action={<Link className="btn sm" to="/missao">Abrir</Link>}>
+      <div className="row between"><span><strong>{st.done}/{st.total}</strong> itens</span><span>🔥 {streak(data, today)} dia(s)</span></div>
+      <Progress value={st.done} max={Math.max(1, st.total)} label="Missão de hoje" />
+      <p className="hint">Pendentes: {st.items.filter((i) => i.done === false).map((i) => i.habit.label).slice(0, 4).join(' · ') || 'nenhum — dia cumprido!'}</p>
+    </Card>
+  );
+}
 
 export function Today() {
   const nav = useNavigate();
@@ -94,6 +114,8 @@ export function Today() {
         <h1>{WEEKDAY_LONG[wd]}, {formatBR(today).slice(0, 5)}{profile?.display_name ? ` · ${profile.display_name}` : ''}</h1>
         {phase && program && !next?.finished && <p className="muted">Semana {next!.week} de {program.weeks} · {phase.label}</p>}
       </div>
+
+      <MissionCard />
 
       <Card title="O que fazer hoje">
         <ul className="list">

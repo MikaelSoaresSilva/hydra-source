@@ -53,7 +53,7 @@ npx vite build && npm run test:e2e   # fluxo completo no Chromium (celular e des
 ## Configurar o Supabase (conta, banco e fotos)
 
 1. Crie um projeto gratuito em <https://supabase.com> (região São Paulo, `sa-east-1`).
-2. **SQL Editor →** execute, na ordem, `supabase/migrations/20261014000001_schema.sql`, `20261014000002_storage.sql` e `20261015000003_knowledge_appearance.sql` e `20261020000004_metrics_detail.sql`.
+2. **SQL Editor →** execute, na ordem, `supabase/migrations/20261014000001_schema.sql`, `20261014000002_storage.sql` e `20261015000003_knowledge_appearance.sql` , `20261020000004_metrics_detail.sql` e `20261020000005_habits.sql`.
    (Ou, com a CLI: `supabase link --project-ref SEU_REF && supabase db push`.)
 3. **Authentication → Providers → Email:** habilitado. Recomendado: "Confirm email" ligado e senha mínima de 8 caracteres.
 4. **Authentication → URL Configuration:** em *Site URL* e *Redirect URLs* coloque a URL onde o app será publicado (ex.: `https://SEU-USUARIO.github.io/hydra-source/`) e `http://localhost:5173` para desenvolvimento.

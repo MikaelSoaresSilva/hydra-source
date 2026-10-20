@@ -88,6 +88,8 @@ export interface Preferences {
   restTimerSound?: boolean;
   /** Análise de aparência por IA (envia fotos à Anthropic). Desligada por padrão. */
   aiAppearance?: boolean;
+  /** Data de início da Missão Titan (12 semanas). */
+  missionStart?: string;
 }
 
 export interface Profile {
@@ -195,6 +197,8 @@ export interface CheckinRow extends Row {
   soreness: number | null;
   stress: number | null;
   water_l?: number | null;
+  /** Hábitos manuais marcados no dia (id → feito). */
+  habits?: Record<string, boolean>;
   notes: string | null;
 }
 

@@ -56,6 +56,10 @@ export function ProfilePage() {
         </div>
       </Card>
 
+      <Card title="Conteúdo">
+        <Link className="btn" to="/biblioteca">Biblioteca: o que o Titan aprendeu (fontes, calculadora, sistemas)</Link>
+      </Card>
+
       <Card title="Integração de IA (análise de aparência)">
         <label className="check"><input type="checkbox" checked={!!p.preferences.aiAppearance} onChange={(e) => void save({ preferences: { ...p.preferences, aiAppearance: e.target.checked } })} /> Permitir análise de fotos por IA (Claude, da Anthropic)</label>
         <p className="hint">Desligada, o app nunca envia fotos para IA. A chave da API, se você usar a sua, fica só neste aparelho.</p>

@@ -131,7 +131,7 @@ test('aparência (questionário sem IA) + biblioteca/calculadora + IA desligada 
   await expect(page.getByRole('button', { name: 'Enviar e analisar' })).toBeDisabled();
 
   // Biblioteca: calculadora de 1RM
-  await page.getByRole('link', { name: 'Biblioteca' }).click();
+  await page.goto('/#/biblioteca');
   await page.getByRole('tab', { name: 'Calculadora' }).click();
   await page.getByLabel('Carga da série').fill('60');
   await page.getByLabel('Repetições feitas').fill('10');
@@ -139,4 +139,31 @@ test('aparência (questionário sem IA) + biblioteca/calculadora + IA desligada 
   await page.getByRole('tab', { name: 'Sistemas' }).click();
   await expect(page.getByText('Drop-set')).toBeVisible();
   await page.screenshot({ path: `test-results/biblioteca-${info.project.name}.png`, fullPage: true });
+});
+
+test('missão: começar, marcar hábito e ver o progresso no painel', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+
+  await page.getByRole('link', { name: 'Ver a missão' }).click();
+  await page.getByRole('button', { name: 'Começar hoje' }).click();
+  await expect(page.getByText(/Semana 1 de 12/)).toBeVisible();
+  const before = await page.locator('.card').filter({ hasText: 'Hoje' }).first().locator('strong').first().innerText();
+  await page.getByLabel('Dentes: escovar 2× + fio dental').check();
+  await expect(page.getByLabel('Dentes: escovar 2× + fio dental')).toBeChecked();
+  const after = await page.locator('.card').filter({ hasText: 'Hoje' }).first().locator('strong').first().innerText();
+  expect(Number(after.split('/')[0])).toBe(Number(before.split('/')[0]) + 1);
+  await page.reload();
+  await expect(page.getByLabel('Dentes: escovar 2× + fio dental')).toBeChecked();
+  await page.screenshot({ path: `test-results/missao-${info.project.name}.png`, fullPage: true });
+  await page.getByRole('link', { name: 'Hoje' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Missão de hoje' })).toBeVisible();
 });

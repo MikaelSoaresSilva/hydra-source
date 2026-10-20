@@ -1,5 +1,6 @@
 import { EXERCISE_BY_KEY, getExercise, resolveExercise } from './exercises';
 import { MIN_WEEKLY_SETS } from './science';
+import { OLYMPIA_DAYS, OLYMPIA_PRIORITIES, olympiaPhase } from './olympia';
 import { MUSCLE_LABEL, type Muscle, type ProgramConfig, type ProgramDay, type SlotPrescription, type TrainingProfile } from './types';
 
 type SlotTpl = [exerciseKey: string, sets: number, restSec: number];
@@ -74,7 +75,15 @@ export function weekPhase(week: number, totalWeeks = 8): WeekPhase {
   return { week, ...table[Math.min(week, table.length) - 1] };
 }
 
+/** Fase da semana conforme o protocolo do ciclo. */
+export function phaseFor(config: Pick<ProgramConfig, 'protocol' | 'deloadWeeks'>, week: number, totalWeeks = 8): WeekPhase {
+  if (config.protocol === 'olympia') return olympiaPhase(week, config.deloadWeeks);
+  if (config.deloadWeeks?.includes(week)) return { ...weekPhase(totalWeeks, totalWeeks), week, label: 'Deload (aplicado por fadiga/desempenho)', assessment: false };
+  return weekPhase(week, totalWeeks);
+}
+
 export interface GenerateInput {
+  protocol?: 'olympia';
   training: TrainingProfile;
   overrides?: Record<string, string>;
   blocked?: Set<string>;
@@ -93,17 +102,19 @@ export function estimateMinutes(slots: { exerciseKey: string; sets: number; rest
   return Math.round(total);
 }
 
-export function generateProgram({ training, overrides = {}, blocked = new Set() }: GenerateInput): ProgramConfig {
+export function generateProgram({ training, overrides = {}, blocked = new Set(), protocol }: GenerateInput): ProgramConfig {
   const trainingDays = (training.trainingDays?.length ? [...training.trainingDays] : DEFAULT_DAYS).sort((a, b) => a - b);
-  const n = Math.max(3, Math.min(5, trainingDays.length));
+  const n = protocol === 'olympia' ? 5 : Math.max(3, Math.min(5, trainingDays.length));
   const sessionMinutes = training.sessionMinutes ?? 100;
-  const priorities = Array.from(new Set([...DEFAULT_PRIORITIES, ...(training.priorities ?? [])]));
+  const priorities = Array.from(new Set([...(protocol === 'olympia' ? OLYMPIA_PRIORITIES : DEFAULT_PRIORITIES), ...(training.priorities ?? [])]));
   const equipment = training.equipment ?? [];
   const notes: string[] = [];
+  if (protocol === 'olympia' && trainingDays.length !== 5) notes.push('O Protocolo Olympia foi desenhado para 5 sessões (seg–sex). Com outros dias, a ordem das sessões é mantida e o ciclo só avança quando cada sessão é feita.');
   if (trainingDays.length > 5) notes.push('Mais de 5 dias informados: o plano usa 5 sessões e os demais dias ficam livres para recuperação.');
   if (!training.equipmentConfirmed) notes.push('Equipamentos ainda não confirmados: exercícios podem ser substituídos na tela de treino.');
 
-  const days: ProgramDay[] = TEMPLATES[n].map((tpl, i) => {
+  const templates = protocol === 'olympia' ? OLYMPIA_DAYS : TEMPLATES[n];
+  const days: ProgramDay[] = templates.map((tpl, i) => {
     let slots: SlotPrescription[] = tpl.slots.map(([key, sets, restSec], j) => {
       const ex = resolveExercise(key, equipment, overrides, blocked);
       return { slotId: `d${i}s${j}`, exerciseKey: ex.key, sets, repRange: ex.repRange, restSec, rir: 2 };
@@ -120,7 +131,7 @@ export function generateProgram({ training, overrides = {}, blocked = new Set() 
       if (removable) { slots = slots.filter((s) => s !== removable); continue; }
       break;
     }
-    return { dayIndex: trainingDays[i] ?? i + 1, name: tpl.name, focus: tpl.focus, slots };
+    return { dayIndex: trainingDays[i % trainingDays.length] ?? i + 1, name: tpl.name, focus: tpl.focus, slots };
   });
   ensurePriorityVolume(days, priorities, sessionMinutes, notes);
   const longest = Math.max(...days.map((d) => estimateMinutes(d.slots)));
@@ -130,7 +141,7 @@ export function generateProgram({ training, overrides = {}, blocked = new Set() 
   if (days.some((d) => estimateMinutes(d.slots) > sessionMinutes)) {
     notes.push('Mesmo reduzido, algum dia passa do tempo disponível; considere aumentar o tempo ou aceitar menos exercícios.');
   }
-  return { version: 1, trainingDays: days.map((d) => d.dayIndex), sessionMinutes, priorities, equipment, days, notes };
+  return { version: 1, trainingDays: Array.from(new Set(days.map((d) => d.dayIndex))), sessionMinutes, priorities, equipment, days, notes, ...(protocol ? { protocol, deloadWeeks: [] } : {}) };
 }
 
 /** Séries semanais base (sem bônus de fase): direto = 1, secundário = 0,5. */
@@ -168,7 +179,7 @@ export function ensurePriorityVolume(days: ProgramDay[], priorities: Muscle[], s
 
 /** Prescrição da semana: aplica RIR da fase, bônus de séries nos prioritários e deload. */
 export function prescribeDay(config: ProgramConfig, dayPos: number, week: number, totalWeeks = 8): SlotPrescription[] {
-  const phase = weekPhase(week, totalWeeks);
+  const phase = phaseFor(config, week, totalWeeks);
   const seenPriority = new Set<Muscle>();
   // O bônus vai para a 1ª ocorrência de cada músculo prioritário na semana (+1 série/semana/músculo).
   const firstOccurrence = new Set<string>();

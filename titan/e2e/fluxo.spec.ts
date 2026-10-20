@@ -27,6 +27,8 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   // Treino
   await page.getByRole('link', { name: 'Treino' }).first().click();
   await expect(page.getByText(/Próxima sessão:/)).toBeVisible();
+  await expect(page.getByText(/Protocolo Olympia — 60 dias/)).toBeVisible();
+  await expect(page.getByText('Próxima sessão: Superior A — largura')).toBeVisible();
   await page.getByRole('button', { name: 'Iniciar treino' }).click();
   // Prontidão (TQR) abaixo de 13 → sessão ajustada
   await page.getByLabel('Prontidão TQR').selectOption('11');
@@ -70,11 +72,16 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   // Evolução: medidas + gráfico com dado real
   await page.getByRole('link', { name: 'Evolução' }).first().click();
   await page.getByLabel('Peso (kg)').fill('80,4');
-  await page.getByLabel('Braço direito (cm)').fill('38,5');
+  await page.getByLabel('Braço direito contraído (cm)').fill('38,5');
   await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByRole('cell', { name: '80,4' })).toBeVisible();
   await page.getByRole('tab', { name: 'Gráficos' }).click();
   await expect(page.locator('.recharts-surface').first()).toBeVisible();
+
+  // Proporções aparecem no Treino a partir da medição
+  await page.goto('/#/treino');
+  await expect(page.getByRole('cell', { name: 'Braço / cintura' })).toHaveCount(0); // sem cintura medida ainda
+  await page.screenshot({ path: `test-results/olympia-${info.project.name}.png`, fullPage: true });
 
   // Persistência após "sair e entrar" (nova página, mesmo navegador)
   await page.goto('/#/treino');

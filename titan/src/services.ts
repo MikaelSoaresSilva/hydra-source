@@ -1,7 +1,8 @@
 import { addDays, todayISO } from './domain/dates';
 import { getExercise, resolveExercise } from './domain/exercises';
 import { calculateTargets } from './domain/nutrition';
-import { generateProgram, prescribeDay, warmupFor } from './domain/program';
+import { generateProgram, phaseFor, prescribeDay, warmupFor } from './domain/program';
+import { OLYMPIA_WEEKS } from './domain/olympia';
 import { groupHistory, suggestProgression } from './domain/progression';
 import { applyReadiness } from './domain/science';
 import type { DataStore } from './data/store';
@@ -17,12 +18,14 @@ export function overridesMap(rows: OverrideRow[]) {
   return { map, blocked };
 }
 
-export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO()): Promise<ProgramRow> {
+export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia'): Promise<ProgramRow> {
   const old = await store.list<ProgramRow>('programs', { eq: { status: 'active' } });
   for (const p of old) await store.upsert('programs', { ...p, status: 'archived' });
   const ov = overridesMap(await store.list<OverrideRow>('exercise_overrides'));
-  const config = generateProgram({ training: profile.training, overrides: ov.map, blocked: ov.blocked });
-  const row: ProgramRow = { id: uuid(), user_id: store.userId, name: 'Ciclo de hipertrofia — 8 semanas', start_date: startDate, weeks: 8, config, status: 'active' };
+  const config = generateProgram({ training: profile.training, overrides: ov.map, blocked: ov.blocked, protocol });
+  const row: ProgramRow = protocol === 'olympia'
+    ? { id: uuid(), user_id: store.userId, name: 'Protocolo Olympia — 60 dias', start_date: startDate, weeks: OLYMPIA_WEEKS, config, status: 'active' }
+    : { id: uuid(), user_id: store.userId, name: 'Ciclo de hipertrofia — 8 semanas', start_date: startDate, weeks: 8, config, status: 'active' };
   await store.upsert('programs', row as unknown as Record<string, unknown>);
   return row;
 }
@@ -71,7 +74,7 @@ export function buildSessionPlan(
     const sug = suggestProgression(ex, s.rir, groupHistory(logs, ex.key), { recoveryScore: recScore });
     const warmup = warmupFor(ex.key, ex.kind === 'compound' && firstCompound);
     if (ex.kind === 'compound') firstCompound = false;
-    const deload = week >= program.weeks;
+    const deload = phaseFor(program.config, week, program.weeks).deload;
     const load = sug.load !== null && deload ? Math.round((sug.load * 0.85) / (ex.increment || 0.5)) * (ex.increment || 0.5) : sug.load;
     return {
       ...s, exerciseKey: ex.key, repRange: ex.repRange, name: ex.name, muscle: ex.primary,
@@ -126,4 +129,10 @@ export function downloadJSON(data: unknown, filename: string) {
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/** Marca a semana como deload (decisão baseada em fadiga/desempenho, não no calendário). */
+export async function applyDeload(store: DataStore, program: ProgramRow, week: number): Promise<void> {
+  const weeks = Array.from(new Set([...(program.config.deloadWeeks ?? []), week])).sort((a, b) => a - b);
+  await store.upsert('programs', { ...program, config: { ...program.config, deloadWeeks: weeks } } as unknown as Record<string, unknown>);
 }

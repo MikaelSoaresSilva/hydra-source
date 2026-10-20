@@ -4,11 +4,14 @@ import { useProfile, useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
 import { addDays, formatBR, startOfWeek, todayISO, WEEKDAY_SHORT, weekday } from '../domain/dates';
 import { alternativesFor, getExercise, resolveExercise } from '../domain/exercises';
-import { estimateMinutes, plannedWeeklyVolume, prescribeDay, weekPhase } from '../domain/program';
+import { estimateMinutes, plannedWeeklyVolume, phaseFor, prescribeDay } from '../domain/program';
 import { nextSession, projectedEnd } from '../domain/schedule';
 import { weeklyVolume } from '../domain/volume';
-import { MUSCLE_LABEL, type CheckinRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
-import { createProgram, overridesMap, recoveryScore, startSession } from '../services';
+import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
+import { applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
+import { anthropometry, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
+import { decliningExercises } from '../domain/progression';
+import { recentRecovery } from '../domain/recommendations';
 import { Card, Empty, ErrorBox, Loading, fmt, useToast } from '../ui/components';
 import { TrendChart } from '../ui/charts';
 import { tqrLabel, weeklyLoads } from '../domain/science';
@@ -23,6 +26,7 @@ export function Training() {
   const logs = useRows<SetLogRow>('set_logs', { gte: { logged_at: addDays(todayISO(), -120) } });
   const overrides = useRows<OverrideRow>('exercise_overrides');
   const checkins = useRows<CheckinRow>('daily_checkins', { gte: { date: addDays(todayISO(), -14) } });
+  const lastMetric = useRows<MetricRow>('body_metrics', { order: { col: 'date', asc: false }, limit: 1 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [swapFor, setSwapFor] = useState<string | null>(null);
@@ -45,13 +49,16 @@ export function Training() {
     return (
       <Card title="Nenhum ciclo ativo">
         <p>Gere um ciclo de 8 semanas a partir do seu perfil.</p>
-        <button className="btn primary" disabled={busy || !profile} onClick={async () => { setBusy(true); await createProgram(store, profile!); setBusy(false); }}>Gerar ciclo</button>
+        <div className="row">
+          <button className="btn primary" disabled={busy || !profile} onClick={async () => { setBusy(true); await createProgram(store, profile!, undefined, 'olympia'); setBusy(false); }}>Gerar Protocolo Olympia (60 dias)</button>
+          <button className="btn" disabled={busy || !profile} onClick={async () => { setBusy(true); await createProgram(store, profile!); setBusy(false); }}>Ciclo padrão (8 semanas)</button>
+        </div>
       </Card>
     );
   }
 
   const { next, inProgress, mine } = info;
-  const phase = weekPhase(next.week, program.weeks);
+  const phase = phaseFor(program.config, next.week, program.weeks);
   const day = program.config.days[next.dayPos];
   const ov = overridesMap(overrides.data);
   const presc = next.finished ? [] : prescribeDay(program.config, next.dayPos, next.week, program.weeks);
@@ -60,6 +67,19 @@ export function Training() {
   const actual = weeklyVolume(logs.data, weekStart, addDays(weekStart, 6));
   const muscles = (Object.keys(planned) as Muscle[]).filter((m) => (planned[m] ?? 0) >= 2);
   const loads = weeklyLoads(mine, logs.data).slice(-8);
+  const olympia = program.config.protocol === 'olympia';
+  const declining = decliningExercises(logs.data.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -28)));
+  const rec = recentRecovery(checkins.data, today);
+  const deloadSuggested = declining.length >= 2 && ((rec.recovery !== null && rec.recovery < 3) || mine.filter((x) => x.readiness).slice(-2).every((x) => x.readiness!.tqr < 13));
+  const ratios = lastMetric.data[0] ? anthropometry(lastMetric.data[0] as unknown as Record<string, unknown>, profile?.height_cm) : [];
+
+  async function startOlympia() {
+    if (!confirm('Arquivar o ciclo atual e iniciar o Protocolo Olympia (60 dias, seg–sex)? Seus registros de cargas continuam e servem de ponto de partida.')) return;
+    setBusy(true);
+    await createProgram(store, profile!, today, 'olympia');
+    setBusy(false);
+    toast('Protocolo Olympia gerado.');
+  }
 
   async function begin(withTqr: number | null) {
     setBusy(true); setError(null);
@@ -163,11 +183,43 @@ export function Training() {
         </Card>
       )}
 
+      {!olympia ? (
+        <Card title="Protocolo Olympia — 60 dias (Classic Physique natural)">
+          <p>Ciclo de 9 semanas, seg–sex: cada músculo ~2×/semana, braços em 4 dos 5 dias, prioridade em largura (dorsais + deltoide lateral), peitoral superior e pernas. Volume inicial moderado, ajustado só por dados; deload apenas quando fadiga e desempenho indicarem.</p>
+          <button className="btn primary" disabled={busy || !profile} onClick={() => void startOlympia()}>Iniciar Protocolo Olympia</button>
+        </Card>
+      ) : (
+        <Card title="Protocolo Olympia — decisões" className={deloadSuggested ? 'rec p1' : ''}>
+          {deloadSuggested && <div className="banner" role="alert">Desempenho caindo em {declining.length} exercícios com recuperação baixa: critério de deload atingido.</div>}
+          <details open={deloadSuggested}>
+            <summary>Quando subir carga, volume ou reduzir</summary>
+            <p><strong>Progressão</strong></p><ul>{OLYMPIA_RULES.progression.map((r) => <li key={r}><small>{r}</small></li>)}</ul>
+            <p><strong>Aumentar volume</strong></p><ul>{OLYMPIA_RULES.addVolume.map((r) => <li key={r}><small>{r}</small></li>)}</ul>
+            <p><strong>Reduzir</strong></p><ul>{OLYMPIA_RULES.reduceVolume.map((r) => <li key={r}><small>{r}</small></li>)}</ul>
+            <p><strong>Peso e calorias</strong></p><ul>{OLYMPIA_RULES.weight.map((r) => <li key={r}><small>{r}</small></li>)}</ul>
+          </details>
+          {(program.config.deloadWeeks ?? []).includes(next.week) ? <p className="hint">Deload aplicado nesta semana (semana {next.week}).</p> : (
+            <button className={`btn ${deloadSuggested ? 'primary' : 'ghost'} sm`} onClick={async () => {
+              if (!confirm(deloadSuggested ? 'Aplicar deload nesta semana (metade das séries, ~85% da carga, RIR 3–4)?' : 'O critério de deload NÃO foi atingido pelos seus registros. Aplicar mesmo assim nesta semana?')) return;
+              await applyDeload(store, program, next.week); toast('Deload aplicado nesta semana.');
+            }}>Aplicar deload nesta semana</button>
+          )}
+        </Card>
+      )}
+
+      {ratios.length > 0 && (
+        <Card title="Proporções (última medição)" action={<Link className="btn sm" to="/evolucao">Medir</Link>}>
+          <div className="scroll-x"><table className="t"><tbody>{ratios.map((r) => <tr key={r.label}><td>{r.label}</td><td><strong>{r.value}</strong></td><td><small className="muted">{r.note}</small></td></tr>)}</tbody></table></div>
+          <p className="hint">Compare sempre consigo mesmo, nas mesmas condições de medida. Não existe proporção “ideal” universal.</p>
+        </Card>
+      )}
+
       <Card title="Volume semanal (séries efetivas)" action={<Link className="btn sm" to="/treino/bracos">Painel de braços</Link>}>
         <p className="hint">Planejado para a semana {Math.min(next.week, program.weeks)} × realizado desde segunda. Músculo secundário conta 0,5.</p>
         <div className="scroll-x"><table className="t">
-          <thead><tr><th>Músculo</th><th>Planejado</th><th>Feito</th></tr></thead>
-          <tbody>{muscles.map((m) => <tr key={m}><td>{MUSCLE_LABEL[m]}{program.config.priorities.includes(m) ? ' ★' : ''}</td><td>{fmt(planned[m])}</td><td>{fmt(actual[m] ?? 0)}</td></tr>)}</tbody>
+          <thead><tr><th>Músculo</th><th>Planejado</th><th>Feito</th>{olympia && <th>Faixa inicial · teto</th>}</tr></thead>
+          <tbody>{muscles.map((m) => <tr key={m}><td>{MUSCLE_LABEL[m]}{program.config.priorities.includes(m) ? ' ★' : ''}</td><td>{fmt(planned[m])}</td><td>{fmt(actual[m] ?? 0)}</td>
+            {olympia && <td>{OLYMPIA_VOLUME[m] ? `${OLYMPIA_VOLUME[m]!.start[0]}–${OLYMPIA_VOLUME[m]!.start[1]} · ${OLYMPIA_VOLUME[m]!.ceiling}` : '—'}</td>}</tr>)}</tbody>
         </table></div>
       </Card>
 
@@ -192,8 +244,8 @@ export function Training() {
           </details>
         ))}
         {program.config.notes.map((n, i) => <p key={i} className="hint">• {n}</p>)}
-        <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>
-        <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!); }}>Regerar ciclo (ex.: mudei de academia)</button>
+        {olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
+        <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!, undefined, program.config.protocol); }}>Regerar ciclo (ex.: mudei de academia)</button>
       </Card>
 
       <Card title="Histórico">

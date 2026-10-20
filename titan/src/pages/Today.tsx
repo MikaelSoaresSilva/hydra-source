@@ -4,7 +4,7 @@ import { useProfile, useRows } from '../data/AppContext';
 import { addDays, formatBR, todayISO, WEEKDAY_LONG, weekday } from '../domain/dates';
 import { getExercise } from '../domain/exercises';
 import { isWashDay } from '../domain/hair';
-import { weekPhase } from '../domain/program';
+import { phaseFor } from '../domain/program';
 import { buildRecommendations, consistencyBlocker, recentRecovery } from '../domain/recommendations';
 import { isTrainingDay, nextSession } from '../domain/schedule';
 import { weeklyAverages } from '../domain/trend';
@@ -70,7 +70,7 @@ export function Today() {
   const rec = recentRecovery(checkins.data, today);
   const weekly = weeklyAverages(metrics.data.filter((m) => m.weight_kg !== null).map((m) => ({ date: m.date, weight: Number(m.weight_kg) })));
   const weeklyGain = Number((target?.inputs as { weeklyGainKg?: number } | undefined)?.weeklyGainKg ?? 0);
-  const phase = next ? weekPhase(next.week, program?.weeks) : null;
+  const phase = next && program ? phaseFor(program.config, next.week, program.weeks) : null;
 
   const todo: { label: string; done: boolean; to: string }[] = [
     ...(trainToday ? [{ label: `Treino: ${day?.name}${profile?.training.trainingTime ? ` às ${profile.training.trainingTime}` : ''}`, done: !!doneToday, to: '/treino' }] : []),
@@ -149,7 +149,7 @@ export function Today() {
         <ul className="list">
           {armGoal && <li>{armGoal.name}: <strong>{fmt(armGoal.loadSuggestion)} kg</strong> × {armGoal.repRange[0]}–{armGoal.repRange[1]} reps (RIR {armGoal.rir})<br /><small className="muted">{armGoal.suggestionReason}</small></li>}
           {weekly.length > 0 && weeklyGain > 0 && <li>Média de peso da próxima semana: ~<strong>{fmt(weekly[weekly.length - 1].avg + weeklyGain, 2)} kg</strong> (ritmo-alvo +{fmt(weeklyGain, 2)} kg/sem)</li>}
-          {program && next && !next.finished && <li>Próxima avaliação (medidas e fotos): semana {[1, 4, 8].find((w) => w >= next.week) ?? 8} do ciclo</li>}
+          {program && next && !next.finished && <li>Próxima avaliação (medidas e fotos): semana {(program.config.protocol === 'olympia' ? [1, 3, 5, 7, 9] : [1, 4, 8]).find((w) => w >= next.week) ?? program.weeks} do ciclo</li>}
           {!armGoal && weekly.length === 0 && <li className="muted">Registre treinos e pesagens para gerar metas a partir dos seus dados.</li>}
         </ul>
       </Card>

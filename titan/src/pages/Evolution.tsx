@@ -4,12 +4,33 @@ import { uuid } from '../data/store';
 import { formatBR, todayISO } from '../domain/dates';
 import { photoComparability } from '../domain/recommendations';
 import { movingAverage } from '../domain/trend';
+import { MEASURING_GUIDE } from '../domain/olympia';
 import type { CheckinRow, MetricRow, PhotoRow } from '../domain/types';
 import { sanitizeImage } from '../services';
 import { TrendChart } from '../ui/charts';
 import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Scale, Tabs, fmt, useToast } from '../ui/components';
 
 type Tab = 'medidas' | 'graficos' | 'fotos' | 'checkin';
+
+type MetricKey = Exclude<keyof MetricRow, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'date' | 'conditions' | 'notes'>;
+/** Campos de medida: chave, rótulo, mínimo e máximo aceitos (iguais às restrições do banco). */
+export const METRIC_FIELDS: [MetricKey, string, number, number][] = [
+  ['weight_kg', 'Peso (kg)', 30, 300],
+  ['arm_right_cm', 'Braço direito contraído (cm)', 15, 80],
+  ['arm_left_cm', 'Braço esquerdo contraído (cm)', 15, 80],
+  ['arm_right_relaxed_cm', 'Braço direito relaxado (cm)', 15, 80],
+  ['arm_left_relaxed_cm', 'Braço esquerdo relaxado (cm)', 15, 80],
+  ['forearm_right_cm', 'Antebraço direito (cm)', 15, 60],
+  ['forearm_left_cm', 'Antebraço esquerdo (cm)', 15, 60],
+  ['shoulders_cm', 'Ombros (cm)', 70, 200],
+  ['chest_cm', 'Peitoral (cm)', 50, 200],
+  ['waist_cm', 'Cintura (cm, na altura do umbigo)', 40, 200],
+  ['hip_cm', 'Quadril (cm)', 50, 200],
+  ['thigh_cm', 'Coxa direita (cm)', 30, 110],
+  ['thigh_left_cm', 'Coxa esquerda (cm)', 30, 110],
+  ['calf_right_cm', 'Panturrilha direita (cm)', 20, 70],
+  ['calf_left_cm', 'Panturrilha esquerda (cm)', 20, 70],
+];
 
 export function CheckinForm({ compact = false }: { compact?: boolean }) {
   const store = useStore();
@@ -74,11 +95,9 @@ export function Evolution() {
 
   async function saveMetric() {
     setError(null);
-    const vals = ['weight_kg', 'arm_right_cm', 'arm_left_cm', 'chest_cm', 'waist_cm', 'thigh_cm', 'shoulders_cm'] as const;
-    if (!m.date || vals.every((k) => m[k] === null || m[k] === undefined)) { setError('Informe a data e pelo menos uma medida.'); return; }
+    if (!m.date || METRIC_FIELDS.every(([k]) => m[k] === null || m[k] === undefined)) { setError('Informe a data e pelo menos uma medida.'); return; }
     await store.upsert('body_metrics', {
-      id: uuid(), date: m.date, weight_kg: m.weight_kg ?? null, arm_right_cm: m.arm_right_cm ?? null, arm_left_cm: m.arm_left_cm ?? null,
-      chest_cm: m.chest_cm ?? null, waist_cm: m.waist_cm ?? null, thigh_cm: m.thigh_cm ?? null, shoulders_cm: m.shoulders_cm ?? null,
+      id: uuid(), date: m.date, ...Object.fromEntries(METRIC_FIELDS.map(([k]) => [k, m[k] ?? null])),
       conditions: m.conditions ?? {}, notes: m.notes ?? null,
     });
     setM({ date: todayISO(), conditions: m.conditions });
@@ -115,13 +134,9 @@ export function Evolution() {
           <Card title="Nova medição">
             <div className="grid two">
               <Field label="Data"><input type="date" value={m.date} max={todayISO()} onChange={(e) => setM({ ...m, date: e.target.value })} /></Field>
-              <Field label="Peso (kg)"><NumberInput value={m.weight_kg} min={30} max={300} onChange={(v) => setM({ ...m, weight_kg: v })} /></Field>
-              <Field label="Braço direito (cm)"><NumberInput value={m.arm_right_cm} min={15} max={80} onChange={(v) => setM({ ...m, arm_right_cm: v })} /></Field>
-              <Field label="Braço esquerdo (cm)"><NumberInput value={m.arm_left_cm} min={15} max={80} onChange={(v) => setM({ ...m, arm_left_cm: v })} /></Field>
-              <Field label="Peito (cm)"><NumberInput value={m.chest_cm} min={50} max={200} onChange={(v) => setM({ ...m, chest_cm: v })} /></Field>
-              <Field label="Cintura (cm, na altura do umbigo)"><NumberInput value={m.waist_cm} min={40} max={200} onChange={(v) => setM({ ...m, waist_cm: v })} /></Field>
-              <Field label="Coxa (cm)"><NumberInput value={m.thigh_cm} min={30} max={110} onChange={(v) => setM({ ...m, thigh_cm: v })} /></Field>
-              <Field label="Ombros (cm)"><NumberInput value={m.shoulders_cm} min={70} max={200} onChange={(v) => setM({ ...m, shoulders_cm: v })} /></Field>
+              {METRIC_FIELDS.map(([k, label, min, max]) => (
+                <Field key={k} label={label}><NumberInput value={(m[k] as number | null | undefined) ?? null} min={min} max={max} onChange={(v) => setM({ ...m, [k]: v })} /></Field>
+              ))}
             </div>
             <div className="row">
               {([['fasted', 'Em jejum'], ['morning', 'Pela manhã'], ['afterTraining', 'Após treino (pump)'], ['flexed', 'Braço contraído']] as const).map(([k, l]) => (
@@ -130,7 +145,8 @@ export function Evolution() {
             </div>
             <Field label="Observações"><input value={m.notes ?? ''} onChange={(e) => setM({ ...m, notes: e.target.value })} /></Field>
             <button className="btn primary" style={{ marginTop: 8 }} onClick={() => void saveMetric()}>Salvar</button>
-            <p className="hint">Pese-se 3–7× por semana ao acordar, após o banheiro. Medidas: a cada 2–4 semanas, sempre nas mesmas condições.</p>
+            <p className="hint">Pese-se 3–7× por semana ao acordar, após o banheiro. Medidas: a cada 2 semanas, sempre nas mesmas condições.</p>
+            <details><summary>Como medir cada região (reduz erro)</summary><ul>{MEASURING_GUIDE.map((g) => <li key={g}><small>{g}</small></li>)}</ul></details>
           </Card>
           <Card title="Histórico">
             {metrics.data.length === 0 ? <Empty>Sem medições.</Empty> : (

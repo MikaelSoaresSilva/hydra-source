@@ -127,6 +127,10 @@ export interface ProgramConfig {
   equipment: Equipment[];
   days: ProgramDay[];
   notes: string[];
+  /** Protocolo usado para gerar o ciclo (padrão: modelo de 8 semanas do Titan). */
+  protocol?: 'olympia';
+  /** Semanas em que o deload foi aplicado por decisão baseada em dados. */
+  deloadWeeks?: number[];
 }
 
 export interface ProgramRow extends Row {
@@ -205,6 +209,14 @@ export interface MetricRow extends Row {
   waist_cm: number | null;
   thigh_cm: number | null;
   shoulders_cm: number | null;
+  thigh_left_cm?: number | null;
+  arm_right_relaxed_cm?: number | null;
+  arm_left_relaxed_cm?: number | null;
+  forearm_right_cm?: number | null;
+  forearm_left_cm?: number | null;
+  calf_right_cm?: number | null;
+  calf_left_cm?: number | null;
+  hip_cm?: number | null;
   conditions: MetricConditions;
   notes: string | null;
 }

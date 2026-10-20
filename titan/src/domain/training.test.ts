@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateProgram, estimateMinutes, plannedWeeklyVolume, prescribeDay, weekPhase } from './program';
-import { decliningExercises, estimated1RM, groupHistory, suggestProgression, type SessionPerformance } from './progression';
+import { adjustNextSet, decliningExercises, estimated1RM, groupHistory, isPersonalRecord, stalledExercises, suggestProgression, type SessionPerformance } from './progression';
 import { resolveExercise, getExercise } from './exercises';
 import { missedCount, nextSession, projectSchedule } from './schedule';
 import { weeklyVolume } from './volume';
@@ -134,5 +134,55 @@ describe('volume e tendências', () => {
     ];
     expect(decliningExercises(logs).sort()).toEqual(['bench_press', 'ez_bar_curl']);
     expect(groupHistory(logs, 'bench_press')[0].sessionId).toBe('c');
+  });
+});
+
+describe('ajuste série a série', () => {
+  const ex = { repRange: [8, 12] as [number, number], increment: 2.5 };
+  it('dentro da faixa mantém', () => {
+    expect(adjustNextSet(ex, 2, { load: 30, reps: 10, rir: 2 }).action).toBe('keep');
+    expect(adjustNextSet(ex, 2, { load: 30, reps: 8, rir: 1 }).action).toBe('keep'); // fadiga normal
+  });
+  it('acima da faixa sobe pelo 1RM estimado, arredondado ao incremento', () => {
+    const a = adjustNextSet(ex, 2, { load: 30, reps: 15, rir: 2 });
+    expect(a.action).toBe('up');
+    expect(a.load).toBeGreaterThan(30);
+    expect(a.load % 2.5).toBe(0);
+    expect(a.load).toBeLessThanOrEqual(30 * 1.15);
+  });
+  it('sobrou muito esforço sobe mesmo dentro da faixa', () => {
+    expect(adjustNextSet(ex, 2, { load: 30, reps: 10, rir: 5 }).action).toBe('up');
+  });
+  it('abaixo da faixa ou falha antes do alvo desce', () => {
+    const a = adjustNextSet(ex, 2, { load: 30, reps: 5, rir: 0 });
+    expect(a.action).toBe('down');
+    expect(a.load).toBeLessThan(30);
+    expect(a.load).toBeGreaterThanOrEqual(30 * 0.85 - 2.5);
+    expect(adjustNextSet(ex, 3, { load: 30, reps: 10, rir: 0 }).action).toBe('down');
+  });
+  it('dor para o exercício e técnica ruim não deixa subir', () => {
+    expect(adjustNextSet(ex, 2, { load: 30, reps: 12, rir: 4, pain: 5 }).action).toBe('stop');
+    expect(adjustNextSet(ex, 2, { load: 30, reps: 15, rir: 3, techniqueOk: false }).action).toBe('keep');
+  });
+  it('sem RIR informado usa o alvo', () => {
+    expect(adjustNextSet(ex, 2, { load: 30, reps: 10, rir: null }).action).toBe('keep');
+    expect(adjustNextSet(ex, 2, { load: 30, reps: 14, rir: null }).action).toBe('up');
+  });
+});
+
+describe('estagnação e recordes', () => {
+  const log = (sid: string, date: string, load: number, reps: number) =>
+    ({ session_id: sid, exercise_key: 'ez_bar_curl', logged_at: date, load_kg: load, reps, rir: 2, kind: 'working', technique_ok: true, pain: 0 }) as unknown as SetLogRow;
+  it('4 sessões sem subir = estagnado; subindo não', () => {
+    const flat = [log('a', '2026-10-01', 30, 10), log('b', '2026-10-04', 30, 10), log('c', '2026-10-08', 30, 9), log('d', '2026-10-11', 30, 10)];
+    expect(stalledExercises(flat)).toEqual(['ez_bar_curl']);
+    const up = [log('a', '2026-10-01', 30, 8), log('b', '2026-10-04', 30, 9), log('c', '2026-10-08', 30, 10), log('d', '2026-10-11', 32.5, 9)];
+    expect(stalledExercises(up)).toEqual([]);
+  });
+  it('recorde de 1RM estimado', () => {
+    const prev = groupHistory([log('a', '2026-10-01', 30, 10)], 'ez_bar_curl');
+    expect(isPersonalRecord(prev, { load: 30, reps: 11, rir: 2 })).toBe(true);
+    expect(isPersonalRecord(prev, { load: 30, reps: 10, rir: 2 })).toBe(false);
+    expect(isPersonalRecord([], { load: 30, reps: 10, rir: 2 })).toBe(false);
   });
 });

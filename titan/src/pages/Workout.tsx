@@ -3,13 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
 import { alternativesFor, demoSearchUrl, getExercise } from '../domain/exercises';
-import { groupHistory, suggestProgression } from '../domain/progression';
+import { adjustNextSet, groupHistory, isPersonalRecord, suggestProgression, type SetAdjustAction } from '../domain/progression';
 import { sessionLoad, sessionMinutes, tonnage } from '../domain/science';
 import { MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { Card, ErrorBox, Field, Loading, NumberInput, Scale, fmt, useToast } from '../ui/components';
 
 interface DraftSet { id?: string; load: number | null; reps: number | null; rir: number | null; done: boolean }
-type Draft = Record<number, { sets: DraftSet[]; pain: number; technique: boolean; notes: string }>;
+type Feedback = { action: SetAdjustAction; message: string; pr?: boolean };
+type Draft = Record<number, { sets: DraftSet[]; pain: number; technique: boolean; notes: string; feedback?: Feedback }>;
 
 const draftKey = (id: string) => `titan-workout-draft-${id}`;
 
@@ -66,7 +67,7 @@ export function Workout() {
       myLogs.data.filter((l) => l.exercise_key === ex.exerciseKey && l.kind === 'working').forEach((l) => {
         sets[l.set_index] = { id: l.id, load: Number(l.load_kg), reps: l.reps, rir: l.rir === null ? null : Number(l.rir), done: true };
       });
-      d[i] = { sets, pain: prev?.pain ?? 0, technique: prev?.technique ?? true, notes: prev?.notes ?? '' };
+      d[i] = { sets, pain: prev?.pain ?? 0, technique: prev?.technique ?? true, notes: prev?.notes ?? '', feedback: prev?.feedback };
     });
     setDraft(d);
   }, [session, myLogs.loading, myLogs.data, draft]);
@@ -81,6 +82,21 @@ export function Workout() {
     });
     return out;
   }, [session, allLogs.data, id]);
+
+  const nextChanges = useMemo(() => {
+    if (!session) return [];
+    const LABEL: Record<string, [string, string]> = {
+      increase: ['Sobe carga', 'ok'], maintain: ['Mantém, busque + reps', ''], reduce: ['Reduz carga', 'warn'],
+      hold_pain: ['Dor: segura', 'danger'], hold_technique: ['Técnica: segura', 'warn'], hold_recovery: ['Recuperação: segura', 'warn'], first_time: ['', ''],
+    };
+    return session.exercises.flatMap((ex) => {
+      const hist = groupHistory(allLogs.data, ex.exerciseKey);
+      if (!hist[0] || hist[0].sessionId !== session.id) return [];
+      const sug = suggestProgression(getExercise(ex.exerciseKey), ex.rir, hist);
+      const [label, tone] = LABEL[sug.action];
+      return [{ key: ex.exerciseKey, name: ex.name, load: sug.load, reason: sug.reason + (sug.suggestSubstitution ? ' Troque o exercício.' : ''), label, tone }];
+    });
+  }, [session, allLogs.data]);
 
   if (sessions.loading || !draft) return <Loading />;
   if (!session) return <Card><p>Sessão não encontrada.</p><Link to="/treino">Voltar</Link></Card>;
@@ -105,6 +121,20 @@ export function Workout() {
         notes: draft![i].notes || null, logged_at: new Date().toISOString(),
       });
       if (r.queued) toast('Sem conexão: série salva no aparelho e será sincronizada.');
+      // Autorregulação: a série registrada define a carga das próximas séries deste exercício.
+      const meta = getExercise(ex.exerciseKey);
+      const adj = adjustNextSet(meta, ex.rir, { load: s.load, reps: s.reps, rir: s.rir, pain: draft![i].pain, techniqueOk: draft![i].technique });
+      const pr = isPersonalRecord(groupHistory(allLogs.data.filter((l) => l.session_id !== session.id), ex.exerciseKey), { load: s.load, reps: s.reps, rir: s.rir });
+      setDraft((d) => {
+        const cur = d![i];
+        const sets = cur.sets.map((x, k) => {
+          if (k <= j || x.done) return x;
+          if (adj.action === 'up' || adj.action === 'down') return { ...x, load: adj.load };
+          return x.load === null ? { ...x, load: s.load } : x; // primeira vez: repete o peso usado
+        });
+        return { ...d!, [i]: { ...cur, sets, feedback: { action: adj.action, message: `Série ${j + 1}: ${adj.message}`, pr } } };
+      });
+      if (pr) toast(`Novo recorde em ${ex.name}: ${fmt(s.load)} kg × ${s.reps}!`);
       setTimer(Date.now() + ex.restSec * 1000);
     } catch (e) {
       setError((e as Error).message);
@@ -185,7 +215,7 @@ export function Workout() {
               <p className="hint">Prefira canais de profissionais de educação física; o link é uma busca, não um vídeo verificado.</p>
             </details>
             <div className="stack" style={{ marginTop: 8 }}>
-              <div className="set-row hint"><span>#</span><span>kg</span><span>reps</span><span>RIR</span><span /></div>
+              <div className="set-row hint"><span>#</span><span>Peso (kg)</span><span>Reps feitas</span><span>RIR</span><span /></div>
               {d.sets.map((s, j) => (
                 <div className="set-row" key={j}>
                   <span className="idx">{j + 1}</span>
@@ -196,6 +226,12 @@ export function Workout() {
                     onClick={() => void logSet(i, j)}>✓</button>
                 </div>
               ))}
+              {d.feedback && (
+                <div className={`adjust ${d.feedback.action}`} role="status">
+                  {d.feedback.pr && <strong>🏆 Recorde! </strong>}{d.feedback.message}
+                  {d.feedback.action === 'stop' && !readOnly && <> <button className="btn ghost sm" onClick={() => setSwapIdx(i)}>Trocar exercício</button></>}
+                </div>
+              )}
               {!readOnly && <button className="btn ghost sm" onClick={() => update(i, { sets: [...d.sets, { load: d.sets.at(-1)?.load ?? null, reps: null, rir: null, done: false }] })}>+ série</button>}
             </div>
             <div className="row" style={{ marginTop: 8 }}>
@@ -209,6 +245,15 @@ export function Workout() {
           </Card>
         );
       })}
+
+      {nextChanges.length > 0 && (
+        <Card title="O que muda no próximo treino">
+          <ul className="list">{nextChanges.map((c) => (
+            <li key={c.key}><span className={`tag ${c.tone}`}>{c.label}</span> <strong>{c.name}</strong>{c.load !== null ? ` → ${fmt(c.load)} kg` : ''}<br /><small className="muted">{c.reason}</small></li>
+          ))}</ul>
+          <p className="hint">Calculado pelas séries que você registrou hoje (peso, repetições, RIR, dor e técnica). A sugestão aparece pronta na próxima sessão deste exercício.</p>
+        </Card>
+      )}
 
       {!readOnly ? (
         <Card title="Concluir sessão">

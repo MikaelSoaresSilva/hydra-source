@@ -1,6 +1,6 @@
 import { addDays } from './dates';
 import { scalpStatus } from './hair';
-import { decliningExercises, groupHistory } from './progression';
+import { decliningExercises, estimated1RM, groupHistory, stalledExercises } from './progression';
 import { missedCount, projectedEnd } from './schedule';
 import { adjustCalories, weeklyAverages } from './trend';
 import { EXERCISE_BY_KEY } from './exercises';
@@ -84,6 +84,23 @@ export function buildRecommendations(ctx: RecContext): Recommendation[] {
         rec.sleep !== null ? `Sono médio: ${f1(rec.sleep)} h` : 'Sem registro de sono',
       ],
       monitor: 'e1RM desses exercícios nas próximas 2 sessões e a recuperação diária.',
+    });
+  }
+
+  // 1b. Estagnação (sem fadiga): mudar alguma variável, não insistir igual
+  const stalled = stalledExercises(ctx.setLogs.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -56))).filter((k) => !declining.includes(k));
+  for (const k of stalled.slice(0, 3)) {
+    const ex = EXERCISE_BY_KEY[k];
+    const prio = !!ex && !!ctx.program?.config.priorities.includes(ex.primary);
+    const good = rec.recovery === null || rec.recovery >= 3;
+    out.push({
+      id: `stall-${k}`, module: 'muscle', priority: 2,
+      title: `${ex?.name ?? k} parou de progredir`,
+      reason: prio && good
+        ? 'O 1RM estimado não sobe há 4 sessões e a recuperação está boa. Como é músculo prioritário: some 1 série semanal nele OU troque por uma variação (Treino → Trocar) — mude só uma coisa por vez e reavalie em 2 semanas.'
+        : 'O 1RM estimado não sobe há 4 sessões. Antes de somar séries, revise sono, alimentação e se o RIR registrado está honesto; se continuar, troque por uma variação (Treino → Trocar).',
+      data: groupHistory(ctx.setLogs, k).slice(0, 4).reverse().map((p) => `${p.date.slice(0, 10)}: melhor série ${(() => { const b = p.sets.filter((x) => x.kind === 'working').sort((a, c) => estimated1RM(Number(c.load_kg), c.reps, c.rir) - estimated1RM(Number(a.load_kg), a.reps, a.rir))[0]; return b ? `${Number(b.load_kg)} kg × ${b.reps}` : '—'; })()}`),
+      monitor: 'e1RM do exercício nas próximas 2 semanas.',
     });
   }
 

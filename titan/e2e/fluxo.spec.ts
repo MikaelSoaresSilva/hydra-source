@@ -39,12 +39,23 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await page.getByLabel('RIR série 1').first().fill('3');
   await page.getByRole('button', { name: 'Concluir série 1' }).first().click();
   await expect(page.getByRole('timer')).toBeVisible();
+  await expect(page.getByText(/Série 1: 8 reps com RIR 3: dentro do alvo/)).toBeVisible();
+  // Série 2 fácil demais → a carga da série seguinte sobe sozinha
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: '+ série' }).first().click();
+  await page.getByLabel('Repetições série 2').first().fill('15');
+  await page.getByLabel('RIR série 2').first().fill('5');
+  await page.getByRole('button', { name: 'Concluir série 2' }).first().click();
+  await expect(page.getByText(/Série 2: 15 reps com RIR 5: acima do alvo. Próxima série: 67,5 kg \(\+7,5 kg\)/)).toBeVisible();
+  await expect(page.getByLabel('Carga série 3').first()).toHaveValue('67,5');
   await page.screenshot({ path: `test-results/treino-${info.project.name}.png` });
 
   // Recarrega: série continua salva
   await page.reload();
   await expect(page.getByRole('button', { name: 'Concluir série 1' }).first()).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Carga série 1').first()).toHaveValue('60');
+  await expect(page.getByRole('heading', { name: 'O que muda no próximo treino' })).toBeVisible();
+  await page.screenshot({ path: `test-results/progressao-${info.project.name}.png`, fullPage: true });
   await page.getByRole('button', { name: 'Concluir treino' }).click();
   await expect(page.getByText('Treino concluído e salvo!')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Ver' }).first()).toBeVisible();

@@ -142,3 +142,8 @@ table.t th, table.t td { text-align: left; padding: 6px 4px; border-bottom: 1px 
 table.t th { color: var(--muted); font-weight: 600; }
 .scroll-x { overflow-x: auto; }
 .topbar svg { width: 22px; height: 22px; }
+
+.adjust { font-size: 0.85rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); }
+.adjust.up { border-color: var(--ok); }
+.adjust.down { border-color: var(--warn); }
+.adjust.stop { border-color: var(--danger); }

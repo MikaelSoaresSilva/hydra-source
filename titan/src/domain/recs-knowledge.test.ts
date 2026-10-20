@@ -24,3 +24,11 @@ it('cintura acima de 94 cm (homem) usa a última medida', () => {
   expect(r?.priority).toBe(2);
   expect(buildRecommendations({ ...empty, profile, metrics: [m('2026-10-14', 90)] }).some((x) => x.id === 'waist')).toBe(false);
 });
+
+it('exercício estagnado gera recomendação de mudar uma variável', () => {
+  const log = (sid: string, date: string, reps: number) => ({ id: sid, session_id: sid, exercise_key: 'ez_bar_curl', logged_at: `${date}T17:00:00Z`, load_kg: 30, reps, rir: 2, kind: 'working', technique_ok: true, pain: 0 });
+  const setLogs = [log('a', '2026-09-30', 10), log('b', '2026-10-03', 10), log('c', '2026-10-07', 9), log('d', '2026-10-10', 10)] as never;
+  const r = buildRecommendations({ ...empty, setLogs }).find((x) => x.id === 'stall-ez_bar_curl');
+  expect(r?.title).toMatch(/parou de progredir/);
+  expect(r?.data.at(-1)).toMatch(/30 kg × 10/);
+});

@@ -117,3 +117,70 @@ export function decliningExercises(logs: SetLogRow[]): string[] {
     return h.length === 3 && h[0] < h[1] * 0.98 && h[1] < h[2] * 0.98;
   });
 }
+
+export type SetAdjustAction = 'up' | 'keep' | 'down' | 'stop';
+export interface SetAdjustment { action: SetAdjustAction; load: number; message: string }
+
+const fmtKg = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg`;
+
+/**
+ * Ajuste série a série (autorregulação dentro da sessão), a partir do que foi registrado.
+ * - Dentro da faixa e com RIR até 1 do alvo → mantém (queda de 1–2 reps entre séries é fadiga normal).
+ * - Passou do topo da faixa ou sobrou esforço (RIR ≥ alvo+2) → sobe.
+ * - Abaixo do mínimo ou mais perto da falha que o alvo (RIR < alvo−1) → desce.
+ * A nova carga vem do 1RM estimado da série (Epley) para o meio da faixa com o RIR alvo,
+ * arredondada ao incremento do exercício, com no máx. ±15% de mudança.
+ * - Dor ≥ 4/10 → parar o exercício hoje. Técnica comprometida → nunca sobe.
+ */
+export function adjustNextSet(
+  ex: Pick<Exercise, 'repRange' | 'increment'>,
+  rirTarget: number,
+  set: { load: number; reps: number; rir: number | null; pain?: number; techniqueOk?: boolean },
+): SetAdjustment {
+  const [min, max] = ex.repRange;
+  const step = ex.increment || 0.5;
+  const { load, reps } = set;
+  const rir = set.rir ?? rirTarget;
+  if ((set.pain ?? 0) >= 4) {
+    return { action: 'stop', load, message: `Dor ${set.pain}/10: encerre este exercício hoje (ou troque por uma variação sem dor). A carga não sobe no próximo treino.` };
+  }
+  const tooEasy = reps > max || (reps >= max && rir >= rirTarget + 1) || (reps >= min && rir >= rirTarget + 2);
+  const tooHard = reps < min || rir < rirTarget - 1;
+  if (!tooEasy && !tooHard) {
+    return { action: 'keep', load, message: `${reps} reps com RIR ${rir}: dentro do alvo (${min}–${max}, RIR ${rirTarget}). Mantenha ${fmtKg(load)}.` };
+  }
+  if (load <= 0) {
+    return { action: tooEasy ? 'up' : 'keep', load, message: tooEasy ? `Ficou fácil: acrescente carga (ou repetições, se for peso do corpo).` : 'Abaixo da faixa: diminua a amplitude de dificuldade ou use assistência.' };
+  }
+  const e1rm = load * (1 + (reps + rir) / 30);
+  const target = e1rm / (1 + ((min + max) / 2 + rirTarget) / 30);
+  let next = roundToStep(Math.min(load * 1.15, Math.max(load * 0.85, target)), step);
+  if (tooEasy) {
+    if (set.techniqueOk === false) return { action: 'keep', load, message: 'Ficou leve, mas a técnica foi marcada como comprometida: mantenha a carga e acerte a execução.' };
+    if (next <= load) next = roundToStep(load + step, step);
+    return { action: 'up', load: next, message: `${reps} reps com RIR ${rir}: acima do alvo. Próxima série: ${fmtKg(next)} (+${fmtKg(next - load)}).` };
+  }
+  if (next >= load) next = Math.max(0, roundToStep(load - step, step));
+  return { action: 'down', load: next, message: `${reps} reps com RIR ${rir}: ${reps < min ? `abaixo de ${min} reps` : 'perto demais da falha'}. Próxima série: ${fmtKg(next)} (−${fmtKg(load - next)}).` };
+}
+
+/**
+ * Estagnação: melhor e1RM das 4 últimas sessões do exercício não subiu mais que 1% em relação
+ * à sessão mais antiga das 4 (e não está em queda forte, que é tratada como fadiga).
+ */
+export function stalledExercises(logs: SetLogRow[]): string[] {
+  const keys = Array.from(new Set(logs.map((l) => l.exercise_key)));
+  return keys.filter((k) => {
+    const h = groupHistory(logs, k).slice(0, 4).map(bestE1RM);
+    if (h.length < 4 || h.some((x) => x <= 0)) return false;
+    const best = Math.max(...h.slice(0, 3));
+    return best <= h[3] * 1.01 && h[0] >= h[3] * 0.95;
+  });
+}
+
+/** Recorde: a série supera o melhor 1RM estimado de todas as sessões anteriores do exercício. */
+export function isPersonalRecord(previous: SessionPerformance[], set: { load: number; reps: number; rir: number | null }): boolean {
+  if (!previous.length || set.load <= 0) return false;
+  const best = Math.max(...previous.map(bestE1RM));
+  return best > 0 && estimated1RM(set.load, set.reps, set.rir) > best * 1.005;
+}

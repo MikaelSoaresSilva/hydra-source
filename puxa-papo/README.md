@@ -2,6 +2,11 @@
 
 App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app fica em `app/index.html`.
 
+## v1.3
+- **Servidor lotado (503) resolvido sozinho**: tenta de novo, troca para outro modelo livre (até 6) e, se houver chave do Claude também, passa pra ele. Lembra por 30 min qual funcionou.
+- Mostra "Servidor lotado, tentando outro..." durante a troca; 429 pula direto; chave errada para na hora.
+- Ajustes: **🔎 Procurar o melhor servidor** (testa vários e escolhe o mais rápido) e opção de desligar a troca automática.
+
 ## v1.2
 - **Sobre mim** já vem preenchido com o que se sabe do Mikael (botão "Preencher automático" restaura).
 
@@ -14,11 +19,11 @@ App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app f
 - No Story, vários stories = uma resposta para cada.
 
 ## Instalar
-`dist/PuxaPapo-v1.2.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
+`dist/PuxaPapo-v1.3.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
 
 ## Reconstruir
 ```
-./build.sh PuxaPapo-original.apk 3 1.2
+./build.sh PuxaPapo-original.apk 4 1.3
 ```
 
 ## Testar

@@ -23,10 +23,18 @@ const MOCK = {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  const reqs = [];
+  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  const reqs = [], calls = [];
+  const srv = { busy: new Set(), status: 503, delay: {} };
+  const MODELS = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-pro'];
   await page.route('https://generativelanguage.googleapis.com/**', async route => {
-    const body = JSON.parse(route.request().postData() || '{}'); reqs.push(body);
+    const req = route.request();
+    if (req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ models: MODELS.map(m => ({ name: 'models/' + m, supportedGenerationMethods: ['generateContent'] })) }) });
+    const model = decodeURIComponent(req.url().split('/models/')[1].split(':')[0]);
+    const body = JSON.parse(req.postData() || '{}'); calls.push(model);
+    if (srv.delay[model]) await new Promise(r => setTimeout(r, srv.delay[model]));
+    if (srv.busy.has(model)) return route.fulfill({ status: srv.status, contentType: 'application/json', body: JSON.stringify({ error: { code: srv.status, message: 'The model is overloaded. Please try again later.' } }) });
+    reqs.push(body);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(MOCK) }] } }] }) });
   });
   // Simula dados antigos da v1.0 (sem "me") pra garantir que a atualização não quebra
@@ -138,6 +146,65 @@ const MOCK = {
   const last = reqs[reqs.length - 1];
   ok(last.contents[0].parts.filter(x => x.inlineData).length === 10, 'manda os 10 prints pra IA');
   ok(lastPrompt().includes('(10 print(s) anexado(s), em ordem.)'), 'prompt sabe quantos prints');
+
+  console.log('12) Servidor lotado (503): troca sozinho');
+  await page.evaluate(() => { const d = JSON.parse(localStorage.puxapapo); delete d.settings.good; localStorage.puxapapo = JSON.stringify(d); });
+  await page.reload();
+  await page.fill('#ctx-conversa', 'Ela: oi\nEla: tudo bem?');
+  srv.busy = new Set(['gemini-3.8-flash']); calls.length = 0;
+  const seen = [];
+  const poll = setInterval(async () => { try { const t = await page.textContent('#ld-conversa .ldt'); if (t && !seen.includes(t)) seen.push(t); } catch (e) {} }, 100);
+  await page.click('[data-run="conversa"]');
+  await page.waitForSelector('#out-conversa .pair', { timeout: 20000 });
+  clearInterval(poll);
+  ok(calls.join(',') === 'gemini-3.8-flash,gemini-3.8-flash,gemini-3.6-flash', 'tentou de novo no lotado e trocou pro próximo: ' + calls.join(','));
+  ok(seen.some(t => t.includes('Servidor lotado, tentando outro')), 'mostra "Servidor lotado, tentando outro..."');
+  ok((await page.textContent('#toast')).includes('Usei gemini-3.6-flash'), 'avisa qual servidor usou');
+  ok(await page.locator('#out-conversa .err').count() === 0, 'sem mensagem de erro');
+  calls.length = 0;
+  await page.click('[data-run="conversa"]'); await page.waitForSelector('#out-conversa .pair', { timeout: 20000 });
+  ok(calls[0] === 'gemini-3.6-flash', 'próxima análise já começa no servidor que funcionou');
+
+  console.log('13) Todos lotados');
+  srv.busy = new Set(MODELS); calls.length = 0;
+  await page.click('[data-run="conversa"]');
+  await page.waitForSelector('#out-conversa .err', { timeout: 40000 });
+  const errTxt = await page.textContent('#out-conversa .err');
+  ok(errTxt.includes('lotado') && errTxt.includes('Tentei'), 'erro claro depois de tentar vários: ' + errTxt.replace(/\n/g, ' '));
+  ok(new Set(calls).size >= 4, 'tentou ' + new Set(calls).size + ' servidores diferentes');
+
+  console.log('14) Limite (429) num modelo: pula sem repetir');
+  srv.busy = new Set(['gemini-3.6-flash']); srv.status = 429; calls.length = 0;
+  await page.click('[data-run="conversa"]'); await page.waitForSelector('#out-conversa .pair', { timeout: 20000 });
+  ok(calls.join(',') === 'gemini-3.6-flash,gemini-3.8-flash', '429 pula direto pro próximo: ' + calls.join(','));
+
+  console.log('15) Chave errada (401): não fica tentando');
+  srv.busy = new Set(MODELS); srv.status = 401; calls.length = 0;
+  await page.click('[data-run="conversa"]'); await page.waitForSelector('#out-conversa .err', { timeout: 20000 });
+  ok(calls.length === 1 && (await page.textContent('#out-conversa .err')).includes('Chave recusada'), 'para na 1ª tentativa e fala da chave');
+
+  console.log('16) Troca automática desligada');
+  srv.busy = new Set(['gemini-3.8-flash']); srv.status = 503;
+  await page.evaluate(() => { const d = JSON.parse(localStorage.puxapapo); delete d.settings.good; localStorage.puxapapo = JSON.stringify(d); });
+  await page.reload();
+  await page.click('nav [data-tab="ajustes"]');
+  ok(await page.isChecked('#autoSrv'), 'troca automática vem ligada');
+  await page.click('label.sw:has(#autoSrv)');
+  await page.click('nav [data-tab="conversa"]'); await page.fill('#ctx-conversa', 'Ela: oi'); calls.length = 0;
+  await page.click('[data-run="conversa"]'); await page.waitForSelector('#out-conversa .err', { timeout: 20000 });
+  ok(calls.length === 1, 'desligada: tenta só o escolhido');
+  await page.click('nav [data-tab="ajustes"]'); await page.click('label.sw:has(#autoSrv)');
+
+  console.log('17) Procurar o melhor servidor');
+  srv.busy = new Set(['gemini-3.8-flash']); srv.status = 503;
+  srv.delay = { 'gemini-3.6-flash': 900, 'gemini-3.5-flash-lite': 150, 'gemini-3.1-flash-lite': 600, 'gemini-3.5-pro': 1200 };
+  await page.click('#bestSrv');
+  await page.waitForSelector('#srvMsg ul', { timeout: 20000 });
+  const sm = await page.textContent('#srvMsg');
+  ok(sm.includes('Escolhido: gemini-3.5-flash-lite'), 'escolheu o mais rápido que respondeu');
+  ok(/❌ gemini-3.8-flash\s*lotado/.test(sm), 'mostra o lotado com ❌');
+  ok((await page.inputValue('#model')) === 'gemini-3.5-flash-lite', 'modelo selecionado atualizado');
+  srv.busy = new Set(); srv.delay = {};
 
   await page.click('nav [data-tab="conversa"]');
   await page.evaluate(() => document.querySelector('#out-conversa').scrollIntoView());

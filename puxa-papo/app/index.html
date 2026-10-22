@@ -153,7 +153,7 @@ small.mut{color:var(--mut)}
     <div class="toggle"><label class="sw"><input type="checkbox" id="learn-conversa" checked><span></span></label>Aprender meu jeito de escrever com este print</div>
   </div>
   <button class="btn main" data-run="conversa">✨ Analisar e sugerir</button>
-  <div class="loading" id="ld-conversa"><div class="spin"></div>Lendo a conversa e pensando no seu estilo...</div>
+  <div class="loading" id="ld-conversa"><div class="spin"></div><span class="ldt" data-t="Lendo a conversa e pensando no seu estilo...">Lendo a conversa e pensando no seu estilo...</span></div>
   <div id="out-conversa"></div>
 </section>
 
@@ -180,7 +180,7 @@ small.mut{color:var(--mut)}
     <p class="note">Sem print? Só descreva o story aqui que já funciona.</p>
   </div>
   <button class="btn main" data-run="story">✨ Sugerir resposta</button>
-  <div class="loading" id="ld-story"><div class="spin"></div>Analisando o story...</div>
+  <div class="loading" id="ld-story"><div class="spin"></div><span class="ldt" data-t="Analisando o story...">Analisando o story...</span></div>
   <div id="out-story"></div>
 </section>
 
@@ -205,7 +205,7 @@ small.mut{color:var(--mut)}
     <textarea id="ctx-musica" placeholder="Ex: estamos conversando faz 1 semana, ela curte trap e pagode..."></textarea>
   </div>
   <button class="btn main" data-run="musica">🎵 Sugerir</button>
-  <div class="loading" id="ld-musica"><div class="spin"></div>Ouvindo o clima da conversa...</div>
+  <div class="loading" id="ld-musica"><div class="spin"></div><span class="ldt" data-t="Ouvindo o clima da conversa...">Ouvindo o clima da conversa...</span></div>
   <div id="out-musica"></div>
 </section>
 
@@ -256,6 +256,9 @@ small.mut{color:var(--mut)}
     <select id="model"></select>
     <div class="row" style="margin-top:12px"><button class="btn" id="testKey" style="flex:1">Salvar e testar</button></div>
     <div id="keyMsg"></div>
+    <div class="toggle"><label class="sw"><input type="checkbox" id="autoSrv" checked><span></span></label>Se um servidor estiver lotado, trocar sozinho por outro</div>
+    <div class="row" style="margin-top:12px"><button class="btn ghost" id="bestSrv" style="flex:1">🔎 Procurar o melhor servidor</button></div>
+    <div id="srvMsg"></div>
   </div>
   <div class="card">
     <h3>💾 Backup</h3>
@@ -267,7 +270,7 @@ small.mut{color:var(--mut)}
     <p class="note" style="margin-top:0">Tudo fica salvo só no seu celular. Os prints vão apenas para a IA que você escolheu, na hora da análise. No plano grátis do Gemini o Google pode usar os dados pra melhorar os produtos dele, então evite mandar prints com dados sensíveis (endereço, documentos).</p>
     <button class="btn sm danger" id="wipe">Apagar tudo do app</button>
   </div>
-  <p class="note" style="text-align:center">Puxa Papo v1.2</p>
+  <p class="note" style="text-align:center">Puxa Papo v1.3</p>
 </section>
 </main>
 
@@ -309,6 +312,7 @@ function load() {
   for (const k of Object.keys(DEFAULT)) if (db[k] === undefined) db[k] = JSON.parse(JSON.stringify(DEFAULT[k]));
   db.settings.keys = Object.assign({ gemini: "", claude: "" }, db.settings.keys);
   db.settings.models = Object.assign({}, DEFAULT.settings.models, db.settings.models);
+  db.settings.modelList = Object.assign({ gemini: [], claude: [] }, db.settings.modelList);
   if (!db.me.auto && !db.me.descricao) { db.me.descricao = ME_PADRAO; db.me.auto = 1; save(); }
 }
 function save() { try { localStorage.setItem("puxapapo", JSON.stringify(db)); } catch (e) { toast("Memória cheia: limpe o histórico"); } }
@@ -548,45 +552,110 @@ function parseJSON(t) {
 function friendlyError(status, text, prov) {
   let msg = ""; try { const j = JSON.parse(text); msg = (j.error && (j.error.message || j.error.type)) || ""; } catch (e) { msg = String(text || "").slice(0, 200); }
   if (status === -1) return "Sem internet ou a conexão caiu. Confere o Wi-Fi/dados e tenta de novo.";
+  if (status === -2) return "O servidor da IA demorou demais pra responder.";
   if (status === 400 && /api key|API_KEY/i.test(msg)) return "Chave da API inválida. Vai em Ajustes e cola a chave de novo.";
   if (status === 401 || status === 403) return "Chave recusada (" + status + "). Confere a chave em Ajustes.";
   if (status === 404) return "Esse modelo não existe mais. Vai em Ajustes e toca em \"Salvar e testar\" pra escolher outro.";
   if (status === 429) return prov === "gemini" ? "Limite grátis do Gemini atingido. Espera 1 minuto e tenta de novo (ou troque para um modelo \"lite\" em Ajustes)." : "Muitas chamadas seguidas. Espera um pouco.";
-  if (status >= 500) return "O servidor da IA está instável agora (" + status + "). Tenta de novo em instantes.";
+  if (status >= 500) return "O servidor da IA está lotado/instável agora (" + status + ").";
   return "Erro " + status + ": " + msg;
 }
-async function callAI(userText, images) {
-  const s = db.settings, prov = s.provider, key = (s.keys[prov] || "").trim(), model = s.models[prov];
-  if (!key) throw new Error("Falta configurar a chave da IA. Vai em Ajustes (leva 1 minuto e é grátis com o Gemini).");
-  images = images || [];
+/* ---------------- Servidores: se um modelo estiver lotado, troca sozinho ---------------- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function httpT(method, url, headers, body, ms) {
+  return Promise.race([http(method, url, headers, body), sleep(ms).then(() => ({ status: -2, text: "timeout" }))]);
+}
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const claudeHeaders = key => ({ "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" });
+// Lista os modelos que a chave pode usar, do melhor pro pior.
+async function fetchModels(prov, key) {
+  const r = prov === "gemini"
+    ? await httpT("GET", GEMINI_URL + "?pageSize=200", { "x-goog-api-key": key }, "", 20000)
+    : await httpT("GET", "https://api.anthropic.com/v1/models?limit=50", claudeHeaders(key), "", 20000);
+  if (r.status !== 200) return { error: r };
+  const j = JSON.parse(r.text); let ids;
+  if (prov === "gemini") {
+    ids = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => m.name.replace(/^models\//, ""))
+      .filter(n => /^gemini-/.test(n) && !/(tts|live|image|embed|transcri|aqa|banana|omni|audio|robotics|computer)/i.test(n));
+    const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+    const score = n => ver(n) * 10 + (/flash/.test(n) && !/lite/.test(n) ? 3 : /lite/.test(n) ? 1 : 0) - (/preview|exp/.test(n) ? 0.5 : 0);
+    ids.sort((x, y) => score(y) - score(x));
+  } else ids = (j.data || []).map(m => m.id);
+  if (ids.length) { db.settings.modelList[prov] = ids; save(); }
+  return { ids };
+}
+// Ordem de tentativa: o que funcionou por último (se foi há pouco), o escolhido, e depois os outros.
+function modelChain(prov) {
+  const s = db.settings, list = s.modelList[prov].length ? s.modelList[prov] : KNOWN_MODELS[prov];
+  const heavy = prov === "gemini" ? /pro|ultra/ : /opus/;
+  const good = s.good && s.good.prov === prov && Date.now() - s.good.t < 30 * 60000 ? s.good.model : "";
+  return Array.from(new Set([good, s.models[prov], ...list.filter(n => !heavy.test(n)), ...list.filter(n => heavy.test(n))].filter(Boolean))).slice(0, 6);
+}
+// Uma tentativa num modelo. again = vale repetir no mesmo; fatal = problema da chave/conteúdo, não adianta trocar.
+async function callOnce(prov, model, key, userText, images, maxTok) {
   let r;
   if (prov === "gemini") {
     const body = {
       systemInstruction: { parts: [{ text: SYSTEM }] },
       contents: [{ role: "user", parts: [...images.map(b => ({ inlineData: { mimeType: "image/jpeg", data: b } })), { text: userText }] }],
-      generationConfig: { temperature: 0.95, responseMimeType: "application/json", maxOutputTokens: 16384 }
+      generationConfig: { temperature: 0.95, responseMimeType: "application/json", maxOutputTokens: maxTok || 16384 }
     };
-    r = await http("POST", `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      { "Content-Type": "application/json", "x-goog-api-key": key }, JSON.stringify(body));
-    if (r.status !== 200) throw new Error(friendlyError(r.status, r.text, prov));
-    const j = JSON.parse(r.text);
-    if (j.promptFeedback && j.promptFeedback.blockReason) throw new Error("A IA bloqueou esse conteúdo (" + j.promptFeedback.blockReason + ").");
-    const c = j.candidates && j.candidates[0];
-    const out = c && c.content && (c.content.parts || []).filter(p => !p.thought && p.text).map(p => p.text).join("");
-    if (!out) throw new Error("A IA não respondeu (" + ((c && c.finishReason) || "vazio") + "). Tenta de novo.");
-    return parseJSON(out);
+    r = await httpT("POST", `${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, { "Content-Type": "application/json", "x-goog-api-key": key }, JSON.stringify(body), 120000);
   } else {
     const body = {
-      model, max_tokens: 8000, temperature: 0.9, system: SYSTEM,
+      model, max_tokens: maxTok || 8000, temperature: 0.9, system: SYSTEM,
       messages: [{ role: "user", content: [...images.map(b => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b } })), { type: "text", text: userText }] }]
     };
-    r = await http("POST", "https://api.anthropic.com/v1/messages",
-      { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, JSON.stringify(body));
-    if (r.status !== 200) throw new Error(friendlyError(r.status, r.text, prov));
-    const j = JSON.parse(r.text);
-    const out = (j.content || []).filter(p => p.type === "text").map(p => p.text).join("");
-    return parseJSON(out);
+    r = await httpT("POST", "https://api.anthropic.com/v1/messages", claudeHeaders(key), JSON.stringify(body), 120000);
   }
+  const st = r.status, fail = (extra) => Object.assign({ ok: false, status: st, msg: friendlyError(st, r.text, prov) }, extra);
+  if (st !== 200) {
+    if (st === 401 || st === 403) return fail({ fatal: true });
+    if (st === 400 && /api key|API_KEY|credit|billing/i.test(r.text || "")) return fail({ fatal: true });
+    if (st === 404) db.settings.modelList[prov] = [];
+    return fail({ again: st === -1 || st === -2 || st >= 500 });
+  }
+  if (maxTok) return { ok: true };
+  try {
+    const j = JSON.parse(r.text); let out;
+    if (prov === "gemini") {
+      if (j.promptFeedback && j.promptFeedback.blockReason) return { ok: false, fatal: true, msg: "A IA bloqueou esse conteúdo (" + j.promptFeedback.blockReason + ")." };
+      const c = j.candidates && j.candidates[0];
+      out = c && c.content && (c.content.parts || []).filter(p => !p.thought && p.text).map(p => p.text).join("");
+      if (!out) return { ok: false, again: true, msg: "A IA não respondeu (" + ((c && c.finishReason) || "vazio") + ")." };
+    } else out = (j.content || []).filter(p => p.type === "text").map(p => p.text).join("");
+    return { ok: true, res: parseJSON(out) };
+  } catch (e) { return { ok: false, msg: e.message }; }
+}
+async function callAI(userText, images, say) {
+  const s = db.settings, auto = s.auto !== false;
+  say = say || (() => {});
+  if (!(s.keys[s.provider] || "").trim()) throw new Error("Falta configurar a chave da IA. Vai em Ajustes (leva 1 minuto e é grátis com o Gemini).");
+  images = images || [];
+  const provs = [s.provider, ...(auto ? ["gemini", "claude"].filter(p => p !== s.provider && (s.keys[p] || "").trim()) : [])];
+  let last = null, n = 0; const used = new Set();
+  for (const prov of provs) {
+    const key = s.keys[prov].trim();
+    if (auto && !s.modelList[prov].length) { try { await fetchModels(prov, key); } catch (e) {} }
+    const chain = auto ? modelChain(prov) : [s.models[prov]];
+    for (const model of chain) {
+      for (let a = 0; a < 2; a++) {
+        if (n) say(`Servidor lotado, tentando outro (${model})...`);
+        n++; used.add(model);
+        const r = await callOnce(prov, model, key, userText, images);
+        if (r.ok) {
+          s.good = { prov, model, t: Date.now() }; save();
+          if (model !== s.models[s.provider]) toast("Usei " + model + " (o principal estava ocupado)");
+          return r.res;
+        }
+        last = r;
+        if (r.fatal) throw new Error(r.msg);
+        if (!r.again || a === 1 || !auto) break;
+        await sleep(1500);
+      }
+    }
+  }
+  throw new Error((last ? last.msg : "Erro desconhecido.") + (used.size > 1 ? `\nTentei ${used.size} servidores diferentes (${n} tentativas) e nenhum respondeu. Espera 1 minutinho e tenta de novo.` : " Tenta de novo em instantes."));
 }
 
 /* ---------------- Deixa o texto ainda mais humano ---------------- */
@@ -641,7 +710,8 @@ async function run(mode, refine) {
   btn.disabled = true; ld.classList.add("on"); if (!refine) out.innerHTML = "";
   else out.querySelectorAll(".refine .chip").forEach(c => c.style.opacity = .5);
   try {
-    const res = await callAI(prompt, images);
+    const ldt = ld.querySelector(".ldt"); if (ldt) ldt.textContent = ldt.dataset.t;
+    const res = await callAI(prompt, images, m => { if (ldt) ldt.textContent = m; });
     if (!refine && (mode === "conversa" ? $("#learn-conversa").checked : true)) learnStyle(res);
     if (!refine && res.nome_dela && !o.personId && !db.people.some(p => p.nome.toLowerCase() === String(res.nome_dela).toLowerCase())) o.sugerirNome = res.nome_dela;
     if (refine) { res.transcricao = res.transcricao || o.res.transcricao; }
@@ -783,12 +853,12 @@ const KNOWN_MODELS = {
   gemini: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   claude: ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"]
 };
-let fetchedModels = { gemini: null, claude: null };
 function renderAjustes() {
   const s = db.settings, prov = s.provider;
   $$("#prov .chip").forEach(c => c.classList.toggle("on", c.dataset.v === prov));
   $("#apikey").value = s.keys[prov] || "";
-  const list = Array.from(new Set([s.models[prov], ...(fetchedModels[prov] || KNOWN_MODELS[prov])].filter(Boolean)));
+  const list = Array.from(new Set([s.models[prov], ...(s.modelList[prov].length ? s.modelList[prov] : KNOWN_MODELS[prov])].filter(Boolean)));
+  $("#autoSrv").checked = s.auto !== false;
   $("#model").innerHTML = list.map(m => `<option ${m === s.models[prov] ? "selected" : ""}>${esc(m)}</option>`).join("");
   $("#howto").innerHTML = prov === "gemini"
     ? `<ol class="steps"><li>Toque em <a href="#" data-url="https://aistudio.google.com/apikey" style="color:var(--rose)">abrir Google AI Studio</a></li><li>Entre com sua conta Google</li><li>Toque em <b>Create API key</b> (Criar chave)</li><li>Copie a chave, cole abaixo e toque em <b>Salvar e testar</b></li></ol><p class="note">É grátis, com limite de uso por minuto/dia. Pra uso pessoal sobra.</p>`
@@ -801,28 +871,34 @@ $("#testKey").onclick = async () => {
   s.keys[prov] = key; s.models[prov] = $("#model").value; save();
   const msg = $("#keyMsg"); if (!key) { msg.innerHTML = `<div class="err">Cola a chave primeiro.</div>`; return; }
   msg.innerHTML = `<p class="note">Testando...</p>`;
-  let r;
-  if (prov === "gemini") r = await http("GET", "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { "x-goog-api-key": key }, "");
-  else r = await http("GET", "https://api.anthropic.com/v1/models?limit=50", { "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, "");
-  if (r.status !== 200) { msg.innerHTML = `<div class="err">${esc(friendlyError(r.status, r.text, prov))}</div>`; return; }
   try {
-    const j = JSON.parse(r.text); let ids;
-    if (prov === "gemini") {
-      ids = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => m.name.replace(/^models\//, ""))
-        .filter(n => /^gemini-/.test(n) && !/(tts|live|image|embed|transcri|aqa|banana|omni|audio|robotics|computer)/i.test(n));
-      const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
-      const score = n => ver(n) * 10 + (/flash/.test(n) && !/lite/.test(n) ? 3 : /lite/.test(n) ? 1 : 0) - (/preview|exp/.test(n) ? 0.5 : 0);
-      ids.sort((a, b) => score(b) - score(a));
-    } else ids = (j.data || []).map(m => m.id);
-    if (ids.length) {
-      fetchedModels[prov] = ids;
-      if (!ids.includes(s.models[prov])) s.models[prov] = prov === "gemini" ? (ids.find(n => /flash/.test(n) && !/lite|pro/.test(n)) || ids[0]) : (ids.find(n => /sonnet/.test(n)) || ids[0]);
-      save();
-    }
+    const f = await fetchModels(prov, key);
+    if (f.error) { msg.innerHTML = `<div class="err">${esc(friendlyError(f.error.status, f.error.text, prov))}</div>`; return; }
+    if (f.ids.length && !f.ids.includes(s.models[prov])) { s.models[prov] = prov === "gemini" ? (f.ids.find(n => /flash/.test(n) && !/lite|pro/.test(n)) || f.ids[0]) : (f.ids.find(n => /sonnet/.test(n)) || f.ids[0]); save(); }
     renderAjustes();
     msg.innerHTML = `<p class="note" style="color:var(--ok)">✅ Chave funcionando! Modelo: <b>${esc(s.models[prov])}</b>. Já pode analisar prints.</p>`;
     renderBanner();
   } catch (e) { msg.innerHTML = `<div class="err">Resposta inesperada: ${esc(e.message)}</div>`; }
+};
+$("#autoSrv").onchange = () => { db.settings.auto = $("#autoSrv").checked; save(); };
+// Testa vários modelos ao mesmo tempo com uma pergunta minúscula e escolhe o mais rápido que respondeu.
+$("#bestSrv").onclick = async () => {
+  const s = db.settings, prov = s.provider, key = (s.keys[prov] || "").trim(), out = $("#srvMsg"), btn = $("#bestSrv");
+  if (!key) { out.innerHTML = `<div class="err">Configura a chave primeiro.</div>`; return; }
+  btn.disabled = true; out.innerHTML = `<p class="note">Testando os servidores...</p>`;
+  try {
+    if (!s.modelList[prov].length) await fetchModels(prov, key);
+    const list = (s.modelList[prov].length ? s.modelList[prov] : KNOWN_MODELS[prov]).slice(0, 8);
+    const res = await Promise.all(list.map(async m => {
+      const t0 = Date.now(); const r = await callOnce(prov, m, key, "Responda só com {}", [], 64);
+      return { m, ok: r.ok, ms: Date.now() - t0, status: r.status };
+    }));
+    const good = res.filter(x => x.ok).sort((x, y) => x.ms - y.ms);
+    if (good.length) { s.models[prov] = good[0].m; s.good = { prov, model: good[0].m, t: Date.now() }; save(); renderAjustes(); }
+    out.innerHTML = `<ul class="tight">${res.sort((x, y) => (y.ok - x.ok) || (x.ms - y.ms)).map(x => `<li>${x.ok ? "✅" : "❌"} ${esc(x.m)} <small class="mut">${x.ok ? (x.ms / 1000).toFixed(1) + "s" : x.status === 503 || x.status === 529 ? "lotado" : x.status === 429 ? "limite atingido" : "erro " + x.status}</small></li>`).join("")}</ul>` +
+      (good.length ? `<p class="note" style="color:var(--ok)">Escolhido: <b>${esc(good[0].m)}</b> (o mais rápido agora).</p>` : `<div class="err">Nenhum servidor respondeu agora. Espera 1 minutinho e tenta de novo.</div>`);
+  } catch (e) { out.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+  btn.disabled = false;
 };
 $("#exportB").onclick = () => { const b = JSON.parse(JSON.stringify(db)); b.settings.keys = { gemini: "", claude: "" }; copyText(JSON.stringify(b)); };
 $("#importB").onclick = () => {

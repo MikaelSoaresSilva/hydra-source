@@ -216,9 +216,9 @@ small.mut{color:var(--mut)}
   <div class="card" id="styleCard"></div>
   <div class="card">
     <h3>🙋 Sobre mim (minha descrição)</h3>
-    <p class="note" style="margin-top:0">Escreva quem você é. A IA usa isso pra sugerir coisas que combinam com você (e nunca inventa algo que não é seu).</p>
+    <p class="note" style="margin-top:0">Já veio preenchida com o que eu sei de você. Confere e completa (música que curte, seu jeito, o que procura). A IA usa isso pra sugerir coisas que combinam com você.</p>
     <textarea id="aboutMe" style="min-height:110px" placeholder="Ex: tenho 19 anos, moro em Campo Limpo Paulista, trabalho de dia e estudo à noite, curto academia, futebol e trap, sou mais tímido no começo mas brincalhão depois que pego intimidade, procuro algo sério"></textarea>
-    <div class="row" style="margin-top:10px"><button class="btn sm" id="saveMe">Salvar descrição</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="saveMe">Salvar descrição</button><button class="btn sm ghost" id="fillMe">Preencher automático</button></div>
   </div>
   <div class="card">
     <h3>✍️ Ensinar mais rápido</h3>
@@ -267,7 +267,7 @@ small.mut{color:var(--mut)}
     <p class="note" style="margin-top:0">Tudo fica salvo só no seu celular. Os prints vão apenas para a IA que você escolheu, na hora da análise. No plano grátis do Gemini o Google pode usar os dados pra melhorar os produtos dele, então evite mandar prints com dados sensíveis (endereço, documentos).</p>
     <button class="btn sm danger" id="wipe">Apagar tudo do app</button>
   </div>
-  <p class="note" style="text-align:center">Puxa Papo v1.1</p>
+  <p class="note" style="text-align:center">Puxa Papo v1.2</p>
 </section>
 </main>
 
@@ -300,6 +300,8 @@ const DEFAULT = {
   people: [],
   history: []
 };
+/* Preenchido com o que se sabe do Mikael pelos projetos dele (Titan, Backend Mastery, Life Leveling, MoneyFlow, Hydra). Ele pode editar. */
+const ME_PADRAO = "Mikael, 19 anos, de Campo Limpo Paulista (SP). Tô numa fase de evoluir em tudo: treino na academia focado em ganhar massa, estudo programação (backend) e crio meus próprios apps, tipo esse aqui. Curto games. Gosto de organizar a vida com metas, treino, estudo e grana no controle.";
 let db;
 function load() {
   try { db = JSON.parse(localStorage.getItem("puxapapo") || "null"); } catch (e) { db = null; }
@@ -307,6 +309,7 @@ function load() {
   for (const k of Object.keys(DEFAULT)) if (db[k] === undefined) db[k] = JSON.parse(JSON.stringify(DEFAULT[k]));
   db.settings.keys = Object.assign({ gemini: "", claude: "" }, db.settings.keys);
   db.settings.models = Object.assign({}, DEFAULT.settings.models, db.settings.models);
+  if (!db.me.auto && !db.me.descricao) { db.me.descricao = ME_PADRAO; db.me.auto = 1; save(); }
 }
 function save() { try { localStorage.setItem("puxapapo", JSON.stringify(db)); } catch (e) { toast("Memória cheia: limpe o histórico"); } }
 
@@ -730,8 +733,9 @@ document.addEventListener("click", e => {
 });
 
 /* ---------------- Tela: Meu estilo ---------------- */
-$("#saveMe").onclick = () => { db.me = { descricao: $("#aboutMe").value.trim() }; save(); toast("Descrição salva!"); };
-$("#aboutMe").onchange = () => { db.me = { descricao: $("#aboutMe").value.trim() }; save(); };
+$("#saveMe").onclick = () => { db.me.descricao = $("#aboutMe").value.trim(); save(); toast("Descrição salva!"); };
+$("#aboutMe").onchange = () => { db.me.descricao = $("#aboutMe").value.trim(); save(); };
+$("#fillMe").onclick = () => { $("#aboutMe").value = ME_PADRAO; db.me.descricao = ME_PADRAO; save(); toast("Preenchido! Confere e completa"); };
 function renderPerfil() {
   const st = db.style, p = st.perfil, lv = styleLevel();
   $("#aboutMe").value = (db.me && db.me.descricao) || "";

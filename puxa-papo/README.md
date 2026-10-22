@@ -2,6 +2,9 @@
 
 App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app fica em `app/index.html`.
 
+## v1.2
+- **Sobre mim** já vem preenchido com o que se sabe do Mikael (botão "Preencher automático" restaura).
+
 ## v1.1 (o que mudou)
 - **📝 Descrição**: campo para descrever a situação ou colar/escrever a conversa (`Ela:` / `Eu:`). Funciona **sem print**. Também no Story ("Descrição do story") e na Música.
 - **🙋 Sobre mim**: em *Meu estilo*, sua descrição pessoal, enviada à IA em toda análise.
@@ -11,11 +14,11 @@ App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app f
 - No Story, vários stories = uma resposta para cada.
 
 ## Instalar
-`dist/PuxaPapo-v1.1.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
+`dist/PuxaPapo-v1.2.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
 
 ## Reconstruir
 ```
-./build.sh PuxaPapo-original.apk 2 1.1
+./build.sh PuxaPapo-original.apk 3 1.2
 ```
 
 ## Testar

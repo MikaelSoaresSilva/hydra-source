@@ -95,7 +95,13 @@ const MOCK = {
   await page.click('label.sw:has(#each-conversa)');
 
   console.log('8) Sobre mim (descrição)');
+  ok(reqs[0].contents[0].parts.map(x => x.text || '').join('').includes('Campo Limpo Paulista'), 'descrição automática vai pra IA desde a 1ª análise');
   await page.click('nav [data-tab="perfil"]');
+  ok((await page.inputValue('#aboutMe')).startsWith('Mikael, 19 anos, de Campo Limpo Paulista'), 'Sobre mim já vem preenchido automaticamente');
+  await page.fill('#aboutMe', ''); await page.click('#saveMe'); await page.reload(); await page.click('nav [data-tab="perfil"]');
+  ok((await page.inputValue('#aboutMe')) === '', 'se ele apagar, não preenche de novo sozinho');
+  await page.click('#fillMe');
+  ok((await page.inputValue('#aboutMe')).includes('academia'), 'botão "Preencher automático" restaura');
   await page.fill('#aboutMe', 'tenho 19 anos, curto trap e academia');
   await page.click('#saveMe');
   await page.reload();

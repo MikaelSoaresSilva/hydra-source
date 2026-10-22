@@ -133,6 +133,9 @@ export interface ProgramConfig {
   protocol?: 'olympia';
   /** Semanas em que o deload foi aplicado por decisão baseada em dados. */
   deloadWeeks?: number[];
+  /** Plano fechado: o usuário só registra; trocas apenas por dor ou aparelho indisponível. */
+  locked?: boolean;
+  olympiaVersion?: number;
 }
 
 export interface ProgramRow extends Row {

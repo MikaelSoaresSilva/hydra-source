@@ -101,6 +101,7 @@ export function Workout() {
   if (sessions.loading || !draft) return <Loading />;
   if (!session) return <Card><p>Sessão não encontrada.</p><Link to="/treino">Voltar</Link></Card>;
   const program = programs.data.find((p) => p.id === session.program_id);
+  const locked = !!program?.config.locked;
 
   function update(i: number, patch: Partial<Draft[number]>) { setDraft((d) => ({ ...d!, [i]: { ...d![i], ...patch } })); }
   function updateSet(i: number, j: number, patch: Partial<DraftSet>) {
@@ -154,6 +155,15 @@ export function Workout() {
     setSwapIdx(null);
   }
 
+  /** Protocolo travado: troca só por dor ou aparelho indisponível, sempre pela 1ª alternativa definida no plano. */
+  async function forcedSwap(i: number, reason: string) {
+    const alt = alternativesFor(session.exercises[i].exerciseKey, program?.config.equipment)[0];
+    if (!alt) { toast('Sem alternativa compatível: pule este exercício hoje.'); return; }
+    if (!confirm(`${reason}: trocar por ${alt.name} só nesta sessão?`)) return;
+    await swapExercise(i, alt.key);
+    toast(`Hoje: ${alt.name}. Na próxima sessão o plano volta ao exercício original.`);
+  }
+
   async function complete() {
     setError(null);
     try {
@@ -193,9 +203,10 @@ export function Workout() {
                 <h2>{ex.name}</h2>
                 <small className="muted">{MUSCLE_LABEL[ex.muscle]} · {ex.sets} × {ex.repRange[0]}–{ex.repRange[1]} · descanso {ex.restSec}s · RIR alvo {ex.rir}</small>
               </div>
-              {!readOnly && <button className="btn ghost sm" onClick={() => setSwapIdx(swapIdx === i ? null : i)}>Trocar</button>}
+              {!readOnly && !locked && <button className="btn ghost sm" onClick={() => setSwapIdx(swapIdx === i ? null : i)}>Trocar</button>}
+              {!readOnly && locked && <button className="btn ghost sm" onClick={() => void forcedSwap(i, 'Aparelho ocupado ou inexistente')}>Aparelho indisponível</button>}
             </div>
-            {swapIdx === i && (
+            {swapIdx === i && !locked && (
               <div className="stack" style={{ margin: '8px 0' }}>
                 <small>Substituir só nesta sessão (para trocar sempre, use Treino → Trocar):</small>
                 {alternativesFor(ex.exerciseKey, program?.config.equipment).slice(0, 6).map((a) => (
@@ -209,6 +220,7 @@ export function Workout() {
               <summary>Aquecimento, técnica e demonstração</summary>
               <p className="hint">{ex.warmup}</p>
               <p className="hint">{meta.cues}</p>
+              {(meta.primary === 'biceps' || meta.primary === 'brachialis') && <p className="hint"><strong>Bíceps:</strong> {meta.primary === 'biceps' ? 'no topo, gire o mindinho para fora (supinação máxima) e segure 1 s contraído; desça até o cotovelo quase estender.' : 'pegada neutra, cotovelo colado; o braquial cresce por baixo do bíceps e ajuda a "empurrar" o bíceps para cima.'}</p>}
               <p className="hint"><strong>Respiração:</strong> solte o ar na fase de esforço (subir/empurrar/puxar) e inspire ao voltar. Evite prender o ar, que eleva a pressão arterial.</p>
               <p className="hint"><strong>Até onde ir:</strong> pare quando a técnica quebrar (falha técnica), mesmo que ainda saia uma repetição roubada. Use amplitude completa, que rende mais que a parcial.{ex.exerciseKey.includes('bench') ? ' Supino com barra livre: nunca vá à falha sem alguém ajudando.' : ''}</p>
               <a href={demoSearchUrl(meta)} target="_blank" rel="noreferrer noopener">Buscar vídeo de demonstração ↗</a>
@@ -229,10 +241,10 @@ export function Workout() {
               {d.feedback && (
                 <div className={`adjust ${d.feedback.action}`} role="status">
                   {d.feedback.pr && <strong>🏆 Recorde! </strong>}{d.feedback.message}
-                  {d.feedback.action === 'stop' && !readOnly && <> <button className="btn ghost sm" onClick={() => setSwapIdx(i)}>Trocar exercício</button></>}
+                  {d.feedback.action === 'stop' && !readOnly && <> <button className="btn ghost sm" onClick={() => (locked ? void forcedSwap(i, 'Dor') : setSwapIdx(i))}>Trocar exercício</button></>}
                 </div>
               )}
-              {!readOnly && <button className="btn ghost sm" onClick={() => update(i, { sets: [...d.sets, { load: d.sets.at(-1)?.load ?? null, reps: null, rir: null, done: false }] })}>+ série</button>}
+              {!readOnly && !locked && <button className="btn ghost sm" onClick={() => update(i, { sets: [...d.sets, { load: d.sets.at(-1)?.load ?? null, reps: null, rir: null, done: false }] })}>+ série</button>}
             </div>
             <div className="row" style={{ marginTop: 8 }}>
               <label className="check"><input type="checkbox" checked={d.technique} onChange={(e) => update(i, { technique: e.target.checked })} /> Técnica ok</label>

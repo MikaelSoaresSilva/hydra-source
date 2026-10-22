@@ -1,6 +1,6 @@
 import { EXERCISE_BY_KEY, getExercise, resolveExercise } from './exercises';
 import { MIN_WEEKLY_SETS } from './science';
-import { OLYMPIA_DAYS, OLYMPIA_PRIORITIES, olympiaPhase } from './olympia';
+import { OLYMPIA_DAYS, OLYMPIA_PRIORITIES, OLYMPIA_VERSION, olympiaPhase } from './olympia';
 import { MUSCLE_LABEL, type Muscle, type ProgramConfig, type ProgramDay, type SlotPrescription, type TrainingProfile } from './types';
 
 type SlotTpl = [exerciseKey: string, sets: number, restSec: number];
@@ -141,7 +141,7 @@ export function generateProgram({ training, overrides = {}, blocked = new Set(),
   if (days.some((d) => estimateMinutes(d.slots) > sessionMinutes)) {
     notes.push('Mesmo reduzido, algum dia passa do tempo disponível; considere aumentar o tempo ou aceitar menos exercícios.');
   }
-  return { version: 1, trainingDays: Array.from(new Set(days.map((d) => d.dayIndex))), sessionMinutes, priorities, equipment, days, notes, ...(protocol ? { protocol, deloadWeeks: [] } : {}) };
+  return { version: 1, trainingDays: Array.from(new Set(days.map((d) => d.dayIndex))), sessionMinutes, priorities, equipment, days, notes, ...(protocol === 'olympia' ? { protocol, deloadWeeks: [], locked: true, olympiaVersion: OLYMPIA_VERSION } : {}) };
 }
 
 /** Séries semanais base (sem bônus de fase): direto = 1, secundário = 0,5. */

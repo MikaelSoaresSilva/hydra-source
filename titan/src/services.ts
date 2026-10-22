@@ -21,7 +21,8 @@ export function overridesMap(rows: OverrideRow[]) {
 export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia'): Promise<ProgramRow> {
   const old = await store.list<ProgramRow>('programs', { eq: { status: 'active' } });
   for (const p of old) await store.upsert('programs', { ...p, status: 'archived' });
-  const ov = overridesMap(await store.list<OverrideRow>('exercise_overrides'));
+  // Protocolo travado: trocas pessoais antigas não entram no plano.
+  const ov = protocol === 'olympia' ? { map: {}, blocked: new Set<string>() } : overridesMap(await store.list<OverrideRow>('exercise_overrides'));
   const config = generateProgram({ training: profile.training, overrides: ov.map, blocked: ov.blocked, protocol });
   const row: ProgramRow = protocol === 'olympia'
     ? { id: uuid(), user_id: store.userId, name: 'Protocolo Olympia — 60 dias', start_date: startDate, weeks: OLYMPIA_WEEKS, config, status: 'active' }
@@ -67,7 +68,7 @@ export function recoveryScore(checkins: CheckinRow[], today = todayISO()): numbe
 export function buildSessionPlan(
   program: ProgramRow, week: number, dayPos: number, overrides: OverrideRow[], logs: SetLogRow[], recScore: number | null,
 ): PlannedExercise[] {
-  const ov = overridesMap(overrides);
+  const ov = program.config.locked ? { map: {}, blocked: new Set<string>() } : overridesMap(overrides);
   let firstCompound = true;
   return prescribeDay(program.config, dayPos, week, program.weeks).map((s) => {
     const ex = resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked);
@@ -135,4 +136,10 @@ export function downloadJSON(data: unknown, filename: string) {
 export async function applyDeload(store: DataStore, program: ProgramRow, week: number): Promise<void> {
   const weeks = Array.from(new Set([...(program.config.deloadWeeks ?? []), week])).sort((a, b) => a - b);
   await store.upsert('programs', { ...program, config: { ...program.config, deloadWeeks: weeks } } as unknown as Record<string, unknown>);
+}
+
+/** Atualiza um Protocolo Olympia antigo para a versão atual no mesmo ciclo (mantém semana, histórico e deloads). */
+export async function upgradeOlympia(store: DataStore, program: ProgramRow, profile: Profile): Promise<void> {
+  const config = generateProgram({ training: profile.training, protocol: 'olympia' });
+  await store.upsert('programs', { ...program, config: { ...config, deloadWeeks: program.config.deloadWeeks ?? [] } } as unknown as Record<string, unknown>);
 }

@@ -16,22 +16,34 @@ export const OLYMPIA_PRIORITIES: Muscle[] = ['biceps', 'triceps', 'brachialis', 
  * distribuído para que nenhuma sessão de braço passe de ~8 séries diretas.
  */
 export const OLYMPIA_DAYS: DayTpl[] = [
-  { name: 'Superior A — largura', focus: 'Dorsais, deltoide lateral, peitoral superior e braços (posição alongada)', slots: [
+  { name: 'Superior A — largura', focus: 'Dorsais (largura), deltoide lateral, peitoral superior e braços em posição alongada', slots: [
     ['lat_pulldown', 3, 150], ['incline_db_press', 3, 150], ['chest_supported_row', 3, 120], ['db_lateral_raise', 4, 75],
-    ['cable_fly', 2, 90], ['incline_db_curl', 3, 90], ['overhead_cable_extension', 3, 90]] },
+    ['straight_arm_pulldown', 2, 75], ['incline_db_curl', 3, 90], ['overhead_cable_extension', 3, 90]] },
   { name: 'Inferior A — quadríceps', focus: 'Quadríceps, posteriores, panturrilhas e abdômen', slots: [
     ['back_squat', 3, 180], ['romanian_deadlift', 3, 150], ['leg_press', 2, 150], ['leg_extension', 3, 90],
     ['lying_leg_curl', 2, 90], ['standing_calf_raise', 4, 75], ['cable_crunch', 3, 75]] },
   { name: 'Braços e ombros', focus: 'Especialização: bíceps, braquial, tríceps, deltoides lateral e posterior', slots: [
     ['ez_bar_curl', 3, 120], ['skull_crusher_ez', 3, 120], ['hammer_curl', 3, 90], ['rope_pushdown', 3, 75],
-    ['bayesian_cable_curl', 2, 75], ['cable_lateral_raise', 4, 60], ['reverse_pec_deck', 3, 60]] },
-  { name: 'Superior B — espessura', focus: 'Peitoral, costas (espessura), ombros e tríceps', slots: [
-    ['bench_press', 3, 180], ['pull_up', 3, 150], ['seated_cable_row', 3, 120], ['incline_smith_press', 2, 120],
-    ['machine_shoulder_press', 2, 120], ['db_lateral_raise', 3, 75], ['machine_dip', 2, 90]] },
-  { name: 'Inferior B + braços', focus: 'Quadríceps, posteriores, glúteos, panturrilhas e volume extra de braço', slots: [
+    ['bayesian_cable_curl', 3, 75], ['cable_lateral_raise', 4, 60], ['reverse_pec_deck', 3, 60]] },
+  { name: 'Superior B — peitoral superior e espessura', focus: 'Peitoral superior primeiro, costas (espessura), deltoide lateral e tríceps', slots: [
+    ['incline_smith_press', 3, 150], ['pull_up', 3, 150], ['bench_press', 2, 180], ['seated_cable_row', 3, 120],
+    ['cable_fly', 2, 90], ['db_lateral_raise', 4, 75], ['machine_dip', 2, 90]] },
+  { name: 'Inferior B + braços', focus: 'Quadríceps, posteriores, glúteos, panturrilhas e volume extra de braço e ombro', slots: [
     ['hack_squat', 3, 150], ['seated_leg_curl', 3, 90], ['bulgarian_split_squat', 2, 120], ['leg_press_calf', 4, 60],
     ['cable_lateral_raise', 3, 60], ['rope_hammer_curl', 2, 75], ['db_overhead_extension', 2, 75], ['hanging_leg_raise', 2, 60]] },
 ];
+
+/** Versão do protocolo: ciclos antigos são atualizados no lugar (mantendo semana e histórico). */
+export const OLYMPIA_VERSION = 2;
+
+/**
+ * Critério de deload (aplicado automaticamente no protocolo travado): queda de desempenho em
+ * ≥ 2 exercícios nas 3 últimas sessões E recuperação baixa (média ≤ 2,5/5 ou TQR < 13 nas 2 últimas sessões).
+ */
+export function deloadCriteria(decliningCount: number, recovery: number | null, lastTqrs: number[]): boolean {
+  const poor = (recovery !== null && recovery <= 2.5) || (lastTqrs.length >= 2 && lastTqrs.slice(-2).every((t) => t < 13));
+  return decliningCount >= 2 && poor;
+}
 
 /**
  * Fases por dias do plano (sem deload automático — só quando os dados indicarem):
@@ -75,7 +87,7 @@ export const OLYMPIA_RULES = {
   ],
   reduceVolume: [
     'Corte 1/3 do volume do músculo (ou aplique deload) se houver queda de desempenho em ≥ 2 exercícios por 2 sessões seguidas com TQR < 13, ou dor articular que persiste no dia seguinte.',
-    'Deload não é automático: use o botão "Aplicar deload nesta semana" quando o app recomendar por fadiga e queda de desempenho.',
+    'Deload não segue o calendário: o app aplica sozinho na semana em que o critério (queda de desempenho + recuperação baixa) for atingido.',
   ],
   weight: [
     'Use a média semanal (3–7 pesagens), nunca uma pesagem isolada.',

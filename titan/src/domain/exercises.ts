@@ -46,6 +46,8 @@ export const EXERCISES: Exercise[] = [
   // Costas
   E('lat_pulldown', 'Puxada alta (pulldown)', 'back', ['biceps', 'brachialis'], ['cable'], 'compound', [8, 12], 2.5,
     'Peito para cima, puxe os cotovelos em direção ao quadril, controle a volta até alongar.', ['pull_up', 'machine_pulldown']),
+  E('straight_arm_pulldown', 'Pulldown com braços estendidos (pullover na polia)', 'back', [], ['cable'], 'isolation', [10, 15], 2.5,
+    'Braços quase retos, leve inclinação do tronco; leve a barra/corda até a coxa usando as dorsais, sem dobrar os cotovelos. Alongue bem na volta.', ['lat_pulldown', 'machine_pulldown']),
   E('machine_pulldown', 'Puxada articulada (máquina)', 'back', ['biceps'], ['machine'], 'compound', [8, 12], 5,
     'Puxe com os cotovelos, sem balançar o tronco.', ['lat_pulldown', 'pull_up']),
   E('pull_up', 'Barra fixa', 'back', ['biceps', 'brachialis'], ['pullup_bar'], 'compound', [5, 10], 2.5,

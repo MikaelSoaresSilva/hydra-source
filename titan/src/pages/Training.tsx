@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile, useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
@@ -8,8 +8,8 @@ import { estimateMinutes, plannedWeeklyVolume, phaseFor, prescribeDay } from '..
 import { nextSession, projectedEnd } from '../domain/schedule';
 import { weeklyVolume } from '../domain/volume';
 import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
-import { applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
-import { anthropometry, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
+import { applyDeload, createProgram, overridesMap, recoveryScore, startSession, upgradeOlympia } from '../services';
+import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VERSION, OLYMPIA_VOLUME } from '../domain/olympia';
 import { decliningExercises } from '../domain/progression';
 import { recentRecovery } from '../domain/recommendations';
 import { Card, Empty, ErrorBox, Loading, fmt, useToast } from '../ui/components';
@@ -35,6 +35,13 @@ export function Training() {
   const { toast, node } = useToast();
   const program = programs.data[0];
   const today = todayISO();
+  const needsUpgrade = !!program && program.config.protocol === 'olympia' && program.config.olympiaVersion !== OLYMPIA_VERSION;
+  const upgrading = useRef(false);
+  useEffect(() => {
+    if (!needsUpgrade || !profile || upgrading.current) return;
+    upgrading.current = true;
+    void upgradeOlympia(store, program!, profile).then(() => toast('Protocolo Olympia atualizado para a versão 2 (mesma semana, histórico mantido).'));
+  }, [needsUpgrade, profile, program, store, toast]);
 
   const info = useMemo(() => {
     if (!program) return null;
@@ -70,7 +77,9 @@ export function Training() {
   const olympia = program.config.protocol === 'olympia';
   const declining = decliningExercises(logs.data.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -28)));
   const rec = recentRecovery(checkins.data, today);
-  const deloadSuggested = declining.length >= 2 && ((rec.recovery !== null && rec.recovery < 3) || mine.filter((x) => x.readiness).slice(-2).every((x) => x.readiness!.tqr < 13));
+  const lastTqrs = [...mine].filter((x) => x.readiness).sort((a, b) => ((a.started_at ?? '') < (b.started_at ?? '') ? -1 : 1)).map((x) => x.readiness!.tqr);
+  const deloadSuggested = deloadCriteria(declining.length, rec.recovery, lastTqrs);
+  const locked = !!program.config.locked;
   const ratios = lastMetric.data[0] ? anthropometry(lastMetric.data[0] as unknown as Record<string, unknown>, profile?.height_cm) : [];
 
   async function startOlympia() {
@@ -84,6 +93,12 @@ export function Training() {
   async function begin(withTqr: number | null) {
     setBusy(true); setError(null);
     try {
+      // Protocolo travado: o deload entra sozinho quando o critério é atingido.
+      if (locked && !inProgress && deloadSuggested && !(program.config.deloadWeeks ?? []).includes(next.week)) {
+        await applyDeload(store, program, next.week);
+        program.config.deloadWeeks = [...(program.config.deloadWeeks ?? []), next.week];
+        toast('Critério de deload atingido: esta semana é de deload (metade das séries, ~85% da carga).');
+      }
       const s = inProgress ?? await startSession(store, program, next.sequence, overrides.data, logs.data, recoveryScore(checkins.data), withTqr);
       nav(`/treino/sessao/${s.id}`);
     } catch (e) { setError((e as Error).message); setBusy(false); }
@@ -146,7 +161,7 @@ export function Training() {
               return (
                 <li key={s.slotId} className="row between">
                   <span><strong>{ex.name}</strong><br /><small>{MUSCLE_LABEL[ex.primary]} · {s.sets}× {ex.repRange[0]}–{ex.repRange[1]} · RIR {s.rir} · {s.restSec}s</small></span>
-                  <button className="btn ghost sm" onClick={() => setSwapFor(swapFor === s.exerciseKey ? null : s.exerciseKey)}>Trocar</button>
+                  {!locked && <button className="btn ghost sm" onClick={() => setSwapFor(swapFor === s.exerciseKey ? null : s.exerciseKey)}>Trocar</button>}
                   {swapFor === s.exerciseKey && (
                     <div className="stack" style={{ width: '100%' }}>
                       <small>Alternativas compatíveis com seus equipamentos:</small>
@@ -198,7 +213,8 @@ export function Training() {
             <p><strong>Reduzir</strong></p><ul>{OLYMPIA_RULES.reduceVolume.map((r) => <li key={r}><small>{r}</small></li>)}</ul>
             <p><strong>Peso e calorias</strong></p><ul>{OLYMPIA_RULES.weight.map((r) => <li key={r}><small>{r}</small></li>)}</ul>
           </details>
-          {(program.config.deloadWeeks ?? []).includes(next.week) ? <p className="hint">Deload aplicado nesta semana (semana {next.week}).</p> : (
+          {(program.config.deloadWeeks ?? []).includes(next.week) ? <p className="hint">Deload aplicado nesta semana (semana {next.week}).</p>
+            : locked ? <p className="hint">{deloadSuggested ? 'Critério de deload atingido: ele será aplicado ao iniciar o próximo treino.' : 'Deload: o app aplica sozinho quando o critério for atingido.'}</p> : (
             <button className={`btn ${deloadSuggested ? 'primary' : 'ghost'} sm`} onClick={async () => {
               if (!confirm(deloadSuggested ? 'Aplicar deload nesta semana (metade das séries, ~85% da carga, RIR 3–4)?' : 'O critério de deload NÃO foi atingido pelos seus registros. Aplicar mesmo assim nesta semana?')) return;
               await applyDeload(store, program, next.week); toast('Deload aplicado nesta semana.');
@@ -245,7 +261,8 @@ export function Training() {
         ))}
         {program.config.notes.map((n, i) => <p key={i} className="hint">• {n}</p>)}
         {olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
-        <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!, undefined, program.config.protocol); }}>Regerar ciclo (ex.: mudei de academia)</button>
+        {locked ? <p className="hint">🔒 Plano fechado: você só registra o que fez. A carga de cada série é ajustada pelo app; trocas só acontecem por dor ou aparelho indisponível, dentro do próprio treino.</p>
+          : <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!, undefined, program.config.protocol); }}>Regerar ciclo (ex.: mudei de academia)</button>}
       </Card>
 
       <Card title="Histórico">

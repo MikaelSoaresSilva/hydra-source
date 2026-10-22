@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { baseWeeklySets, estimateMinutes, generateProgram, phaseFor, prescribeDay } from './program';
-import { OLYMPIA_DAYS, OLYMPIA_VOLUME, OLYMPIA_WEEKS, anthropometry, olympiaPhase } from './olympia';
+import { OLYMPIA_DAYS, OLYMPIA_VOLUME, OLYMPIA_WEEKS, anthropometry, deloadCriteria, olympiaPhase } from './olympia';
 import { getExercise } from './exercises';
 import type { Muscle } from './types';
 
@@ -63,4 +63,31 @@ test('antropometria com a ficha informada', () => {
   expect(get('IMC')).toBe('23,1');
   expect(get('Braço: diferença D/E')).toBe('0 cm');
   expect(r.some((x) => x.label === 'Ombros / cintura')).toBe(false); // ombro não informado
+});
+
+describe('Olympia v2 — plano fechado', () => {
+  test('gera travado, versão atual, peitoral superior primeiro na Superior B e pullover para dorsais', () => {
+    const c = gen();
+    expect(c.locked).toBe(true);
+    expect(c.olympiaVersion).toBe(2);
+    expect(c.days[3].slots[0].exerciseKey).toBe('incline_smith_press');
+    expect(c.days[0].slots.some((s) => s.exerciseKey === 'straight_arm_pulldown')).toBe(true);
+  });
+  test('bíceps com 3 exercícios em posições diferentes (alongado, neutro, polia atrás do corpo)', () => {
+    const keys = gen().days.flatMap((d) => d.slots.map((s) => s.exerciseKey));
+    for (const k of ['incline_db_curl', 'ez_bar_curl', 'bayesian_cable_curl', 'hammer_curl']) expect(keys).toContain(k);
+  });
+  test('critério de deload automático', () => {
+    expect(deloadCriteria(2, 2.5, [])).toBe(true);
+    expect(deloadCriteria(2, null, [12, 11])).toBe(true);
+    expect(deloadCriteria(1, 2, [10, 10])).toBe(false);
+    expect(deloadCriteria(3, 4, [15, 12])).toBe(false);
+  });
+  test('plano travado ignora trocas pessoais antigas', async () => {
+    const { buildSessionPlan } = await import('../services');
+    const c = gen();
+    const program = { id: 'p', weeks: OLYMPIA_WEEKS, config: c } as never;
+    const ov = [{ exercise_key: 'lat_pulldown', replacement_key: 'machine_pulldown' }] as never;
+    expect(buildSessionPlan(program, 1, 0, ov, [], null)[0].exerciseKey).toBe('lat_pulldown');
+  });
 });

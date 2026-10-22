@@ -113,7 +113,7 @@ export function Evolution() {
       const id = uuid();
       const path = `${store.userId}/${id}.jpg`;
       await store.uploadPhoto(path, blob);
-      await store.upsert('photos', { id, category: ph.category, storage_path: path, taken_at: new Date().toISOString(), lighting: ph.lighting, distance: ph.distance, pose: ph.pose, time_of_day: ph.time_of_day, pump: ph.pump, notes: ph.notes || null });
+      await store.upsert('photos', { id, category: ph.category, storage_path: path, taken_at: new Date(file.lastModified && file.lastModified < Date.now() ? file.lastModified : Date.now()).toISOString(), lighting: ph.lighting, distance: ph.distance, pose: ph.pose, time_of_day: ph.time_of_day, pump: ph.pump, notes: ph.notes || null });
       toast('Foto salva com privacidade.');
     } catch (e) {
       setError(`Falha ao salvar a foto: ${(e as Error).message}`);
@@ -190,8 +190,8 @@ export function Evolution() {
             </div>
             <label className="check"><input type="checkbox" checked={ph.pump} onChange={(e) => setPh({ ...ph, pump: e.target.checked })} /> Tirada após treino (com pump)</label>
             <label className="btn primary big" style={{ marginTop: 8 }}>
-              {busy ? 'Enviando…' : 'Tirar / escolher foto'}
-              <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ''; }} />
+              {busy ? 'Enviando…' : 'Tirar ou escolher fotos (galeria, várias de uma vez)'}
+              <input type="file" accept="image/*" multiple className="sr-only" aria-label="Escolher fotos" disabled={busy} onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; void (async () => { for (const f of fs) await upload(f); })(); }} />
             </label>
           </Card>
           {selected.length === 2 && (

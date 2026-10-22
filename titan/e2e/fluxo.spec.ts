@@ -31,9 +31,13 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await expect(page.getByText('Próxima sessão: Superior A — largura')).toBeVisible();
   await page.getByRole('button', { name: 'Iniciar treino' }).click();
   // Prontidão (TQR) abaixo de 13 → sessão ajustada
-  await page.getByLabel('Prontidão TQR').selectOption('11');
+  await page.getByLabel('Prontidão TQR').selectOption('15');
   await page.getByRole('button', { name: 'Começar' }).click();
-  await expect(page.getByText(/TQR 11 .*abaixo de 13/)).toBeVisible();
+  await expect(page.getByText(/TQR 15 .*mantida como planejada/)).toBeVisible();
+  // Plano fechado: sem trocar livremente nem somar séries
+  await expect(page.getByRole('button', { name: 'Trocar', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '+ série' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Aparelho indisponível' }).first()).toBeVisible();
   await page.getByLabel('Carga série 1').first().fill('60');
   await page.getByLabel('Repetições série 1').first().fill('8');
   await page.getByLabel('RIR série 1').first().fill('3');
@@ -42,12 +46,11 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await expect(page.getByText(/Série 1: 8 reps com RIR 3: dentro do alvo/)).toBeVisible();
   // Série 2 fácil demais → a carga da série seguinte sobe sozinha
   await page.getByRole('button', { name: 'Pular' }).click();
-  await page.getByRole('button', { name: '+ série' }).first().click();
   await page.getByLabel('Repetições série 2').first().fill('15');
   await page.getByLabel('RIR série 2').first().fill('5');
   await page.getByRole('button', { name: 'Concluir série 2' }).first().click();
-  await expect(page.getByText(/Série 2: 15 reps com RIR 5: acima do alvo. Próxima série: 67,5 kg \(\+7,5 kg\)/)).toBeVisible();
-  await expect(page.getByLabel('Carga série 3').first()).toHaveValue('67,5');
+  await expect(page.getByText(/Série 2: 15 reps com RIR 5: acima do alvo. Próxima série: 70 kg \(\+10 kg\)/)).toBeVisible();
+  await expect(page.getByLabel('Carga série 3').first()).toHaveValue('70');
   await page.screenshot({ path: `test-results/treino-${info.project.name}.png` });
 
   // Recarrega: série continua salva
@@ -166,4 +169,26 @@ test('missão: começar, marcar hábito e ver o progresso no painel', async ({ p
   await page.screenshot({ path: `test-results/missao-${info.project.name}.png`, fullPage: true });
   await page.getByRole('link', { name: 'Hoje' }).first().click();
   await expect(page.getByRole('heading', { name: 'Missão de hoje' })).toBeVisible();
+});
+
+test('fotos: escolher várias da galeria de uma vez', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await page.getByRole('link', { name: 'Evolução' }).first().click();
+  await page.getByRole('tab', { name: 'Fotos' }).click();
+  // PNG 1×1 gerado no teste (nenhuma foto real no repositório)
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.getByLabel('Escolher fotos').setInputFiles([
+    { name: 'a.png', mimeType: 'image/png', buffer: png },
+    { name: 'b.png', mimeType: 'image/png', buffer: png },
+  ]);
+  await expect(page.locator('.photo-grid img')).toHaveCount(2);
 });

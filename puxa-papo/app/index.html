@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Puxa Papo</title>
+<style>
+:root{
+  --bg:#0f0c17; --bg2:#171223; --card:#1d1730; --card2:#251d3c; --line:#33294f;
+  --txt:#f3eefb; --mut:#a89cc4; --dim:#776c93;
+  --rose:#ff5a7a; --vio:#7a4cff; --gold:#ffd666; --ok:#3ddc97; --warn:#ffb547; --bad:#ff6b6b;
+  --grad:linear-gradient(135deg,#ff5a7a,#a24cff 60%,#7a4cff);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45}
+body{padding-bottom:78px;min-height:100vh}
+header{position:sticky;top:0;z-index:5;background:rgba(15,12,23,.92);backdrop-filter:blur(10px);padding:14px 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #221b35}
+header .logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-weight:800;font-size:15px}
+header h1{font-size:18px;margin:0;font-weight:750;letter-spacing:-.2px}
+header .sub{margin-left:auto;font-size:12px;color:var(--mut);background:var(--card);padding:4px 10px;border-radius:99px;border:1px solid var(--line)}
+main{padding:14px 14px 20px;max-width:640px;margin:0 auto}
+.screen{display:none}.screen.on{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+h2{font-size:21px;margin:4px 2px 2px;letter-spacing:-.3px}
+.lead{color:var(--mut);margin:0 2px 14px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+label.lbl{display:block;font-size:12.5px;color:var(--mut);margin:12px 2px 6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+textarea,input[type=text],input[type=password],select{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 12px;font:inherit;outline:none}
+textarea{min-height:70px;resize:vertical}
+textarea:focus,input:focus,select:focus{border-color:var(--vio)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:13px 16px;font:inherit;font-weight:700;color:#fff;background:var(--card2);cursor:pointer}
+.btn.main{background:var(--grad);width:100%;font-size:16px;padding:15px;box-shadow:0 8px 24px -10px #ff5a7a88}
+.btn.main:disabled{opacity:.5}
+.btn.sm{padding:8px 12px;font-size:13px;border-radius:11px}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.btn.danger{background:#3a1622;color:#ff9db0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{padding:8px 12px;border-radius:99px;border:1px solid var(--line);background:var(--bg2);color:var(--mut);font-size:13.5px;cursor:pointer;user-select:none}
+.chip.on{background:#3a2160;border-color:#8a5cff;color:#fff}
+.drop{border:1.5px dashed #4a3d70;border-radius:16px;padding:18px;text-align:center;color:var(--mut);cursor:pointer;background:var(--bg2)}
+.drop b{color:var(--txt);display:block;font-size:15px;margin-bottom:2px}
+.thumbs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;margin-top:10px}
+.thumbs:empty{display:none}
+.th{position:relative;flex:0 0 auto}
+.th img{height:120px;border-radius:10px;border:1px solid var(--line);display:block}
+.th button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:#000b;color:#fff;font-size:14px;line-height:24px;padding:0}
+.toggle{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px;color:var(--mut)}
+.sw{position:relative;width:44px;height:26px;flex:0 0 auto}
+.sw input{display:none}
+.sw span{position:absolute;inset:0;background:#3a3253;border-radius:99px;transition:.2s}
+.sw span:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+span{background:var(--vio)}
+.sw input:checked+span:after{left:21px}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:6;background:rgba(18,14,28,.97);border-top:1px solid #2a2240;display:flex;justify-content:space-around;padding:6px 4px 8px}
+nav button{flex:1;background:none;border:0;color:var(--dim);font:inherit;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer}
+nav button svg{width:23px;height:23px}
+nav button.on{color:#fff}
+nav button.on svg{color:var(--rose)}
+.meter{height:9px;border-radius:99px;background:#2d2545;overflow:hidden;margin:6px 0 4px}
+.meter i{display:block;height:100%;border-radius:99px}
+.kv{font-size:14px;margin:6px 0;color:#ddd3f0}
+.kv b{color:#fff}
+ul.tight{margin:6px 0 0;padding-left:18px}
+ul.tight li{margin:3px 0;color:#ddd3f0;font-size:14px}
+.sug{background:var(--card2);border:1px solid #3d3163;border-radius:16px;padding:12px;margin:10px 0}
+.bubble{background:#0b5c4c;color:#fff;border-radius:14px 14px 4px 14px;padding:10px 12px;font-size:15.5px;white-space:pre-wrap;word-break:break-word;margin-left:18px}
+.sug .tag{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);margin-bottom:6px}
+.sug .why{font-size:13px;color:var(--mut);margin:8px 2px}
+.sug .act{display:flex;gap:6px}
+.sug .act .btn{flex:1}
+.refine{margin-top:6px}
+.loading{display:none;text-align:center;padding:26px 10px;color:var(--mut)}
+.loading.on{display:block}
+.spin{width:38px;height:38px;border-radius:50%;border:3px solid #3a3058;border-top-color:var(--rose);animation:sp 1s linear infinite;margin:0 auto 12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{background:#3a1622;border:1px solid #6b2338;color:#ffc2cf;border-radius:14px;padding:12px;font-size:14px;margin:10px 0;white-space:pre-wrap}
+.note{font-size:12.5px;color:var(--dim);margin-top:8px}
+.banner{background:linear-gradient(135deg,#3a1d4f,#24183d);border:1px solid #5a3a85;border-radius:18px;padding:14px;margin-bottom:12px}
+.banner b{display:block;font-size:15px;margin-bottom:4px}
+.pill{display:inline-block;background:var(--bg2);border:1px solid var(--line);border-radius:99px;padding:3px 9px;font-size:12.5px;margin:3px 3px 0 0;color:#ddd3f0}
+.list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #2a2240}
+.list-item:last-child{border-bottom:0}
+.list-item .grow{flex:1;min-width:0}
+.list-item .t{font-weight:650}
+.list-item .s{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal{position:fixed;inset:0;background:#000a;z-index:20;display:none;align-items:flex-end}
+.modal.on{display:flex}
+.sheet{background:var(--bg2);width:100%;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px 24px;border-top:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:#fff;color:#111;padding:9px 16px;border-radius:99px;font-weight:650;font-size:14px;z-index:30;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1}
+.steps{margin:6px 0 0;padding-left:20px;color:#ddd3f0;font-size:14px}
+.steps li{margin:4px 0}
+.music{display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg2);border-radius:12px;margin:8px 0}
+.music .ic{width:36px;height:36px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex:0 0 auto}
+small.mut{color:var(--mut)}
+.pair{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}
+.pair .hd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.pair .n{width:22px;height:22px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-size:12px;letter-spacing:0}
+.theirs{background:#2b2640;color:#eee;border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:14.5px;white-space:pre-wrap;word-break:break-word;margin-right:24px;margin-bottom:8px}
+.pair .alt{margin-top:8px;font-size:13px;color:var(--mut)}
+.pair .alt .bubble{font-size:14.5px;margin-top:4px;background:#0a4a3e}
+.pair .dica{font-size:12.5px;color:var(--gold);margin:6px 2px 0}
+.pair .act{display:flex;gap:6px;margin-top:8px}
+.pair .act .btn{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">P</div><h1>Puxa Papo</h1>
+  <span class="sub" id="styleBadge">estilo: 0%</span>
+</header>
+
+<main>
+<!-- ================= CONVERSA ================= -->
+<section class="screen on" id="s-conversa">
+  <h2>Analisar conversa</h2>
+  <p class="lead">Manda o print. O app lê a conversa, entende o clima e sugere o que falar do seu jeito.</p>
+  <div id="setupBanner"></div>
+
+  <div class="card">
+    <div class="drop" data-pick="conversa"><b>📸 Escolher prints da conversa</b>Pode mandar vários (até 10, em ordem, do mais antigo pro mais novo). O app lê a conversa inteira. Dica: no WhatsApp/Instagram, compartilhe o print direto pro Puxa Papo.</div>
+    <div class="thumbs" id="th-conversa"></div>
+
+    <label class="lbl">Com quem é a conversa?</label>
+    <div class="row"><select id="person-conversa" class="personSel" style="flex:1"></select><button class="btn sm ghost" data-newperson>+ Nova</button></div>
+
+    <label class="lbl">O que você quer agora?</label>
+    <div class="chips" id="goal-conversa">
+      <span class="chip on" data-v="responder as mensagens dela">Responder</span>
+      <span class="chip" data-v="puxar um assunto novo">Puxar assunto</span>
+      <span class="chip" data-v="reacender uma conversa que morreu/parou">Reacender</span>
+      <span class="chip" data-v="flertar mais, subir o clima com leveza">Flertar</span>
+      <span class="chip" data-v="chamar pra sair / marcar um encontro">Chamar pra sair</span>
+      <span class="chip" data-v="sair de um vácuo sem parecer carente">Levei vácuo</span>
+      <span class="chip" data-v="primeira mensagem, ainda não conversamos">1ª mensagem</span>
+    </div>
+
+    <label class="lbl">📝 Descrição (opcional)</label>
+    <textarea id="ctx-conversa" style="min-height:96px" placeholder="Descreva a situação ou cole a conversa aqui.&#10;Ex: conheci ela na academia, ela curte trilha, ficamos 2x...&#10;&#10;Sem print? Escreva a conversa, uma mensagem por linha:&#10;Ela: oi sumido&#10;Ela: vai na festa sábado?&#10;Ela: o Lucas disse que vc vai"></textarea>
+    <p class="note">Dá pra usar só a descrição, sem print. Se mandar os dois, a IA junta tudo.</p>
+
+    <div class="toggle"><label class="sw"><input type="checkbox" id="each-conversa" checked><span></span></label>Se ela mandou várias mensagens, responder cada uma, uma por uma</div>
+    <div id="eachOpts">
+      <label class="lbl">Quais mensagens dela responder?</label>
+      <div class="chips" id="scope-conversa">
+        <span class="chip on" data-v="pendentes">Só as que eu ainda não respondi</span>
+        <span class="chip" data-v="todas">Todas as mensagens dela</span>
+      </div>
+    </div>
+
+    <div class="toggle"><label class="sw"><input type="checkbox" id="learn-conversa" checked><span></span></label>Aprender meu jeito de escrever com este print</div>
+  </div>
+  <button class="btn main" data-run="conversa">✨ Analisar e sugerir</button>
+  <div class="loading" id="ld-conversa"><div class="spin"></div>Lendo a conversa e pensando no seu estilo...</div>
+  <div id="out-conversa"></div>
+</section>
+
+<!-- ================= STORY ================= -->
+<section class="screen" id="s-story">
+  <h2>Responder story</h2>
+  <p class="lead">Print do story dela. O app acha o gancho certo pra você responder sem ser o “linda 😍” que todo mundo manda.</p>
+  <div class="card">
+    <div class="drop" data-pick="story"><b>📸 Escolher print do story</b>Se tiver conversa anterior com ela, mande o print junto. Vários stories? Mande todos que o app sugere uma resposta pra cada.</div>
+    <div class="thumbs" id="th-story"></div>
+    <label class="lbl">De quem é o story?</label>
+    <div class="row"><select id="person-story" class="personSel" style="flex:1"></select><button class="btn sm ghost" data-newperson>+ Nova</button></div>
+    <label class="lbl">Vibe da resposta</label>
+    <div class="chips" id="goal-story">
+      <span class="chip on" data-v="a melhor opção pra situação (decida você)">Automático</span>
+      <span class="chip" data-v="engraçada">Engraçada</span>
+      <span class="chip" data-v="curiosa, que puxe conversa">Curiosa</span>
+      <span class="chip" data-v="elogio sutil e específico, nada genérico">Elogio sutil</span>
+      <span class="chip" data-v="provocação leve e divertida">Provocar leve</span>
+      <span class="chip" data-v="flerte">Flerte</span>
+    </div>
+    <label class="lbl">📝 Descrição do story (opcional)</label>
+    <textarea id="ctx-story" placeholder="Ex: ela postou foto na praia / vídeo treinando / frase de indireta..."></textarea>
+    <p class="note">Sem print? Só descreva o story aqui que já funciona.</p>
+  </div>
+  <button class="btn main" data-run="story">✨ Sugerir resposta</button>
+  <div class="loading" id="ld-story"><div class="spin"></div>Analisando o story...</div>
+  <div id="out-story"></div>
+</section>
+
+<!-- ================= MÚSICA ================= -->
+<section class="screen" id="s-musica">
+  <h2>Música</h2>
+  <p class="lead">Ela postou ou mandou música? Ou você quer mandar uma? O app sugere a resposta e músicas que combinam com o momento.</p>
+  <div class="card">
+    <label class="lbl">Situação</label>
+    <div class="chips" id="goal-musica">
+      <span class="chip on" data-v="ela postou uma música no story/status e eu quero responder">Ela postou</span>
+      <span class="chip" data-v="ela me mandou uma música e eu quero responder">Ela me mandou</span>
+      <span class="chip" data-v="quero mandar uma música pra ela (sugira músicas que combinem com o momento e a mensagem pra acompanhar)">Quero mandar</span>
+    </div>
+    <label class="lbl">Qual música / artista? (se souber)</label>
+    <input type="text" id="song" placeholder="Ex: Matuê - Quer Voar">
+    <div class="drop" data-pick="musica" style="margin-top:12px"><b>📸 Print (opcional)</b>Story com a música ou a conversa.</div>
+    <div class="thumbs" id="th-musica"></div>
+    <label class="lbl">Com quem?</label>
+    <div class="row"><select id="person-musica" class="personSel" style="flex:1"></select><button class="btn sm ghost" data-newperson>+ Nova</button></div>
+    <label class="lbl">📝 Descrição (opcional)</label>
+    <textarea id="ctx-musica" placeholder="Ex: estamos conversando faz 1 semana, ela curte trap e pagode..."></textarea>
+  </div>
+  <button class="btn main" data-run="musica">🎵 Sugerir</button>
+  <div class="loading" id="ld-musica"><div class="spin"></div>Ouvindo o clima da conversa...</div>
+  <div id="out-musica"></div>
+</section>
+
+<!-- ================= PERFIL ================= -->
+<section class="screen" id="s-perfil">
+  <h2>Meu estilo</h2>
+  <p class="lead">Tudo que o app aprendeu sobre como você escreve. Quanto mais prints, mais as sugestões parecem você.</p>
+  <div class="card" id="styleCard"></div>
+  <div class="card">
+    <h3>🙋 Sobre mim (minha descrição)</h3>
+    <p class="note" style="margin-top:0">Escreva quem você é. A IA usa isso pra sugerir coisas que combinam com você (e nunca inventa algo que não é seu).</p>
+    <textarea id="aboutMe" style="min-height:110px" placeholder="Ex: tenho 19 anos, moro em Campo Limpo Paulista, trabalho de dia e estudo à noite, curto academia, futebol e trap, sou mais tímido no começo mas brincalhão depois que pego intimidade, procuro algo sério"></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="saveMe">Salvar descrição</button></div>
+  </div>
+  <div class="card">
+    <h3>✍️ Ensinar mais rápido</h3>
+    <p class="note" style="margin-top:0">Cole aqui mensagens que VOCÊ mandou (uma por linha). Copie de conversas reais.</p>
+    <textarea id="manualEx" placeholder="slk kkkkk&#10;bora sim, que horas vc sai?&#10;mano vc é mt engraçada"></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="addEx">Adicionar e reaprender</button></div>
+  </div>
+  <div class="card">
+    <h3>👥 Pessoas</h3>
+    <p class="note" style="margin-top:0">Notas sobre cada uma (gostos, piadas internas, o que já rolou). A IA usa isso pra fazer callbacks.</p>
+    <div id="peopleList"></div>
+    <button class="btn sm ghost" data-newperson style="margin-top:8px">+ Adicionar pessoa</button>
+  </div>
+  <div class="card">
+    <h3>🕘 Histórico</h3>
+    <div id="histList"></div>
+  </div>
+</section>
+
+<!-- ================= AJUSTES ================= -->
+<section class="screen" id="s-ajustes">
+  <h2>Ajustes</h2>
+  <p class="lead">A “inteligência” do app vem de uma IA na nuvem. O Gemini do Google tem plano grátis.</p>
+  <div class="card">
+    <h3>🔑 Configurar IA</h3>
+    <label class="lbl">Provedor</label>
+    <div class="chips" id="prov">
+      <span class="chip on" data-v="gemini">Google Gemini (grátis)</span>
+      <span class="chip" data-v="claude">Claude (pago)</span>
+    </div>
+    <div id="howto"></div>
+    <label class="lbl">Chave da API</label>
+    <input type="password" id="apikey" placeholder="cole sua chave aqui" autocomplete="off">
+    <label class="lbl">Modelo</label>
+    <select id="model"></select>
+    <div class="row" style="margin-top:12px"><button class="btn" id="testKey" style="flex:1">Salvar e testar</button></div>
+    <div id="keyMsg"></div>
+  </div>
+  <div class="card">
+    <h3>💾 Backup</h3>
+    <p class="note" style="margin-top:0">Copia seu estilo, pessoas e histórico (sem a chave) pra você guardar. Use “Restaurar” se trocar de celular.</p>
+    <div class="row"><button class="btn sm" id="exportB">Copiar backup</button><button class="btn sm ghost" id="importB">Restaurar backup</button></div>
+  </div>
+  <div class="card">
+    <h3>🔒 Privacidade</h3>
+    <p class="note" style="margin-top:0">Tudo fica salvo só no seu celular. Os prints vão apenas para a IA que você escolheu, na hora da análise. No plano grátis do Gemini o Google pode usar os dados pra melhorar os produtos dele, então evite mandar prints com dados sensíveis (endereço, documentos).</p>
+    <button class="btn sm danger" id="wipe">Apagar tudo do app</button>
+  </div>
+  <p class="note" style="text-align:center">Puxa Papo v1.1</p>
+</section>
+</main>
+
+<nav id="nav">
+  <button class="on" data-tab="conversa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Conversa</button>
+  <button data-tab="story"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><circle cx="12" cy="12" r="4.5"/></svg>Story</button>
+  <button data-tab="musica"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>Música</button>
+  <button data-tab="perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Meu estilo</button>
+  <button data-tab="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   PUXA PAPO — toda a lógica do app
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hasBridge = typeof window.Android !== "undefined";
+
+/* ---------------- Armazenamento local ---------------- */
+const DEFAULT = {
+  settings: { provider: "gemini", keys: { gemini: "", claude: "" }, models: { gemini: "gemini-3.8-flash", claude: "claude-sonnet-5-5" } },
+  style: { perfil: null, exemplos: [], analises: 0 },
+  me: { descricao: "" },
+  people: [],
+  history: []
+};
+let db;
+function load() {
+  try { db = JSON.parse(localStorage.getItem("puxapapo") || "null"); } catch (e) { db = null; }
+  if (!db || typeof db !== "object") db = JSON.parse(JSON.stringify(DEFAULT));
+  for (const k of Object.keys(DEFAULT)) if (db[k] === undefined) db[k] = JSON.parse(JSON.stringify(DEFAULT[k]));
+  db.settings.keys = Object.assign({ gemini: "", claude: "" }, db.settings.keys);
+  db.settings.models = Object.assign({}, DEFAULT.settings.models, db.settings.models);
+}
+function save() { try { localStorage.setItem("puxapapo", JSON.stringify(db)); } catch (e) { toast("Memória cheia: limpe o histórico"); } }
+
+/* ---------------- Utilidades de interface ---------------- */
+let toastT;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 1800); }
+function copyText(t) {
+  if (hasBridge) Android.copy(t);
+  else if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => {});
+  toast("Copiado! Cola na conversa 👌");
+}
+function shareText(t) { if (hasBridge) Android.share(t); else copyText(t); }
+function openUrl(u) { if (hasBridge) Android.openUrl(u); else window.open(u, "_blank"); }
+function openModal(html) { $("#sheet").innerHTML = html; $("#modal").classList.add("on"); }
+function closeModal() { $("#modal").classList.remove("on"); }
+$("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+
+let currentTab = "conversa";
+function go(tab) {
+  currentTab = tab;
+  $$(".screen").forEach(s => s.classList.toggle("on", s.id === "s-" + tab));
+  $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  if (tab === "perfil") renderPerfil();
+  if (tab === "ajustes") renderAjustes();
+  window.scrollTo(0, 0);
+}
+$$("nav button").forEach(b => b.onclick = () => go(b.dataset.tab));
+window.handleBack = function () {
+  if ($("#modal").classList.contains("on")) { closeModal(); return true; }
+  if (currentTab !== "conversa") { go("conversa"); return true; }
+  return false;
+};
+
+function chipGroup(sel, multi) {
+  $$(sel + " .chip").forEach(c => c.onclick = () => {
+    if (!multi) $$(sel + " .chip").forEach(x => x.classList.remove("on"));
+    c.classList.toggle("on", multi ? !c.classList.contains("on") : true);
+    if (sel === "#prov") { db.settings.provider = c.dataset.v; save(); renderAjustes(); }
+  });
+}
+const chipVal = sel => { const c = $(sel + " .chip.on"); return c ? c.dataset.v : ""; };
+["#goal-conversa", "#goal-story", "#goal-musica", "#prov", "#scope-conversa"].forEach(s => chipGroup(s));
+$("#each-conversa").onchange = () => { $("#eachOpts").style.display = $("#each-conversa").checked ? "" : "none"; };
+
+/* ---------------- Ponte com o Android (rede e galeria) ---------------- */
+const pend = {}; let seq = 0;
+window.__httpCb = (id, status, text) => { const p = pend[id]; delete pend[id]; if (p) p({ status, text }); };
+window.__picked = (id, arr) => { const p = pend[id]; delete pend[id]; if (p) p(arr || []); };
+function http(method, url, headers, body) {
+  if (hasBridge) return new Promise(r => { const id = "h" + (++seq); pend[id] = r; Android.http(id, method, url, JSON.stringify(headers || {}), body || ""); });
+  return fetch(url, { method, headers, body: method === "GET" ? undefined : body })
+    .then(async r => ({ status: r.status, text: await r.text() }))
+    .catch(e => ({ status: -1, text: "Sem conexão: " + e.message }));
+}
+function shrinkFile(file) {
+  return new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = () => { const im = new Image(); im.onload = () => {
+      const sc = Math.min(1, 1080 / im.width, 2400 / im.height);
+      const c = document.createElement("canvas"); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+      c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      res(c.toDataURL("image/jpeg", 0.82).split(",")[1]);
+    }; im.onerror = () => res(null); im.src = fr.result; };
+    fr.readAsDataURL(file);
+  });
+}
+function pickImages() {
+  if (hasBridge) return new Promise(r => { const id = "p" + (++seq); pend[id] = r; Android.pickImages(id); });
+  return new Promise(r => {
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = true;
+    inp.onchange = async () => { const out = []; for (const f of inp.files) { const b = await shrinkFile(f); if (b) out.push(b); } r(out); };
+    inp.click();
+  });
+}
+const MAX_IMGS = 10;
+const imgs = { conversa: [], story: [], musica: [] };
+function renderThumbs(k) {
+  $("#th-" + k).innerHTML = imgs[k].map((b, i) => `<div class="th"><img src="data:image/jpeg;base64,${b}"><button data-rm="${k}:${i}">×</button></div>`).join("");
+  $$("#th-" + k + " [data-rm]").forEach(btn => btn.onclick = () => { const [kk, i] = btn.dataset.rm.split(":"); imgs[kk].splice(+i, 1); renderThumbs(kk); });
+}
+$$("[data-pick]").forEach(d => d.onclick = async () => {
+  const k = d.dataset.pick; const arr = await pickImages();
+  if (arr.length) { imgs[k].push(...arr); if (imgs[k].length > MAX_IMGS) toast("Máximo " + MAX_IMGS + " prints: fiquei com os últimos"); imgs[k] = imgs[k].slice(-MAX_IMGS); renderThumbs(k); }
+});
+function receiveShared() {
+  if (!hasBridge) return;
+  let arr = []; try { arr = JSON.parse(Android.getShared() || "[]"); } catch (e) {}
+  if (arr.length) { imgs.conversa = arr.slice(0, MAX_IMGS); renderThumbs("conversa"); go("conversa"); toast("Print recebido! Escolha o objetivo e analise"); }
+}
+window.onSharedReady = receiveShared;
+
+/* ---------------- Pessoas ---------------- */
+function renderPersonSelects() {
+  $$(".personSel").forEach(sel => {
+    const v = sel.value;
+    sel.innerHTML = `<option value="">Alguém (sem nome)</option>` + db.people.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join("");
+    if (v && db.people.some(p => p.id === v)) sel.value = v;
+  });
+}
+function personForm(p) {
+  p = p || { id: "", nome: "", notas: "" };
+  openModal(`<h3 style="margin:0 0 10px">${p.id ? "Editar" : "Nova"} pessoa</h3>
+    <label class="lbl">Nome / apelido</label><input type="text" id="pNome" value="${esc(p.nome)}" placeholder="Ex: Ana da academia">
+    <label class="lbl">Descrição / notas (gostos, piadas internas, o que já rolou)</label>
+    <textarea id="pNotas" style="min-height:120px" placeholder="Ex: curte pagode e açaí, faz enfermagem, tem um gato chamado Thor, a gente brinca que ela sempre chega atrasada">${esc(p.notas)}</textarea>
+    <div class="row" style="margin-top:14px"><button class="btn main" id="pSave">Salvar</button></div>
+    ${p.id ? `<div class="row" style="margin-top:10px"><button class="btn sm danger" id="pDel">Apagar pessoa</button></div>` : ""}`);
+  $("#pSave").onclick = () => {
+    const nome = $("#pNome").value.trim(); if (!nome) return toast("Coloca um nome");
+    if (p.id) { Object.assign(db.people.find(x => x.id === p.id), { nome, notas: $("#pNotas").value.trim() }); }
+    else { p = { id: "p" + Date.now(), nome, notas: $("#pNotas").value.trim() }; db.people.push(p); }
+    save(); renderPersonSelects(); closeModal(); if (currentTab === "perfil") renderPerfil();
+    $$(".personSel").forEach(s => { if (!s.value) s.value = p.id; });
+    toast("Salvo");
+  };
+  if (p.id) $("#pDel").onclick = () => { if (!confirm("Apagar " + p.nome + "?")) return; db.people = db.people.filter(x => x.id !== p.id); save(); renderPersonSelects(); closeModal(); renderPerfil(); };
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-newperson]")) personForm(); });
+
+/* =====================================================================
+   CÉREBRO: conhecimento de comunicação + regras de escrita humana
+   ===================================================================== */
+const SYSTEM = `Você é o "Puxa Papo", um coach de conversa e paquera brasileiro, experiente e com muita inteligência emocional. Você ajuda o Mikael (homem, 19 anos, de Campo Limpo Paulista/SP) a conversar melhor com mulheres por WhatsApp e Instagram. Você analisa prints e sugere mensagens que ele pode mandar, escritas EXATAMENTE no jeito dele, para que ninguém perceba que foi uma IA.
+
+COMO LER O PRINT
+- As mensagens do Mikael ficam do lado DIREITO (balões coloridos: verde no WhatsApp, roxo/azul no Instagram). As da outra pessoa ficam à ESQUERDA.
+- Leia a conversa INTEIRA, do começo ao fim, em todos os prints e na ordem em que vieram. Prints seguidos podem repetir mensagens (rolagem): junte tudo numa conversa só, sem duplicar nada e sem pular nada.
+- Considere horários, "visto", áudios, figurinhas, reações e stories respondidos se aparecerem.
+- Se não houver print, a conversa ou a situação vem escrita pelo Mikael na DESCRIÇÃO (linhas "Ela:" e "Eu:" quando ele colar a conversa). Trate igual a um print.
+- Se o print estiver ilegível ou não for uma conversa, diga isso em leitura.resumo.
+
+O QUE VOCÊ SABE (síntese de pesquisa em psicologia social, atração e comunicação)
+1. Leia antes de escrever. Sinais de interesse dela: faz perguntas de volta, respostas do tamanho das dele ou maiores, risadas/emojis, responde rápido, traz assunto novo, puxa conversa sozinha, elogia, responde story. Desinteresse: respostas de 1 palavra, demora grande e constante, nunca pergunta nada, só reage. Dê uma nota honesta de 1 a 10.
+2. Reciprocidade e investimento equilibrado: a mensagem dele não deve ser muito maior nem mais intensa que a dela. Nada de várias mensagens seguidas, com uma exceção: quando ELA mandou várias mensagens, responder cada uma (citando a mensagem dela com "Responder" no WhatsApp/Instagram) é natural e mostra atenção. Se o interesse está baixo, mensagens mais leves, curtas e fáceis de responder, ou dar espaço.
+3. Ganchos específicos: responda a um detalhe concreto que ela disse ou postou. Especificidade gera conexão. Elogio genérico ("linda") é o que todo mundo manda.
+4. Afirmações em vez de interrogatório: no máximo 1 pergunta por mensagem e nem toda mensagem precisa de pergunta. Suposições divertidas ("tenho certeza que vc é do tipo que...") e comentários com opinião convidam a responder melhor.
+5. Humor e leveza (playfulness) criam atração e conforto. Provocação só gentil, quando o clima já é de brincadeira, e nunca sobre aparência, corpo, inseguranças ou algo que ela leva a sério.
+6. Autorrevelação recíproca e gradual (pesquisa de Arthur Aron): ele compartilha algo pequeno e verdadeiro dele e abre espaço pra ela fazer o mesmo. Aprofundar aos poucos.
+7. Validação emocional (John Gottman, "voltar-se para" os convites de conexão): se ela conta algo pessoal, que está cansada, triste ou estressada, primeiro acolher de forma simples e sincera. Sem piada, sem conselho não pedido.
+8. Espelhamento (efeito camaleão, Chartrand e Bargh): acompanhar ritmo, energia, tamanho das mensagens e uso de emoji dela, sem perder a voz dele.
+9. Callbacks: retomar coisas que ela já falou ou piadas internas (use as notas da pessoa) mostra atenção e cria intimidade.
+10. Escalada natural: quando o interesse é alto e a conversa flui, sugerir levar pra ligação ou encontro com proposta concreta, simples e leve (lugar + dia), sem pressão. Conversa infinita por texto esfria.
+11. Postura: confiança calma e vida própria. Sem carência, sem bajulação, sem se diminuir, sem cobrar resposta, sem pedir desculpa à toa.
+12. Cada pessoa é uma: com quem é mais aberta e comunicativa, criar conexão e aprofundar. Com quem é mais reservada ou "difícil", mais leveza, curiosidade, humor, menos perguntas e zero pressa. Com quem está ocupada, mensagens fáceis de responder.
+13. Ética (inegociável): respeito total. Nunca sugerir manipulação, mentira sobre si, culpa, ciúme provocado, pressão, insistência depois de um não, nem explorar carência, solidão ou insegurança dela. Se a conversa mostra que ela não quer, diga com honestidade e sugira encerrar com classe ou dar espaço. Conteúdo sexual explícito: não sugerir. Se houver sinal de que a pessoa é menor de idade, não ajude com flerte.
+
+ESCRITA HUMANA (o mais importante: não pode parecer IA)
+- Escreva como o Mikael escreve, seguindo o PERFIL DE ESTILO e os EXEMPLOS REAIS: mesmas gírias, abreviações (vc, tbm, pq, mt, slk...), risada (kkkk, kkk, hahaha), emojis, maiúsculas ou minúsculas, pontuação.
+- Se ainda não houver perfil, use o jeito que ele escreve no próprio print. Se não der pra ver, use português jovem de SP no WhatsApp, natural e simples.
+- Curto: normalmente 1 frase, no máximo 2. Nada de textão.
+- PROIBIDO: travessão (— ou –), ponto e vírgula, listas, aspas desnecessárias, linguagem formal ou de livro, "Que incrível!", "Que interessante", "Adoraria saber mais", "conte-me", "Haha", excesso de elogio, mais de 1 emoji por mensagem (a não ser que ele use mais), clichês como "oi sumida" e "tudo bem?" seco, frases que soam como atendimento ou terapia.
+- Pequenas imperfeições são bem-vindas se forem do estilo dele (sem acento, sem ponto final, minúsculas).
+- Nunca repita a mesma ideia em duas sugestões. As sugestões precisam ser diferentes entre si de verdade.
+- Não reproduza letras de música. No máximo cite o nome da música ou um trechinho de até 6 palavras.
+
+FORMATO
+Responda SOMENTE com um JSON válido, sem texto antes ou depois, neste formato:
+{
+ "transcricao": "a conversa do print em texto, uma linha por mensagem, começando com 'Ela:' ou 'Eu:' (vazio se não houver conversa)",
+ "nome_dela": "nome se aparecer no print, senão vazio",
+ "leitura": {
+   "interesse": 7,
+   "clima": "2 a 4 palavras, ex: leve e brincalhão",
+   "resumo": "o que está acontecendo na conversa, em 1 ou 2 frases simples",
+   "sinais": ["sinais concretos de interesse ou desinteresse que você viu"],
+   "ganchos": ["assuntos ou detalhes que ela deu e dá pra explorar"],
+   "voce_bem": "o que o Mikael está fazendo bem",
+   "voce_melhorar": "o que ele pode melhorar, direto e sem rodeio"
+ },
+ "sugestoes": [
+   {"texto": "mensagem pronta pra copiar e mandar", "tipo": "engraçada | curiosa | direta | flerte | acolhedora | leve | convite", "por_que": "por que funciona nessa situação, em 1 frase"}
+ ],
+ "respostas_individuais": [
+   {"mensagem_dela": "a mensagem dela copiada exatamente como está", "resposta": "resposta pronta só pra essa mensagem", "alternativa": "outra opção diferente pra mesma mensagem", "por_que": "por que funciona, em 1 frase curta", "dica": "opcional: ex. 'só reaja com 😂' ou 'cite a mensagem dela'"}
+ ],
+ "evitar": ["o que NÃO mandar agora e por quê, curto"],
+ "proximo_passo": "estratégia pros próximos dias/mensagens em 1 ou 2 frases",
+ "musicas": [{"titulo": "", "artista": "", "por_que": "", "mensagem": "mensagem curta pra mandar junto"}],
+ "meus_exemplos": ["mensagens que o Mikael escreveu no print, copiadas exatamente como estão"],
+ "estilo_atualizado": {
+   "resumo": "descrição curta de como ele escreve",
+   "risada": "kkkk / kkk / hahaha / não usa",
+   "maiusculas": "tudo minúsculo | normal | misto",
+   "pontuacao": "ex: quase sem pontuação, sem ponto final",
+   "tamanho": "ex: mensagens curtas de 3 a 8 palavras",
+   "emojis": ["emojis que ele usa"],
+   "girias": ["gírias e abreviações que ele usa"],
+   "tracos": ["outros traços: humor, energia, jeito de perguntar..."]
+ }
+}
+Regras do formato: entregue 5 sugestões (no modo música podem ser 4). "respostas_individuais" segue o pedido do Mikael no prompt (uma entrada por mensagem dela, na ordem, sem pular nenhuma, sem juntar duas numa só); se ele não pedir, []. Cada resposta individual responde só aquela mensagem e as respostas, lidas em sequência, devem formar uma conversa natural, sem repetir assunto nem pergunta. Quando houver várias mensagens dela, as "sugestoes" passam a ser mensagens únicas que respondem tudo de uma vez (pra quem prefere mandar uma só). "musicas" só no modo música, senão []. "estilo_atualizado" deve juntar o perfil atual com o que você viu de novo (se não viu nada novo, devolva o perfil atual; se ainda não existe e não há mensagens dele, null). Use os números como número, não como texto.`;
+
+function styleBlock() {
+  const st = db.style;
+  const ex = st.exemplos.slice(-30);
+  return `PERFIL DE ESTILO ATUAL DO MIKAEL: ${st.perfil ? JSON.stringify(st.perfil) : "ainda não existe (aprenda pelo print)"}\n` +
+    `EXEMPLOS REAIS DE MENSAGENS DELE (${ex.length}): ${ex.length ? ex.map(e => "• " + e).join("\n") : "nenhum ainda"}`;
+}
+function meBlock() {
+  const d = ((db.me && db.me.descricao) || "").trim();
+  return d ? `DESCRIÇÃO DO MIKAEL (escrita por ele, use pra sugerir coisas verdadeiras sobre ele): ${d}` : "";
+}
+function eachBlock(mode, o) {
+  if (mode === "conversa") {
+    if (!o.each) return `RESPONDER UMA POR UMA: não pedido. Deixe "respostas_individuais" como [].`;
+    return o.scope === "todas"
+      ? `RESPONDER UMA POR UMA: sim. Leia a conversa inteira e preencha "respostas_individuais" com uma resposta para CADA mensagem DELA que aparece na conversa (todas, do começo ao fim, na ordem). Se ela mandou só 1 mensagem, uma entrada só.`
+      : `RESPONDER UMA POR UMA: sim. Leia a conversa inteira, ache a última mensagem do Mikael e pegue TODAS as mensagens DELA que vieram depois (as que ele ainda não respondeu). Se forem 2 ou mais, preencha "respostas_individuais" com uma resposta para CADA uma, na ordem. Se for só 1, deixe "respostas_individuais" como []. Se ele já respondeu tudo, deixe [] e foque no objetivo.`;
+  }
+  if (mode === "story") return `Se houver mais de um story (vários prints ou descrição de vários), preencha "respostas_individuais" com uma resposta para CADA story, na ordem, colocando em "mensagem_dela" uma descrição curta do story (ex: "story na praia"). Se for um story só, [].`;
+  return `"respostas_individuais": [].`;
+}
+function personBlock(pid) {
+  const p = db.people.find(x => x.id === pid);
+  if (!p) return "PESSOA: sem nome cadastrado.";
+  const last = db.history.filter(h => h.personId === pid).slice(-2).map(h => h.resumo).filter(Boolean);
+  return `PESSOA: ${p.nome}\nDESCRIÇÃO / NOTAS SOBRE ELA: ${p.notas || "nenhuma"}` + (last.length ? `\nÚLTIMAS LEITURAS DA CONVERSA COM ELA: ${last.join(" | ")}` : "");
+}
+function buildPrompt(mode, o) {
+  const head = {
+    conversa: `MODO: CONVERSA. Analise o(s) print(s) da conversa.\nOBJETIVO DO MIKAEL AGORA: ${o.goal}.`,
+    story: `MODO: STORY. A imagem é um story/status dela (pode vir junto print de conversa anterior). Sugira respostas ao story que puxem conversa, presas a algo específico do story.\nVIBE PEDIDA: ${o.goal}.`,
+    musica: `MODO: MÚSICA. Situação: ${o.goal}.\nMÚSICA/ARTISTA INFORMADO: ${o.song || "não informado (descubra pelo print se tiver)"}.\nSugira respostas e, em "musicas", 3 a 5 músicas reais (que existem de verdade, populares no Brasil e combinando com o gosto dela e o momento), cada uma com mensagem curta pra mandar junto. Se ela postou uma música, a resposta pode comentar a música, o artista ou a vibe.`
+  }[mode];
+  return `${head}\n${eachBlock(mode, o)}\n${personBlock(o.personId)}\n${meBlock()}\nDESCRIÇÃO ESCRITA PELO MIKAEL: ${o.ctx || "nenhuma"}\n${styleBlock()}\n${o.images ? `(${o.images} print(s) anexado(s), em ordem.)` : "(Sem imagem nesta análise: use a descrição acima.)"}\nResponda só com o JSON.`;
+}
+
+/* ---------------- Chamada à IA ---------------- */
+function parseJSON(t) {
+  t = String(t || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try { return JSON.parse(t); } catch (e) {}
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+  throw new Error("A IA respondeu num formato estranho. Tenta de novo.");
+}
+function friendlyError(status, text, prov) {
+  let msg = ""; try { const j = JSON.parse(text); msg = (j.error && (j.error.message || j.error.type)) || ""; } catch (e) { msg = String(text || "").slice(0, 200); }
+  if (status === -1) return "Sem internet ou a conexão caiu. Confere o Wi-Fi/dados e tenta de novo.";
+  if (status === 400 && /api key|API_KEY/i.test(msg)) return "Chave da API inválida. Vai em Ajustes e cola a chave de novo.";
+  if (status === 401 || status === 403) return "Chave recusada (" + status + "). Confere a chave em Ajustes.";
+  if (status === 404) return "Esse modelo não existe mais. Vai em Ajustes e toca em \"Salvar e testar\" pra escolher outro.";
+  if (status === 429) return prov === "gemini" ? "Limite grátis do Gemini atingido. Espera 1 minuto e tenta de novo (ou troque para um modelo \"lite\" em Ajustes)." : "Muitas chamadas seguidas. Espera um pouco.";
+  if (status >= 500) return "O servidor da IA está instável agora (" + status + "). Tenta de novo em instantes.";
+  return "Erro " + status + ": " + msg;
+}
+async function callAI(userText, images) {
+  const s = db.settings, prov = s.provider, key = (s.keys[prov] || "").trim(), model = s.models[prov];
+  if (!key) throw new Error("Falta configurar a chave da IA. Vai em Ajustes (leva 1 minuto e é grátis com o Gemini).");
+  images = images || [];
+  let r;
+  if (prov === "gemini") {
+    const body = {
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: "user", parts: [...images.map(b => ({ inlineData: { mimeType: "image/jpeg", data: b } })), { text: userText }] }],
+      generationConfig: { temperature: 0.95, responseMimeType: "application/json", maxOutputTokens: 16384 }
+    };
+    r = await http("POST", `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      { "Content-Type": "application/json", "x-goog-api-key": key }, JSON.stringify(body));
+    if (r.status !== 200) throw new Error(friendlyError(r.status, r.text, prov));
+    const j = JSON.parse(r.text);
+    if (j.promptFeedback && j.promptFeedback.blockReason) throw new Error("A IA bloqueou esse conteúdo (" + j.promptFeedback.blockReason + ").");
+    const c = j.candidates && j.candidates[0];
+    const out = c && c.content && (c.content.parts || []).filter(p => !p.thought && p.text).map(p => p.text).join("");
+    if (!out) throw new Error("A IA não respondeu (" + ((c && c.finishReason) || "vazio") + "). Tenta de novo.");
+    return parseJSON(out);
+  } else {
+    const body = {
+      model, max_tokens: 8000, temperature: 0.9, system: SYSTEM,
+      messages: [{ role: "user", content: [...images.map(b => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b } })), { type: "text", text: userText }] }]
+    };
+    r = await http("POST", "https://api.anthropic.com/v1/messages",
+      { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, JSON.stringify(body));
+    if (r.status !== 200) throw new Error(friendlyError(r.status, r.text, prov));
+    const j = JSON.parse(r.text);
+    const out = (j.content || []).filter(p => p.type === "text").map(p => p.text).join("");
+    return parseJSON(out);
+  }
+}
+
+/* ---------------- Deixa o texto ainda mais humano ---------------- */
+function humanize(t) {
+  t = String(t || "").replace(/\s*[—–]\s*/g, ", ").replace(/;/g, ",").replace(/\s{2,}/g, " ").trim();
+  t = t.replace(/^["“](.*)["”]$/, "$1");
+  const p = db.style.perfil;
+  if (p) {
+    if (/min[uú]scul/i.test(p.maiusculas || "") && !/normal|misto/i.test(p.maiusculas || "")) t = t.charAt(0).toLowerCase() + t.slice(1);
+    if (/sem ponto|quase sem pontua|sem pontua/i.test(p.pontuacao || "")) t = t.replace(/\.(\s*)$/, "$1").replace(/\.(\s*[\p{Extended_Pictographic}])/u, "$1");
+  }
+  return t;
+}
+
+/* ---------------- Aprendizado de estilo ---------------- */
+function learnStyle(res) {
+  const st = db.style;
+  const ex = (res.meus_exemplos || []).map(x => String(x).trim()).filter(x => x && x.length < 300);
+  for (const e of ex) if (!st.exemplos.includes(e)) st.exemplos.push(e);
+  st.exemplos = st.exemplos.slice(-80);
+  if (res.estilo_atualizado && typeof res.estilo_atualizado === "object") st.perfil = res.estilo_atualizado;
+  if (ex.length || res.estilo_atualizado) st.analises++;
+  save(); updateBadge();
+}
+function styleLevel() { const st = db.style; return Math.min(100, Math.round(st.exemplos.length * 2.5 + st.analises * 4)); }
+function updateBadge() { $("#styleBadge").textContent = "estilo: " + styleLevel() + "%"; }
+
+/* ---------------- Executar análise ---------------- */
+const lastCtx = {};
+function refineEach(res) {
+  const ri = (res && res.respostas_individuais) || [];
+  if (!ri.length) return `"respostas_individuais": [].`;
+  return `RESPONDER UMA POR UMA: refaça "respostas_individuais" para estas mesmas mensagens dela, na mesma ordem, seguindo o pedido:\n` +
+    ri.map((r, i) => `${i + 1}. ${r.mensagem_dela} (resposta anterior: ${r.resposta})`).join("\n");
+}
+async function run(mode, refine) {
+  const out = $("#out-" + mode), ld = $("#ld-" + mode), btn = $(`[data-run="${mode}"]`);
+  let o, prompt, images = [];
+  if (refine) {
+    o = lastCtx[mode];
+    if (!o) return;
+    prompt = `MODO: REFINAR. Você já analisou esta situação.\nTRANSCRIÇÃO/CONTEXTO: ${o.res.transcricao || "(story ou música)"}\nSUA LEITURA ANTERIOR: ${JSON.stringify(o.res.leitura)}\nSUGESTÕES ANTERIORES: ${(o.res.sugestoes || []).map(s => s.texto).join(" | ")}\nPEDIDO DO MIKAEL: ${refine}. Gere 5 sugestões NOVAS, diferentes das anteriores, mantendo o estilo dele.\n${refineEach(o.res)}\n${personBlock(o.personId)}\n${meBlock()}\n${styleBlock()}\nMantenha a mesma leitura (pode ajustar). "meus_exemplos" pode ficar []. Responda só com o JSON.`;
+  } else {
+    o = { mode, goal: chipVal("#goal-" + mode), personId: $("#person-" + mode).value, ctx: $("#ctx-" + mode).value.trim(), song: mode === "musica" ? $("#song").value.trim() : "" };
+    if (mode === "conversa") { o.each = $("#each-conversa").checked; o.scope = chipVal("#scope-conversa") || "pendentes"; }
+    images = imgs[mode].slice();
+    if (mode !== "musica" && !images.length && !o.ctx) return toast("Manda um print ou escreve a descrição");
+    if (mode === "musica" && !images.length && !o.song && !o.ctx) return toast("Coloca a música, um print ou o contexto");
+    o.images = images.length;
+    prompt = buildPrompt(mode, o);
+  }
+  btn.disabled = true; ld.classList.add("on"); if (!refine) out.innerHTML = "";
+  else out.querySelectorAll(".refine .chip").forEach(c => c.style.opacity = .5);
+  try {
+    const res = await callAI(prompt, images);
+    if (!refine && (mode === "conversa" ? $("#learn-conversa").checked : true)) learnStyle(res);
+    if (!refine && res.nome_dela && !o.personId && !db.people.some(p => p.nome.toLowerCase() === String(res.nome_dela).toLowerCase())) o.sugerirNome = res.nome_dela;
+    if (refine) { res.transcricao = res.transcricao || o.res.transcricao; }
+    o.res = res; lastCtx[mode] = o;
+    db.history.push({ t: Date.now(), mode, personId: o.personId, resumo: (res.leitura && res.leitura.resumo) || "", res });
+    db.history = db.history.slice(-30); save();
+    renderResult(mode, res, o);
+    setTimeout(() => out.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  } catch (e) {
+    out.insertAdjacentHTML("afterbegin", `<div class="err">⚠️ ${esc(e.message)}</div>`);
+  } finally { btn.disabled = false; ld.classList.remove("on"); }
+}
+$$("[data-run]").forEach(b => b.onclick = () => run(b.dataset.run));
+
+/* ---------------- Mostrar resultado ---------------- */
+function meterColor(n) { return n >= 7 ? "var(--ok)" : n >= 4 ? "var(--warn)" : "var(--bad)"; }
+function resultHTML(mode, res, o, noRefine) {
+  const L = res.leitura || {}; const n = Math.max(0, Math.min(10, Number(L.interesse) || 0));
+  let h = "";
+  if (o && o.sugerirNome) h += `<div class="banner"><b>Ela se chama ${esc(o.sugerirNome)}?</b>Salve pra o app lembrar das conversas com ela.<div class="row" style="margin-top:10px"><button class="btn sm" data-savename="${esc(o.sugerirNome)}">Salvar ${esc(o.sugerirNome)}</button></div></div>`;
+  h += `<div class="card"><h3>🧠 Leitura da situação</h3>`;
+  if (n) h += `<div class="kv">Interesse dela: <b>${n}/10</b>${L.clima ? " · " + esc(L.clima) : ""}</div><div class="meter"><i style="width:${n * 10}%;background:${meterColor(n)}"></i></div>`;
+  if (L.resumo) h += `<div class="kv">${esc(L.resumo)}</div>`;
+  if ((L.sinais || []).length) h += `<div class="kv"><b>Sinais:</b></div><ul class="tight">${L.sinais.map(s => `<li>${esc(s)}</li>`).join("")}</ul>`;
+  if ((L.ganchos || []).length) h += `<div class="kv" style="margin-top:8px"><b>Ganchos pra explorar:</b></div><div>${L.ganchos.map(s => `<span class="pill">${esc(s)}</span>`).join("")}</div>`;
+  if (L.voce_bem) h += `<div class="kv" style="margin-top:8px">✅ ${esc(L.voce_bem)}</div>`;
+  if (L.voce_melhorar) h += `<div class="kv">🔧 ${esc(L.voce_melhorar)}</div>`;
+  h += `</div>`;
+  const ri = (res.respostas_individuais || []).filter(r => r && (r.resposta || r.mensagem_dela));
+  if (ri.length) {
+    const all = ri.map(r => humanize(r.resposta)).filter(Boolean).join("\n");
+    h += `<div class="card"><h3>📩 Respondendo uma por uma <span style="margin-left:auto;font-size:13px;color:var(--mut)">${ri.length} ${mode === "story" ? "stories" : "mensagens"}</span></h3>`;
+    if (mode !== "story") h += `<p class="note" style="margin-top:0">No WhatsApp/Instagram: segure a mensagem dela, toque em <b>Responder</b> ↩ e cole a resposta. Faça isso pra cada uma, na ordem.</p>`;
+    ri.forEach((r, i) => {
+      const t = humanize(r.resposta), a = humanize(r.alternativa);
+      h += `<div class="pair"><div class="hd"><span class="n">${i + 1}</span>${mode === "story" ? "Story" : "Ela disse"}</div><div class="theirs">${esc(r.mensagem_dela || "")}</div>`;
+      if (t) h += `<div class="bubble">${esc(t)}</div><div class="act"><button class="btn sm" data-copy="${esc(t)}">Copiar</button><button class="btn sm ghost" data-share="${esc(t)}">Enviar</button><button class="btn sm ghost" data-edit="${esc(t)}">Editar</button></div>`;
+      if (r.por_que) h += `<div class="why" style="font-size:13px;color:var(--mut);margin:8px 2px 0">${esc(r.por_que)}</div>`;
+      if (r.dica) h += `<div class="dica">💡 ${esc(r.dica)}</div>`;
+      if (a && a !== t) h += `<div class="alt">Outra opção:<div class="bubble">${esc(a)}</div><div class="act"><button class="btn sm ghost" data-copy="${esc(a)}">Copiar esta</button><button class="btn sm ghost" data-edit="${esc(a)}">Editar</button></div></div>`;
+      h += `</div>`;
+    });
+    if (ri.length > 1 && all) h += `<div class="row" style="margin-top:4px"><button class="btn sm" style="flex:1" data-copy="${esc(all)}">Copiar todas em ordem</button></div>`;
+    h += `</div>`;
+  }
+  h += `<div class="card"><h3>💬 ${ri.length > 1 ? "Ou mande uma mensagem só (responde tudo)" : "O que mandar"}</h3>`;
+  (res.sugestoes || []).forEach(s => {
+    const t = humanize(s.texto);
+    h += `<div class="sug"><span class="tag">${esc(s.tipo || "sugestão")}</span><div class="bubble">${esc(t)}</div>${s.por_que ? `<div class="why">${esc(s.por_que)}</div>` : ""}<div class="act"><button class="btn sm" data-copy="${esc(t)}">Copiar</button><button class="btn sm ghost" data-share="${esc(t)}">Enviar</button><button class="btn sm ghost" data-edit="${esc(t)}">Editar</button></div></div>`;
+  });
+  if (!noRefine) h += `<div class="refine"><label class="lbl">Não curtiu? Peça de outro jeito</label><div class="chips">
+    ${["mais curtas", "mais engraçadas", "mais diretas", "mais ousadas (com respeito)", "mais carinhosas", "mais parecidas comigo", "outras opções"].map(x => `<span class="chip" data-refine="${mode}|${x}">${x}</span>`).join("")}
+    </div></div>`;
+  h += `</div>`;
+  if ((res.musicas || []).length) {
+    h += `<div class="card"><h3>🎵 Músicas que combinam</h3>`;
+    res.musicas.forEach(m => {
+      const msg = humanize(m.mensagem);
+      h += `<div class="music"><div class="ic">♪</div><div style="flex:1;min-width:0"><b>${esc(m.titulo)}</b> <small class="mut">· ${esc(m.artista)}</small><div class="why" style="font-size:13px;color:var(--mut);margin:4px 0">${esc(m.por_que)}</div>${msg ? `<div class="bubble" style="margin:6px 0 8px">${esc(msg)}</div>` : ""}<div class="row"><button class="btn sm" data-copy="${esc(msg)}">Copiar msg</button><button class="btn sm ghost" data-yt="${esc(m.titulo + " " + m.artista)}">Ouvir</button></div></div></div>`;
+    });
+    h += `</div>`;
+  }
+  if ((res.evitar || []).length || res.proximo_passo) {
+    h += `<div class="card"><h3>🧭 Estratégia</h3>`;
+    if (res.proximo_passo) h += `<div class="kv">${esc(res.proximo_passo)}</div>`;
+    if ((res.evitar || []).length) h += `<div class="kv" style="margin-top:8px"><b>Evite agora:</b></div><ul class="tight">${res.evitar.map(s => `<li>${esc(s)}</li>`).join("")}</ul>`;
+    h += `</div>`;
+  }
+  if (res.transcricao) h += `<details class="card"><summary style="cursor:pointer;color:var(--mut)">Ver o que a IA leu do print</summary><pre style="white-space:pre-wrap;font:inherit;font-size:13.5px;color:#ddd3f0;margin:10px 0 0">${esc(res.transcricao)}</pre></details>`;
+  return h;
+}
+function renderResult(mode, res, o) { $("#out-" + mode).innerHTML = resultHTML(mode, res, o); }
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-copy]"); if (c) return copyText(c.dataset.copy);
+  const s = e.target.closest("[data-share]"); if (s) return shareText(s.dataset.share);
+  const y = e.target.closest("[data-yt]"); if (y) return openUrl("https://www.youtube.com/results?search_query=" + encodeURIComponent(y.dataset.yt));
+  const r = e.target.closest("[data-refine]"); if (r) { const [m, x] = r.dataset.refine.split("|"); return run(m, x); }
+  const ed = e.target.closest("[data-edit]");
+  if (ed) {
+    openModal(`<h3 style="margin:0 0 10px">Editar antes de mandar</h3><textarea id="edT" style="min-height:110px">${esc(ed.dataset.edit)}</textarea><div class="row" style="margin-top:12px"><button class="btn main" id="edC">Copiar</button></div><p class="note">Ajustar do seu jeito também ensina o app: o texto editado vira exemplo do seu estilo.</p>`);
+    $("#edC").onclick = () => { const v = $("#edT").value.trim(); if (v && v !== ed.dataset.edit) { db.style.exemplos.push(v); db.style.exemplos = db.style.exemplos.slice(-80); save(); updateBadge(); } copyText(v); closeModal(); };
+    return;
+  }
+  const sn = e.target.closest("[data-savename]");
+  if (sn) { const p = { id: "p" + Date.now(), nome: sn.dataset.savename, notas: "" }; db.people.push(p); save(); renderPersonSelects(); $$(".personSel").forEach(x => { if (!x.value) x.value = p.id; });
+    const sec = sn.closest(".screen"); const m = sec && sec.id.replace("s-", "");
+    if (m && lastCtx[m] && !lastCtx[m].personId) { lastCtx[m].personId = p.id; const h = db.history.slice().reverse().find(x => x.mode === m && !x.personId); if (h) h.personId = p.id; save(); }
+    sn.closest(".banner").remove(); toast("Salva! Adicione notas em Meu estilo"); }
+});
+
+/* ---------------- Tela: Meu estilo ---------------- */
+$("#saveMe").onclick = () => { db.me = { descricao: $("#aboutMe").value.trim() }; save(); toast("Descrição salva!"); };
+$("#aboutMe").onchange = () => { db.me = { descricao: $("#aboutMe").value.trim() }; save(); };
+function renderPerfil() {
+  const st = db.style, p = st.perfil, lv = styleLevel();
+  $("#aboutMe").value = (db.me && db.me.descricao) || "";
+  let h = `<h3>🎯 Seu jeito de escrever <span style="margin-left:auto;font-size:13px;color:var(--mut)">${lv}% aprendido</span></h3><div class="meter"><i style="width:${lv}%;background:var(--grad)"></i></div>`;
+  if (!p) h += `<p class="note">Ainda não aprendi seu estilo. Analise alguns prints de conversas suas (5 a 10 já ficam ótimos) ou cole mensagens suas abaixo.</p>`;
+  else {
+    h += `<div class="kv" style="margin-top:10px">${esc(p.resumo || "")}</div>`;
+    const line = (k, v) => v ? `<div class="kv"><b>${k}:</b> ${esc(v)}</div>` : "";
+    h += line("Risada", p.risada) + line("Letras", p.maiusculas) + line("Pontuação", p.pontuacao) + line("Tamanho", p.tamanho);
+    const pills = [...(p.girias || []), ...(p.emojis || [])];
+    if (pills.length) h += `<div style="margin-top:6px">${pills.map(x => `<span class="pill">${esc(x)}</span>`).join("")}</div>`;
+    if ((p.tracos || []).length) h += `<ul class="tight">${p.tracos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  }
+  h += `<div class="note">${st.exemplos.length} mensagens suas salvas · ${st.analises} análises</div>`;
+  if (st.exemplos.length) h += `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--mut);font-size:13px">Ver/editar exemplos</summary><textarea id="exEdit" style="min-height:160px;margin-top:8px">${esc(st.exemplos.join("\n"))}</textarea><button class="btn sm" id="exSave" style="margin-top:8px">Salvar exemplos</button></details>`;
+  h += `<div class="row" style="margin-top:12px"><button class="btn sm danger" id="resetStyle">Zerar estilo</button></div>`;
+  $("#styleCard").innerHTML = h;
+  if ($("#exSave")) $("#exSave").onclick = () => { st.exemplos = $("#exEdit").value.split("\n").map(x => x.trim()).filter(Boolean).slice(-80); save(); updateBadge(); renderPerfil(); toast("Exemplos salvos"); };
+  $("#resetStyle").onclick = () => { if (confirm("Apagar tudo que o app aprendeu do seu estilo?")) { db.style = { perfil: null, exemplos: [], analises: 0 }; save(); updateBadge(); renderPerfil(); } };
+  $("#peopleList").innerHTML = db.people.length ? db.people.map(p => `<div class="list-item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="s">${esc(p.notas || "sem notas")}</div></div><button class="btn sm ghost" data-editperson="${p.id}">Editar</button></div>`).join("") : `<p class="note" style="margin:0">Nenhuma pessoa salva ainda.</p>`;
+  $$("[data-editperson]").forEach(b => b.onclick = () => personForm(db.people.find(x => x.id === b.dataset.editperson)));
+  const names = { conversa: "Conversa", story: "Story", musica: "Música" };
+  $("#histList").innerHTML = db.history.length ? db.history.slice().reverse().map((x, i) => {
+    const p = db.people.find(pp => pp.id === x.personId);
+    return `<div class="list-item"><div class="grow"><div class="t">${names[x.mode] || x.mode}${p ? " · " + esc(p.nome) : ""}</div><div class="s">${new Date(x.t).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · ${esc(x.resumo)}</div></div><button class="btn sm ghost" data-hist="${db.history.length - 1 - i}">Abrir</button></div>`;
+  }).join("") : `<p class="note" style="margin:0">Suas análises aparecem aqui.</p>`;
+  $$("[data-hist]").forEach(b => b.onclick = () => { const x = db.history[+b.dataset.hist]; openModal(`<h3 style="margin:0 0 10px">Análise salva</h3>` + resultHTML(x.mode, x.res, null, true)); });
+}
+$("#addEx").onclick = async () => {
+  const lines = $("#manualEx").value.split("\n").map(x => x.trim()).filter(Boolean);
+  if (!lines.length) return toast("Cola algumas mensagens suas");
+  for (const l of lines) if (!db.style.exemplos.includes(l)) db.style.exemplos.push(l);
+  db.style.exemplos = db.style.exemplos.slice(-80); save();
+  const b = $("#addEx"); b.disabled = true; b.textContent = "Aprendendo...";
+  try {
+    const res = await callAI(`MODO: APRENDER ESTILO. Não há print. Analise só os exemplos de mensagens do Mikael abaixo e devolva o JSON com "estilo_atualizado" completo e preciso (o resto pode ficar vazio/[]; "sugestoes" pode ser []).\n${styleBlock()}`, []);
+    if (res.estilo_atualizado) { db.style.perfil = res.estilo_atualizado; db.style.analises++; save(); }
+    $("#manualEx").value = ""; toast("Estilo atualizado!");
+  } catch (e) { toast("Exemplos salvos. " + e.message.slice(0, 60)); }
+  b.disabled = false; b.textContent = "Adicionar e reaprender"; updateBadge(); renderPerfil();
+};
+
+/* ---------------- Tela: Ajustes ---------------- */
+const KNOWN_MODELS = {
+  gemini: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
+  claude: ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"]
+};
+let fetchedModels = { gemini: null, claude: null };
+function renderAjustes() {
+  const s = db.settings, prov = s.provider;
+  $$("#prov .chip").forEach(c => c.classList.toggle("on", c.dataset.v === prov));
+  $("#apikey").value = s.keys[prov] || "";
+  const list = Array.from(new Set([s.models[prov], ...(fetchedModels[prov] || KNOWN_MODELS[prov])].filter(Boolean)));
+  $("#model").innerHTML = list.map(m => `<option ${m === s.models[prov] ? "selected" : ""}>${esc(m)}</option>`).join("");
+  $("#howto").innerHTML = prov === "gemini"
+    ? `<ol class="steps"><li>Toque em <a href="#" data-url="https://aistudio.google.com/apikey" style="color:var(--rose)">abrir Google AI Studio</a></li><li>Entre com sua conta Google</li><li>Toque em <b>Create API key</b> (Criar chave)</li><li>Copie a chave, cole abaixo e toque em <b>Salvar e testar</b></li></ol><p class="note">É grátis, com limite de uso por minuto/dia. Pra uso pessoal sobra.</p>`
+    : `<ol class="steps"><li>Crie conta em <a href="#" data-url="https://console.anthropic.com" style="color:var(--rose)">console.anthropic.com</a></li><li>Adicione créditos (pago por uso, centavos por análise)</li><li>Em <b>API Keys</b>, crie uma chave e cole abaixo</li></ol>`;
+  $$("[data-url]").forEach(a => a.onclick = ev => { ev.preventDefault(); openUrl(a.dataset.url); });
+}
+$("#model").onchange = () => { db.settings.models[db.settings.provider] = $("#model").value; save(); };
+$("#testKey").onclick = async () => {
+  const s = db.settings, prov = s.provider, key = $("#apikey").value.trim();
+  s.keys[prov] = key; s.models[prov] = $("#model").value; save();
+  const msg = $("#keyMsg"); if (!key) { msg.innerHTML = `<div class="err">Cola a chave primeiro.</div>`; return; }
+  msg.innerHTML = `<p class="note">Testando...</p>`;
+  let r;
+  if (prov === "gemini") r = await http("GET", "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { "x-goog-api-key": key }, "");
+  else r = await http("GET", "https://api.anthropic.com/v1/models?limit=50", { "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, "");
+  if (r.status !== 200) { msg.innerHTML = `<div class="err">${esc(friendlyError(r.status, r.text, prov))}</div>`; return; }
+  try {
+    const j = JSON.parse(r.text); let ids;
+    if (prov === "gemini") {
+      ids = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => m.name.replace(/^models\//, ""))
+        .filter(n => /^gemini-/.test(n) && !/(tts|live|image|embed|transcri|aqa|banana|omni|audio|robotics|computer)/i.test(n));
+      const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+      const score = n => ver(n) * 10 + (/flash/.test(n) && !/lite/.test(n) ? 3 : /lite/.test(n) ? 1 : 0) - (/preview|exp/.test(n) ? 0.5 : 0);
+      ids.sort((a, b) => score(b) - score(a));
+    } else ids = (j.data || []).map(m => m.id);
+    if (ids.length) {
+      fetchedModels[prov] = ids;
+      if (!ids.includes(s.models[prov])) s.models[prov] = prov === "gemini" ? (ids.find(n => /flash/.test(n) && !/lite|pro/.test(n)) || ids[0]) : (ids.find(n => /sonnet/.test(n)) || ids[0]);
+      save();
+    }
+    renderAjustes();
+    msg.innerHTML = `<p class="note" style="color:var(--ok)">✅ Chave funcionando! Modelo: <b>${esc(s.models[prov])}</b>. Já pode analisar prints.</p>`;
+    renderBanner();
+  } catch (e) { msg.innerHTML = `<div class="err">Resposta inesperada: ${esc(e.message)}</div>`; }
+};
+$("#exportB").onclick = () => { const b = JSON.parse(JSON.stringify(db)); b.settings.keys = { gemini: "", claude: "" }; copyText(JSON.stringify(b)); };
+$("#importB").onclick = () => {
+  openModal(`<h3 style="margin:0 0 10px">Restaurar backup</h3><textarea id="impT" style="min-height:140px" placeholder="cole o backup aqui"></textarea><div class="row" style="margin-top:12px"><button class="btn main" id="impC">Restaurar</button></div>`);
+  $("#impC").onclick = () => {
+    try { const b = JSON.parse($("#impT").value); if (!b.style) throw 0; const keys = db.settings.keys; db = Object.assign(JSON.parse(JSON.stringify(DEFAULT)), b); db.settings.keys = keys; save(); load(); renderAll(); closeModal(); toast("Backup restaurado"); }
+    catch (e) { toast("Backup inválido"); }
+  };
+};
+$("#wipe").onclick = () => { if (confirm("Apagar TUDO (estilo, pessoas, histórico e chave)? Não dá pra desfazer.")) { localStorage.removeItem("puxapapo"); load(); renderAll(); toast("Tudo apagado"); } };
+
+function renderBanner() {
+  const s = db.settings;
+  $("#setupBanner").innerHTML = s.keys[s.provider] ? "" : `<div class="banner"><b>👋 Primeiro passo: ligar a IA</b>Leva 1 minuto e é grátis com o Google Gemini.<div class="row" style="margin-top:10px"><button class="btn sm" onclick="go('ajustes')">Configurar agora</button></div></div>`;
+}
+function renderAll() { renderPersonSelects(); renderBanner(); updateBadge(); if (currentTab === "perfil") renderPerfil(); if (currentTab === "ajustes") renderAjustes(); }
+
+load(); renderAll(); receiveShared();
+</script>
+</body>
+</html>

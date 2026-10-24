@@ -3,6 +3,7 @@ import { getExercise, resolveExercise } from './domain/exercises';
 import { calculateTargets } from './domain/nutrition';
 import { generateProgram, phaseFor, prescribeDay, warmupFor } from './domain/program';
 import { OLYMPIA_WEEKS } from './domain/olympia';
+import { JKK_WEEKS, generateJkk } from './domain/jkk';
 import { groupHistory, suggestProgression } from './domain/progression';
 import { applyReadiness } from './domain/science';
 import type { DataStore } from './data/store';
@@ -18,15 +19,20 @@ export function overridesMap(rows: OverrideRow[]) {
   return { map, blocked };
 }
 
-export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia'): Promise<ProgramRow> {
+export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia' | 'jkk'): Promise<ProgramRow> {
   const old = await store.list<ProgramRow>('programs', { eq: { status: 'active' } });
   for (const p of old) await store.upsert('programs', { ...p, status: 'archived' });
-  // Protocolo travado: trocas pessoais antigas não entram no plano.
-  const ov = protocol === 'olympia' ? { map: {}, blocked: new Set<string>() } : overridesMap(await store.list<OverrideRow>('exercise_overrides'));
-  const config = generateProgram({ training: profile.training, overrides: ov.map, blocked: ov.blocked, protocol });
-  const row: ProgramRow = protocol === 'olympia'
-    ? { id: uuid(), user_id: store.userId, name: 'Protocolo Olympia — 60 dias', start_date: startDate, weeks: OLYMPIA_WEEKS, config, status: 'active' }
-    : { id: uuid(), user_id: store.userId, name: 'Ciclo de hipertrofia — 8 semanas', start_date: startDate, weeks: 8, config, status: 'active' };
+  let row: ProgramRow;
+  if (protocol === 'jkk') {
+    row = { id: uuid(), user_id: store.userId, name: 'Protocolo JKK', start_date: startDate, weeks: JKK_WEEKS, config: generateJkk(), status: 'active' };
+  } else {
+    // Protocolo travado: trocas pessoais antigas não entram no plano.
+    const ov = protocol === 'olympia' ? { map: {}, blocked: new Set<string>() } : overridesMap(await store.list<OverrideRow>('exercise_overrides'));
+    const config = generateProgram({ training: profile.training, overrides: ov.map, blocked: ov.blocked, protocol });
+    row = protocol === 'olympia'
+      ? { id: uuid(), user_id: store.userId, name: 'Protocolo Olympia — 60 dias', start_date: startDate, weeks: OLYMPIA_WEEKS, config, status: 'active' }
+      : { id: uuid(), user_id: store.userId, name: 'Ciclo de hipertrofia — 8 semanas', start_date: startDate, weeks: 8, config, status: 'active' };
+  }
   await store.upsert('programs', row as unknown as Record<string, unknown>);
   return row;
 }
@@ -70,17 +76,23 @@ export function buildSessionPlan(
 ): PlannedExercise[] {
   const ov = program.config.locked ? { map: {}, blocked: new Set<string>() } : overridesMap(overrides);
   let firstCompound = true;
-  return prescribeDay(program.config, dayPos, week, program.weeks).map((s) => {
+  const jkk = program.config.protocol === 'jkk';
+  return prescribeDay(program.config, dayPos, week, program.weeks).map((s, idx) => {
     const ex = resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked);
-    const sug = suggestProgression(ex, s.rir, groupHistory(logs, ex.key), { recoveryScore: recScore });
-    const warmup = warmupFor(ex.key, ex.kind === 'compound' && firstCompound);
+    // Protocolo importado: a faixa de repetições é a do documento, não a padrão do exercício.
+    const repRange = jkk ? s.repRange : ex.repRange;
+    const sug = suggestProgression({ ...ex, repRange }, s.rir, groupHistory(logs, ex.key), { recoveryScore: recScore });
+    const warmup = jkk
+      ? (idx === 0 ? 'Antes do primeiro exercício de cada dia, faça 2 séries leves (50% e 75% da carga).' : '')
+      : warmupFor(ex.key, ex.kind === 'compound' && firstCompound);
     if (ex.kind === 'compound') firstCompound = false;
     const deload = phaseFor(program.config, week, program.weeks).deload;
-    const load = sug.load !== null && deload ? Math.round((sug.load * 0.85) / (ex.increment || 0.5)) * (ex.increment || 0.5) : sug.load;
+    // JKK: deload com metade das séries e as MESMAS cargas; demais protocolos: ~85% da carga.
+    const load = sug.load !== null && deload && !jkk ? Math.round((sug.load * 0.85) / (ex.increment || 0.5)) * (ex.increment || 0.5) : sug.load;
     return {
-      ...s, exerciseKey: ex.key, repRange: ex.repRange, name: ex.name, muscle: ex.primary,
+      ...s, exerciseKey: ex.key, repRange, name: s.label && ex.key === s.exerciseKey ? s.label : ex.name, muscle: ex.primary,
       loadSuggestion: load,
-      suggestionReason: deload ? `Deload: ~85% da carga habitual, longe da falha. ${sug.reason}` : sug.reason,
+      suggestionReason: deload ? (jkk ? `Deload: metade das séries, mesmas cargas. ${sug.reason}` : `Deload: ~85% da carga habitual, longe da falha. ${sug.reason}`) : sug.reason,
       warmup,
     };
   });

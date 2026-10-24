@@ -8,8 +8,9 @@ import { estimateMinutes, plannedWeeklyVolume, phaseFor, prescribeDay } from '..
 import { nextSession, projectedEnd } from '../domain/schedule';
 import { weeklyVolume } from '../domain/volume';
 import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
-import { applyDeload, createProgram, overridesMap, recoveryScore, startSession, upgradeOlympia } from '../services';
-import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VERSION, OLYMPIA_VOLUME } from '../domain/olympia';
+import { applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
+import { JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
+import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
 import { decliningExercises } from '../domain/progression';
 import { recentRecovery } from '../domain/recommendations';
 import { Card, Empty, ErrorBox, Loading, fmt, useToast } from '../ui/components';
@@ -35,13 +36,14 @@ export function Training() {
   const { toast, node } = useToast();
   const program = programs.data[0];
   const today = todayISO();
-  const needsUpgrade = !!program && program.config.protocol === 'olympia' && program.config.olympiaVersion !== OLYMPIA_VERSION;
-  const upgrading = useRef(false);
+  // O Protocolo JKK substitui qualquer ciclo anterior (o histórico de séries é mantido).
+  const needsJkk = !programs.loading && !!profile && program?.config.protocol !== 'jkk';
+  const switching = useRef(false);
   useEffect(() => {
-    if (!needsUpgrade || !profile || upgrading.current) return;
-    upgrading.current = true;
-    void upgradeOlympia(store, program!, profile).then(() => toast('Protocolo Olympia atualizado para a versão 2 (mesma semana, histórico mantido).'));
-  }, [needsUpgrade, profile, program, store, toast]);
+    if (!needsJkk || switching.current) return;
+    switching.current = true;
+    void createProgram(store, profile!, todayISO(), 'jkk').then(() => toast('Protocolo JKK ativado. O treino anterior foi arquivado; seu histórico continua salvo.'));
+  }, [needsJkk, profile, store, toast]);
 
   const info = useMemo(() => {
     if (!program) return null;
@@ -55,11 +57,7 @@ export function Training() {
   if (!program || !info) {
     return (
       <Card title="Nenhum ciclo ativo">
-        <p>Gere um ciclo de 8 semanas a partir do seu perfil.</p>
-        <div className="row">
-          <button className="btn primary" disabled={busy || !profile} onClick={async () => { setBusy(true); await createProgram(store, profile!, undefined, 'olympia'); setBusy(false); }}>Gerar Protocolo Olympia (60 dias)</button>
-          <button className="btn" disabled={busy || !profile} onClick={async () => { setBusy(true); await createProgram(store, profile!); setBusy(false); }}>Ciclo padrão (8 semanas)</button>
-        </div>
+        <p>Preparando o Protocolo JKK…</p>
       </Card>
     );
   }
@@ -75,10 +73,12 @@ export function Training() {
   const muscles = (Object.keys(planned) as Muscle[]).filter((m) => (planned[m] ?? 0) >= 2);
   const loads = weeklyLoads(mine, logs.data).slice(-8);
   const olympia = program.config.protocol === 'olympia';
+  const jkk = program.config.protocol === 'jkk';
   const declining = decliningExercises(logs.data.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -28)));
   const rec = recentRecovery(checkins.data, today);
   const lastTqrs = [...mine].filter((x) => x.readiness).sort((a, b) => ((a.started_at ?? '') < (b.started_at ?? '') ? -1 : 1)).map((x) => x.readiness!.tqr);
-  const deloadSuggested = deloadCriteria(declining.length, rec.recovery, lastTqrs);
+  // JKK: deload "a cada 6 a 8 semanas" — antecipado só dentro da janela (semanas 6–7) quando a fadiga pedir.
+  const deloadSuggested = deloadCriteria(declining.length, rec.recovery, lastTqrs) && (!jkk || (next.week >= 6 && next.week < program.weeks));
   const locked = !!program.config.locked;
   const ratios = lastMetric.data[0] ? anthropometry(lastMetric.data[0] as unknown as Record<string, unknown>, profile?.height_cm) : [];
 
@@ -97,7 +97,7 @@ export function Training() {
       if (locked && !inProgress && deloadSuggested && !(program.config.deloadWeeks ?? []).includes(next.week)) {
         await applyDeload(store, program, next.week);
         program.config.deloadWeeks = [...(program.config.deloadWeeks ?? []), next.week];
-        toast('Critério de deload atingido: esta semana é de deload (metade das séries, ~85% da carga).');
+        toast(jkk ? 'Fadiga alta na janela de deload: esta semana é de deload (metade das séries, mesmas cargas).' : 'Critério de deload atingido: esta semana é de deload (metade das séries, ~85% da carga).');
       }
       const s = inProgress ?? await startSession(store, program, next.sequence, overrides.data, logs.data, recoveryScore(checkins.data), withTqr);
       nav(`/treino/sessao/${s.id}`);
@@ -126,6 +126,7 @@ export function Training() {
     <div className="stack">
       {node}
       {flash && <div className="banner info" role="status">{flash}</div>}
+      {jkk && <JkkHeader />}
       <div>
         <h1>Treino</h1>
         <p className="muted">{program.name} · início {formatBR(program.start_date)} · fim previsto {info.end ? formatBR(info.end) : '—'}</p>
@@ -150,17 +151,21 @@ export function Training() {
       {next.finished ? (
         <Card title="Ciclo concluído" className="accent">
           <p>Registre medidas e fotos de reavaliação e gere o próximo ciclo. As cargas atuais serão o ponto de partida.</p>
-          <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); await createProgram(store, profile!); setBusy(false); }}>Gerar novo ciclo</button>
+          <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); await createProgram(store, profile!, undefined, program.config.protocol); setBusy(false); }}>Gerar novo ciclo</button>
         </Card>
       ) : (
-        <Card className="accent" title={`Próxima sessão: ${day.name}`} action={<span className="tag">~{estimateMinutes(presc)} min</span>}>
+        <Card className="accent" title={`Próxima sessão: ${day.name}`} action={jkk ? undefined : <span className="tag">~{estimateMinutes(presc)} min</span>}>
           <p className="muted">{day.focus}</p>
           <ul className="list">
             {presc.map((s) => {
               const ex = resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked);
               return (
                 <li key={s.slotId} className="row between">
-                  <span><strong>{ex.name}</strong><br /><small>{MUSCLE_LABEL[ex.primary]} · {s.sets}× {ex.repRange[0]}–{ex.repRange[1]} · RIR {s.rir} · {s.restSec}s</small></span>
+                  {jkk ? (
+                    <span style={{ flex: 1 }}><strong>{s.label ?? ex.name}</strong> <span className="tag">{s.sets} × {s.repRange[0]}–{s.repRange[1]}{s.unit === 's' ? ' s' : ''}</span>
+                      <br /><small>{s.note}</small>
+                      <br /><small className="muted">{s.tag} · {s.restText}</small></span>
+                  ) : <span><strong>{ex.name}</strong><br /><small>{MUSCLE_LABEL[ex.primary]} · {s.sets}× {ex.repRange[0]}–{ex.repRange[1]} · RIR {s.rir} · {s.restSec}s</small></span>}
                   {!locked && <button className="btn ghost sm" onClick={() => setSwapFor(swapFor === s.exerciseKey ? null : s.exerciseKey)}>Trocar</button>}
                   {swapFor === s.exerciseKey && (
                     <div className="stack" style={{ width: '100%' }}>
@@ -191,14 +196,22 @@ export function Training() {
                 <button className="btn ghost sm" disabled={busy} onClick={() => void begin(null)}>Pular esta pergunta</button>
               </div>
             ) : (
-              <button className="btn primary big" disabled={busy} onClick={() => (inProgress ? void begin(null) : setAskTqr(true))}>{inProgress ? 'Continuar treino' : 'Iniciar treino'}</button>
+              <button className="btn primary big" disabled={busy} onClick={() => (inProgress || jkk ? void begin(null) : setAskTqr(true))}>{inProgress ? 'Continuar treino' : 'Iniciar treino'}</button>
             )}
             {!inProgress && !askTqr && <button className="btn ghost sm" onClick={() => void skip()}>Não vou treinar esta sessão</button>}
           </div>
         </Card>
       )}
 
-      {!olympia ? (
+      {jkk ? (
+        <>
+          <JkkPhotos />
+          <JkkWorkouts />
+          <JkkHow />
+          <JkkFlanks />
+          <JkkSources />
+        </>
+      ) : !olympia ? (
         <Card title="Protocolo Olympia — 60 dias (Classic Physique natural)">
           <p>Ciclo de 9 semanas, seg–sex: cada músculo ~2×/semana, braços em 4 dos 5 dias, prioridade em largura (dorsais + deltoide lateral), peitoral superior e pernas. Volume inicial moderado, ajustado só por dados; deload apenas quando fadiga e desempenho indicarem.</p>
           <button className="btn primary" disabled={busy || !profile} onClick={() => void startOlympia()}>Iniciar Protocolo Olympia</button>
@@ -255,12 +268,12 @@ export function Training() {
       <Card title="Divisão do ciclo">
         {program.config.days.map((d, i) => (
           <details key={i}>
-            <summary>{WEEKDAY_SHORT[d.dayIndex]} — {d.name} (~{estimateMinutes(d.slots)} min)</summary>
-            <ul className="list">{d.slots.map((s) => <li key={s.slotId}>{resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked).name} — {s.sets} séries base</li>)}</ul>
+            <summary>{WEEKDAY_SHORT[d.dayIndex]} — {d.name}{jkk ? '' : ` (~${estimateMinutes(d.slots)} min)`}</summary>
+            <ul className="list">{d.slots.map((s) => <li key={s.slotId}>{s.label ?? resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked).name} — {s.sets} × {s.repRange[0]}–{s.repRange[1]}{s.unit === 's' ? ' s' : ''}</li>)}</ul>
           </details>
         ))}
         {program.config.notes.map((n, i) => <p key={i} className="hint">• {n}</p>)}
-        {olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
+        {jkk ? <p className="hint">Ciclo de 8 semanas. Intensidade: 1 a 2 repetições sobrando; nos isolados, a última série até a falha. Deload a cada 6 a 8 semanas: metade das séries e as mesmas cargas (na semana 8, ou antes, nas semanas 6–7, se a fadiga pedir). Depois, um novo ciclo igual começa com as cargas atuais.</p> : olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
         {locked ? <p className="hint">🔒 Plano fechado: você só registra o que fez. A carga de cada série é ajustada pelo app; trocas só acontecem por dor ou aparelho indisponível, dentro do próprio treino.</p>
           : <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!, undefined, program.config.protocol); }}>Regerar ciclo (ex.: mudei de academia)</button>}
       </Card>

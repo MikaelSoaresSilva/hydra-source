@@ -92,7 +92,7 @@ export function Workout() {
     return session.exercises.flatMap((ex) => {
       const hist = groupHistory(allLogs.data, ex.exerciseKey);
       if (!hist[0] || hist[0].sessionId !== session.id) return [];
-      const sug = suggestProgression(getExercise(ex.exerciseKey), ex.rir, hist);
+      const sug = suggestProgression({ ...getExercise(ex.exerciseKey), repRange: ex.repRange }, ex.rir, hist);
       const [label, tone] = LABEL[sug.action];
       return [{ key: ex.exerciseKey, name: ex.name, load: sug.load, reason: sug.reason + (sug.suggestSubstitution ? ' Troque o exercício.' : ''), label, tone }];
     });
@@ -124,7 +124,7 @@ export function Workout() {
       if (r.queued) toast('Sem conexão: série salva no aparelho e será sincronizada.');
       // Autorregulação: a série registrada define a carga das próximas séries deste exercício.
       const meta = getExercise(ex.exerciseKey);
-      const adj = adjustNextSet(meta, ex.rir, { load: s.load, reps: s.reps, rir: s.rir, pain: draft![i].pain, techniqueOk: draft![i].technique });
+      const adj = adjustNextSet({ ...meta, repRange: ex.repRange }, ex.rir, { load: s.load, reps: s.reps, rir: s.rir, pain: draft![i].pain, techniqueOk: draft![i].technique });
       const pr = isPersonalRecord(groupHistory(allLogs.data.filter((l) => l.session_id !== session.id), ex.exerciseKey), { load: s.load, reps: s.reps, rir: s.rir });
       setDraft((d) => {
         const cur = d![i];
@@ -149,7 +149,7 @@ export function Workout() {
     const history = groupHistory(allLogs.data, key);
     const sug = suggestProgression(ex, old.rir, history);
     const exercises: PlannedExercise[] = session.exercises.map((e, k) => k === i
-      ? { ...e, exerciseKey: key, name: ex.name, muscle: ex.primary, repRange: ex.repRange, loadSuggestion: sug.load, suggestionReason: sug.reason } : e);
+      ? { ...e, exerciseKey: key, name: ex.name, muscle: ex.primary, repRange: e.label ? e.repRange : ex.repRange, loadSuggestion: sug.load, suggestionReason: sug.reason, note: e.label ? `Substituindo "${e.label}" só hoje.` : e.note } : e);
     await store.upsert('workout_sessions', { ...session, exercises } as unknown as Record<string, unknown>);
     update(i, { sets: draft![i].sets.map(() => ({ load: sug.load, reps: null, rir: null, done: false })) });
     setSwapIdx(null);
@@ -201,7 +201,9 @@ export function Workout() {
             <div className="ex-head">
               <div>
                 <h2>{ex.name}</h2>
-                <small className="muted">{MUSCLE_LABEL[ex.muscle]} · {ex.sets} × {ex.repRange[0]}–{ex.repRange[1]} · descanso {ex.restSec}s · RIR alvo {ex.rir}</small>
+                <small className="muted">{MUSCLE_LABEL[ex.muscle]} · {ex.sets} × {ex.repRange[0]}–{ex.repRange[1]}{ex.unit === 's' ? ' s' : ''} · descanso {ex.restText ?? `${ex.restSec}s`} · RIR alvo {ex.rir}</small>
+                {ex.note && <p className="hint" style={{ margin: '4px 0 0' }}>{ex.note}</p>}
+                {ex.tag && <small className="muted">{ex.tag}</small>}
               </div>
               {!readOnly && !locked && <button className="btn ghost sm" onClick={() => setSwapIdx(swapIdx === i ? null : i)}>Trocar</button>}
               {!readOnly && locked && <button className="btn ghost sm" onClick={() => void forcedSwap(i, 'Aparelho ocupado ou inexistente')}>Aparelho indisponível</button>}
@@ -227,7 +229,7 @@ export function Workout() {
               <p className="hint">Prefira canais de profissionais de educação física; o link é uma busca, não um vídeo verificado.</p>
             </details>
             <div className="stack" style={{ marginTop: 8 }}>
-              <div className="set-row hint"><span>#</span><span>Peso (kg)</span><span>Reps feitas</span><span>RIR</span><span /></div>
+              <div className="set-row hint"><span>#</span><span>Peso (kg)</span><span>{ex.unit === 's' ? 'Segundos' : 'Reps feitas'}</span><span>RIR</span><span /></div>
               {d.sets.map((s, j) => (
                 <div className="set-row" key={j}>
                   <span className="idx">{j + 1}</span>

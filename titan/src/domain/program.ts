@@ -1,5 +1,6 @@
 import { EXERCISE_BY_KEY, getExercise, resolveExercise } from './exercises';
 import { MIN_WEEKLY_SETS } from './science';
+import { jkkPhase } from './jkk';
 import { OLYMPIA_DAYS, OLYMPIA_PRIORITIES, OLYMPIA_VERSION, olympiaPhase } from './olympia';
 import { MUSCLE_LABEL, type Muscle, type ProgramConfig, type ProgramDay, type SlotPrescription, type TrainingProfile } from './types';
 
@@ -78,6 +79,7 @@ export function weekPhase(week: number, totalWeeks = 8): WeekPhase {
 /** Fase da semana conforme o protocolo do ciclo. */
 export function phaseFor(config: Pick<ProgramConfig, 'protocol' | 'deloadWeeks'>, week: number, totalWeeks = 8): WeekPhase {
   if (config.protocol === 'olympia') return olympiaPhase(week, config.deloadWeeks);
+  if (config.protocol === 'jkk') return jkkPhase(week, config.deloadWeeks);
   if (config.deloadWeeks?.includes(week)) return { ...weekPhase(totalWeeks, totalWeeks), week, label: 'Deload (aplicado por fadiga/desempenho)', assessment: false };
   return weekPhase(week, totalWeeks);
 }

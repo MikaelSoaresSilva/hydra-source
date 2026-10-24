@@ -117,6 +117,13 @@ export interface SlotPrescription {
   repRange: [number, number];
   restSec: number;
   rir: number;
+  /** Protocolos importados: nome, orientação e descanso exatamente como no documento. */
+  label?: string;
+  note?: string;
+  tag?: string;
+  restText?: string;
+  /** 's' = séries por tempo (segundos) em vez de repetições. */
+  unit?: 'reps' | 's';
 }
 
 export interface ProgramDay { dayIndex: number; name: string; focus: string; slots: SlotPrescription[] }
@@ -130,7 +137,7 @@ export interface ProgramConfig {
   days: ProgramDay[];
   notes: string[];
   /** Protocolo usado para gerar o ciclo (padrão: modelo de 8 semanas do Titan). */
-  protocol?: 'olympia';
+  protocol?: 'olympia' | 'jkk';
   /** Semanas em que o deload foi aplicado por decisão baseada em dados. */
   deloadWeeks?: number[];
   /** Plano fechado: o usuário só registra; trocas apenas por dor ou aparelho indisponível. */

@@ -96,6 +96,10 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Treino ativo: Protocolo JKK
+
+`src/domain/jkk.ts` transcreve o PDF "Protocolo JKK" (5 dias: seg, ter, qua, sex, sáb): exercícios, séries, faixas de repetição, descansos, orientações e origem de cada item, além das seções "O que vi nas fotos", "Como treinar", "Flancos" e "De onde veio cada coisa". O plano é fechado (só registro), usa RIR 1–2 com a última série dos isolados até a falha, progressão dupla, aquecimento de 2 séries leves no 1º exercício e deload a cada 6–8 semanas com metade das séries e as mesmas cargas. Ao abrir a aba Treino, o JKK substitui o ciclo anterior (o histórico de séries é mantido).
+
 ## Base de conhecimento e análise de aparência
 
 - `src/domain/knowledge.ts` e `src/domain/science.ts` reúnem o conteúdo dos materiais estudados (CREF4/SC 2018 e 2019, Musculação Aplicada, Ministério da Saúde/BVS, Almanaque da pele, apostila de corte masculino), cada ponto com a fonte. Telas: **Biblioteca** (artigos, calculadora de 1RM por %, sistemas de treino, divergências entre fontes) e **Aparência**.

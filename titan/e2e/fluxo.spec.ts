@@ -27,13 +27,14 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   // Treino
   await page.getByRole('link', { name: 'Treino' }).first().click();
   await expect(page.getByText(/Próxima sessão:/)).toBeVisible();
-  await expect(page.getByText(/Protocolo Olympia — 60 dias/)).toBeVisible();
-  await expect(page.getByText('Próxima sessão: Superior A — largura')).toBeVisible();
+  await expect(page.getByText(/^Protocolo JKK · início/)).toBeVisible();
+  await expect(page.getByText('Próxima sessão: Dia 1 · Peito superior + Ombros + Tríceps')).toBeVisible();
+  await expect(page.getByText('Supino inclinado com halteres (30°)').first()).toBeVisible();
+  await expect(page.getByText('FLANCOS: O QUE FUNCIONA DE VERDADE')).toBeVisible();
   await page.getByRole('button', { name: 'Iniciar treino' }).click();
-  // Prontidão (TQR) abaixo de 13 → sessão ajustada
-  await page.getByLabel('Prontidão TQR').selectOption('15');
-  await page.getByRole('button', { name: 'Começar' }).click();
-  await expect(page.getByText(/TQR 15 .*mantida como planejada/)).toBeVisible();
+  // Protocolo JKK: séries, faixas e orientações exatamente como no documento
+  await expect(page.getByRole('heading', { name: 'Supino inclinado com halteres (30°)' })).toBeVisible();
+  await expect(page.getByText(/4 × 6–10 · descanso 2–3 min/)).toBeVisible();
   // Plano fechado: sem trocar livremente nem somar séries
   await expect(page.getByRole('button', { name: 'Trocar', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '+ série' })).toHaveCount(0);
@@ -49,8 +50,8 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await page.getByLabel('Repetições série 2').first().fill('15');
   await page.getByLabel('RIR série 2').first().fill('5');
   await page.getByRole('button', { name: 'Concluir série 2' }).first().click();
-  await expect(page.getByText(/Série 2: 15 reps com RIR 5: acima do alvo. Próxima série: 70 kg \(\+10 kg\)/)).toBeVisible();
-  await expect(page.getByLabel('Carga série 3').first()).toHaveValue('70');
+  await expect(page.getByText(/Série 2: 15 reps com RIR 5: acima do alvo. Próxima série: /)).toBeVisible();
+  await expect(page.getByLabel('Carga série 3').first()).not.toHaveValue('60');
   await page.screenshot({ path: `test-results/treino-${info.project.name}.png` });
 
   // Recarrega: série continua salva

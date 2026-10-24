@@ -69,7 +69,7 @@ export function Mission() {
         <Card title="12 semanas, o máximo de resultado com o mínimo de gasto" className="accent">
           <p>O plano junta o que o Titan já sabe fazer, no ritmo mais rápido que ainda é sustentável:</p>
           <ul>
-            <li><small><strong>Corpo:</strong> Protocolo Olympia, progressão série a série e proteína todo dia.</small></li>
+            <li><small><strong>Corpo:</strong> Protocolo JKK, progressão série a série e proteína todo dia.</small></li>
             <li><small><strong>Rosto:</strong> corte certo para o formato do rosto, pele em 3 passos, barba e sobrancelha alinhadas, postura e dentes.</small></li>
             <li><small><strong>Base:</strong> sono, água e comida feita em casa, que é o jeito mais barato.</small></li>
           </ul>

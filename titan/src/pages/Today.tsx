@@ -171,7 +171,7 @@ export function Today() {
         <ul className="list">
           {armGoal && <li>{armGoal.name}: <strong>{fmt(armGoal.loadSuggestion)} kg</strong> × {armGoal.repRange[0]}–{armGoal.repRange[1]} reps (RIR {armGoal.rir})<br /><small className="muted">{armGoal.suggestionReason}</small></li>}
           {weekly.length > 0 && weeklyGain > 0 && <li>Média de peso da próxima semana: ~<strong>{fmt(weekly[weekly.length - 1].avg + weeklyGain, 2)} kg</strong> (ritmo-alvo +{fmt(weeklyGain, 2)} kg/sem)</li>}
-          {program && next && !next.finished && <li>Próxima avaliação (medidas e fotos): semana {(program.config.protocol === 'olympia' ? [1, 3, 5, 7, 9] : [1, 4, 8]).find((w) => w >= next.week) ?? program.weeks} do ciclo</li>}
+          {program && next && !next.finished && <li>Próxima avaliação (medidas e fotos): semana {(program.config.protocol === 'olympia' ? [1, 3, 5, 7, 9] : program.config.protocol === 'jkk' ? [1, 3, 5, 7] : [1, 4, 8]).find((w) => w >= next.week) ?? program.weeks} do ciclo</li>}
           {!armGoal && weekly.length === 0 && <li className="muted">Registre treinos e pesagens para gerar metas a partir dos seus dados.</li>}
         </ul>
       </Card>

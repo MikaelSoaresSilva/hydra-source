@@ -76,7 +76,7 @@ export function Onboarding() {
       const done: Profile = { ...p, onboarding_completed_at: new Date().toISOString() };
       await save(done);
       const programs = await store.list('programs', { eq: { status: 'active' } });
-      if (!programs.length) await createProgram(store, done, todayISO(), (done.training.trainingDays?.length ?? 5) >= 5 ? 'olympia' : undefined);
+      if (!programs.length) await createProgram(store, done, todayISO(), 'jkk');
       if (!profileReadyForTargets(done).length) {
         const t = await store.list('nutrition_targets');
         if (!t.length) await createTargets(store, done);

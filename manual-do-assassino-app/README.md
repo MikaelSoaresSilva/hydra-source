@@ -1,9 +1,9 @@
 # Manual do Assassino (app Android)
 
-App offline que mostra o livro *Manual do Assassino*, com sumário, progresso das tarefas salvo no celular, tema claro/escuro e ajuste do tamanho da letra.
+App offline com uma biblioteca de livros (*Manual do Assassino* e *O Código do Viking*), com sumário, progresso das tarefas salvo no celular para cada livro, tema claro/escuro e ajuste do tamanho da letra.
 
-- `livro.md`: o texto do livro. Edite aqui para mudar o conteúdo.
-- `build_html.py`: transforma o livro na página do app (`android/assets/index.html`).
+- `livros/*.md`: o texto de cada livro. Edite aqui para mudar o conteúdo.
+- `build_html.py`: transforma os livros na página do app (`android/assets/index.html`). Para adicionar um livro, coloque o `.md` em `livros/` e inclua-o na lista `BOOKS`.
 - `make_icon.py`: desenha os ícones.
 - `android/`: código Android (uma tela com WebView, sem internet).
 - `build.sh`: gera e assina `ManualDoAssassino.apk`.

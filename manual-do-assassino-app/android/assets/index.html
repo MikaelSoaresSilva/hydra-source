@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Manual do Assassino</title>
+<title>Biblioteca do Guerreiro</title>
 <style>
 :root{
   --bg:#0e0e10; --bg2:#17171b; --card:#1d1d22; --line:#2c2c33;
@@ -14,6 +14,8 @@
   --bg:#f6f2ea; --bg2:#ece6da; --card:#fffdf8; --line:#d9d1c2;
   --tx:#1d1b18; --tx2:#5f5a51; --acc:#a3162b; --acc2:#8a6418;
 }
+[data-book="v"]{--acc:#4f86c6}
+:root[data-theme="light"] [data-book="v"]{--acc:#2d5b8f}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--tx)}
 body{font:var(--fs)/1.6 Georgia,"Noto Serif",serif;}
@@ -24,32 +26,50 @@ a{color:var(--acc2)}
   font-family:system-ui,Roboto,sans-serif}
 .bar .name{flex:1;font-weight:700;font-size:15px;letter-spacing:.08em;text-transform:uppercase;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.btn{display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);color:var(--tx);border-radius:10px;
-  min-width:40px;height:40px;font-size:15px;font-weight:600;padding:0 10px;font-family:inherit}
+.btn{display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);
+  color:var(--tx);border-radius:10px;min-width:40px;height:40px;font-size:15px;font-weight:600;padding:0 10px;font-family:inherit}
 .btn:active{background:var(--line)}
-/* Capa */
-#home{min-height:calc(100vh - 57px);display:flex;flex-direction:column;justify-content:center;
+body.at-lib #menu{visibility:hidden}
+/* Biblioteca */
+#lib{max-width:760px;margin:0 auto;padding:26px 18px 40px;font-family:system-ui,Roboto,sans-serif}
+#lib h1{font-size:28px;letter-spacing:.08em;text-transform:uppercase;margin:6px 0 4px}
+#lib .lead{color:var(--tx2);margin:0 0 22px;font-size:15px}
+.card{display:grid;grid-template-columns:72px 1fr;gap:4px 16px;align-items:center;padding:18px;margin:0 0 14px;
+  border-radius:16px;background:var(--card);border:1px solid var(--line);color:var(--tx);text-decoration:none;
+  box-shadow:inset 4px 0 0 var(--acc)}
+.card:active{background:var(--line)}
+.card .emblem{width:72px;height:72px;margin:0;grid-row:span 2}
+.card .ct{font-size:20px;font-weight:700;line-height:1.2;letter-spacing:.03em}
+.card .ct b{color:var(--acc)}
+.card .cs{font-size:14px;color:var(--tx2);line-height:1.4}
+.card .meter{grid-column:1 / -1;margin:12px 0 0;max-width:none;text-align:left}
+/* Capa do livro */
+.home{min-height:calc(100vh - 57px);flex-direction:column;justify-content:center;
   padding:32px 22px;text-align:center}
-.emblem{width:92px;height:92px;margin:0 auto 22px}
-#home h1{font-family:system-ui,Roboto,sans-serif;font-size:34px;line-height:1.1;margin:0 0 12px;
+.emblem{width:92px;height:92px;margin:0 auto 22px;display:block}
+.home h1{font-family:system-ui,Roboto,sans-serif;font-size:34px;line-height:1.1;margin:0 0 12px;
   letter-spacing:.06em;text-transform:uppercase}
-#home h1 b{color:var(--acc)}
-#home .sub{color:var(--tx2);margin:0 auto 28px;max-width:420px}
+.home h1 b{color:var(--acc)}
+.home .sub{color:var(--tx2);margin:0 auto 28px;max-width:420px}
 .cta{display:block;width:100%;max-width:360px;margin:0 auto 12px;padding:15px;border-radius:12px;
   border:0;background:var(--acc);color:#fff;font:700 17px system-ui,Roboto,sans-serif}
 .cta.alt{background:transparent;border:1px solid var(--line);color:var(--tx)}
-.meter{max-width:360px;margin:22px auto 0;font:14px system-ui,Roboto,sans-serif;color:var(--tx2)}
-.meter .track{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:8px}
-.meter .fill{height:100%;width:0;background:var(--acc2);transition:width .3s}
-/* Capítulos */
-.chapter{display:none;max-width:760px;margin:0 auto;padding:18px 18px 90px}
+.back{display:inline-block;margin:26px auto 0;font:600 15px system-ui,Roboto,sans-serif;text-decoration:none}
+.meter{display:block;max-width:360px;margin:22px auto 0;font:14px system-ui,Roboto,sans-serif;color:var(--tx2)}
+.meter .track{display:block;height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:8px}
+.meter .fill{display:block;height:100%;width:0;background:var(--acc2);transition:width .3s}
+/* Telas: só uma aparece por vez */
+.book,.home,.chapter{display:none}
+.book.on{display:block}
+.book.on .home.on{display:flex}
 .chapter.on{display:block}
+/* Capítulos */
+.chapter{max-width:760px;margin:0 auto;padding:18px 18px 90px}
 h2{font-family:system-ui,Roboto,sans-serif;font-size:1.55em;line-height:1.2;margin:.4em 0 .8em;
   padding-bottom:.4em;border-bottom:3px solid var(--acc)}
 h3{font-family:system-ui,Roboto,sans-serif;font-size:1.12em;margin:1.8em 0 .5em;color:var(--acc2)}
 p{margin:.7em 0}
 li{margin:.35em 0}
-strong{color:var(--tx)}
 blockquote{margin:1em 0;padding:.6em 1em;border-left:4px solid var(--acc2);background:var(--card);
   border-radius:0 10px 10px 0;color:var(--tx2);font-style:italic}
 .tw{overflow-x:auto;margin:1em -18px;padding:0 18px;-webkit-overflow-scrolling:touch}
@@ -78,7 +98,8 @@ input[type=checkbox]{width:22px;height:22px;flex:0 0 22px;margin:2px 0 0;accent-
 body.toc-open #toc{transform:none}
 body.toc-open #scrim{display:block}
 #toc h4{margin:0;padding:18px 18px 10px;letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:var(--tx2)}
-#toc ul{list-style:none;margin:0;padding:0 8px 24px}
+#toc ul{list-style:none;margin:0;padding:0 8px 24px;display:none}
+#toc ul.on{display:block}
 #toc a{display:flex;align-items:center;gap:8px;padding:12px 10px;border-radius:10px;color:var(--tx);
   text-decoration:none;font-size:15px}
 #toc a.cur{background:var(--card);box-shadow:inset 3px 0 0 var(--acc)}
@@ -89,10 +110,10 @@ body.toc-open #scrim{display:block}
   border:1px solid var(--line);background:var(--bg2);color:var(--tx);font-size:20px}
 </style>
 </head>
-<body>
+<body class="at-lib">
 <header class="bar">
   <button class="btn" id="menu" aria-label="Sumário">&#9776;</button>
-  <span class="name" id="barname">Manual do Assassino</span>
+  <span class="name" id="barname">Biblioteca</span>
   <button class="btn" id="fminus" aria-label="Diminuir letra">A&minus;</button>
   <button class="btn" id="fplus" aria-label="Aumentar letra">A+</button>
   <button class="btn" id="theme" aria-label="Trocar tema"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
@@ -101,26 +122,57 @@ body.toc-open #scrim{display:block}
 <div id="scrim"></div>
 <aside id="toc" aria-label="Sumário">
   <h4>Sumário</h4>
-  <ul><li><a href="#inicio" data-i="-1"><span class="t">Capa</span></a></li><li><a href="#c0" data-i="0"><span class="t">Como usar este manual</span><span class="p" data-p="0"></span></a></li><li><a href="#c1" data-i="1"><span class="t">A Biblioteca do Assassino</span><span class="p" data-p="1"></span></a></li><li><a href="#c2" data-i="2"><span class="t">Capítulo 1 — Ler a Mente</span><span class="p" data-p="2"></span></a></li><li><a href="#c3" data-i="3"><span class="t">Capítulo 2 — As 7 Armas da Influência</span><span class="p" data-p="3"></span></a></li><li><a href="#c4" data-i="4"><span class="t">Capítulo 3 — Negociação de Refém</span><span class="p" data-p="4"></span></a></li><li><a href="#c5" data-i="5"><span class="t">Capítulo 4 — Palavras que Entram na Cabeça</span><span class="p" data-p="5"></span></a></li><li><a href="#c6" data-i="6"><span class="t">Capítulo 5 — Presença e Poder</span><span class="p" data-p="6"></span></a></li><li><a href="#c7" data-i="7"><span class="t">Capítulo 6 — O Lado Sombrio</span><span class="p" data-p="7"></span></a></li><li><a href="#c8" data-i="8"><span class="t">Capítulo 7 — O Motor das Emoções</span><span class="p" data-p="8"></span></a></li><li><a href="#c9" data-i="9"><span class="t">Capítulo 8 — Ler o Corpo</span><span class="p" data-p="9"></span></a></li><li><a href="#c10" data-i="10"><span class="t">Capítulo 9 — Impor Respeito</span><span class="p" data-p="10"></span></a></li><li><a href="#c11" data-i="11"><span class="t">Capítulo 10 — Conquistar Pessoas</span><span class="p" data-p="11"></span></a></li><li><a href="#c12" data-i="12"><span class="t">O Desafio de 30 Dias</span><span class="p" data-p="12"></span></a></li><li><a href="#c13" data-i="13"><span class="t">Fontes</span><span class="p" data-p="13"></span></a></li></ul>
+  <ul class="toclist" data-book="a"><li><a href="#biblioteca" data-i="-2"><span class="t">&larr; Biblioteca</span></a></li><li><a href="#a" data-i="-1"><span class="t">Capa</span></a></li><li><a href="#a/0" data-i="0"><span class="t">Como usar este manual</span><span class="p" data-p="0"></span></a></li><li><a href="#a/1" data-i="1"><span class="t">A Biblioteca do Assassino</span><span class="p" data-p="1"></span></a></li><li><a href="#a/2" data-i="2"><span class="t">Capítulo 1 — Ler a Mente</span><span class="p" data-p="2"></span></a></li><li><a href="#a/3" data-i="3"><span class="t">Capítulo 2 — As 7 Armas da Influência</span><span class="p" data-p="3"></span></a></li><li><a href="#a/4" data-i="4"><span class="t">Capítulo 3 — Negociação de Refém</span><span class="p" data-p="4"></span></a></li><li><a href="#a/5" data-i="5"><span class="t">Capítulo 4 — Palavras que Entram na Cabeça</span><span class="p" data-p="5"></span></a></li><li><a href="#a/6" data-i="6"><span class="t">Capítulo 5 — Presença e Poder</span><span class="p" data-p="6"></span></a></li><li><a href="#a/7" data-i="7"><span class="t">Capítulo 6 — O Lado Sombrio</span><span class="p" data-p="7"></span></a></li><li><a href="#a/8" data-i="8"><span class="t">Capítulo 7 — O Motor das Emoções</span><span class="p" data-p="8"></span></a></li><li><a href="#a/9" data-i="9"><span class="t">Capítulo 8 — Ler o Corpo</span><span class="p" data-p="9"></span></a></li><li><a href="#a/10" data-i="10"><span class="t">Capítulo 9 — Impor Respeito</span><span class="p" data-p="10"></span></a></li><li><a href="#a/11" data-i="11"><span class="t">Capítulo 10 — Conquistar Pessoas</span><span class="p" data-p="11"></span></a></li><li><a href="#a/12" data-i="12"><span class="t">O Desafio de 30 Dias</span><span class="p" data-p="12"></span></a></li><li><a href="#a/13" data-i="13"><span class="t">Fontes</span><span class="p" data-p="13"></span></a></li></ul><ul class="toclist" data-book="v"><li><a href="#biblioteca" data-i="-2"><span class="t">&larr; Biblioteca</span></a></li><li><a href="#v" data-i="-1"><span class="t">Capa</span></a></li><li><a href="#v/0" data-i="0"><span class="t">Como usar este livro</span><span class="p" data-p="0"></span></a></li><li><a href="#v/1" data-i="1"><span class="t">Capítulo 1 — O Juramento</span><span class="p" data-p="1"></span></a></li><li><a href="#v/2" data-i="2"><span class="t">Capítulo 2 — Disciplina de Ferro</span><span class="p" data-p="2"></span></a></li><li><a href="#v/3" data-i="3"><span class="t">Capítulo 3 — Forjar o Corpo</span><span class="p" data-p="3"></span></a></li><li><a href="#v/4" data-i="4"><span class="t">Capítulo 4 — Mente de Aço</span><span class="p" data-p="4"></span></a></li><li><a href="#v/5" data-i="5"><span class="t">Capítulo 5 — O Chefe do Clã</span><span class="p" data-p="5"></span></a></li><li><a href="#v/6" data-i="6"><span class="t">Capítulo 6 — A Expedição</span><span class="p" data-p="6"></span></a></li><li><a href="#v/7" data-i="7"><span class="t">Capítulo 7 — Honra e Legado</span><span class="p" data-p="7"></span></a></li><li><a href="#v/8" data-i="8"><span class="t">O Desafio de 30 Dias</span><span class="p" data-p="8"></span></a></li><li><a href="#v/9" data-i="9"><span class="t">Fontes e notas</span><span class="p" data-p="9"></span></a></li></ul>
 </aside>
 
 <main>
-  <section id="home">
-    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+  <section id="lib">
+    <h1>Biblioteca</h1>
+    <p class="lead">Escolha o livro. Seu progresso fica salvo em cada um.</p>
+    
+    <a class="card" href="#a" data-book="a">
+      <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
       <circle cx="50" cy="50" r="47" fill="none" stroke="var(--acc)" stroke-width="3"/>
       <path d="M50 14 L57 58 L50 66 L43 58 Z" fill="var(--tx)"/>
       <rect x="33" y="60" width="34" height="6" rx="3" fill="var(--acc2)"/>
       <rect x="46" y="66" width="8" height="16" rx="2" fill="var(--acc)"/>
-      <circle cx="50" cy="85" r="4" fill="var(--acc2)"/>
-    </svg>
-    <h1>Manual do <b>Assassino</b></h1>
-    <p class="sub">Persuasão, negociação e influência do mais alto nível — e como nunca ser manipulado</p>
-    <button class="cta" id="go">Começar a ler</button>
-    <button class="cta alt" id="open-toc">Ver sumário</button>
-    <div class="meter"><span id="meter-txt">Treino concluído: 0%</span>
-      <div class="track"><div class="fill" id="meter-fill"></div></div></div>
+      <circle cx="50" cy="85" r="4" fill="var(--acc2)"/></svg>
+      <span class="ct">Manual do <b>Assassino</b></span>
+      <span class="cs">Persuasão, negociação e influência do mais alto nível — e como nunca ser manipulado</span>
+      <span class="meter"><span class="mt" data-meter="a"></span>
+        <span class="track"><span class="fill" data-fill="a"></span></span></span>
+    </a>
+    <a class="card" href="#v" data-book="v">
+      <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="47" fill="none" stroke="var(--acc)" stroke-width="3"/>
+      <rect x="45" y="16" width="7" height="68" rx="3" fill="var(--acc2)"/>
+      <path d="M52 22 C70 18 82 32 80 54 C72 46 62 44 52 47 Z" fill="var(--tx)"/>
+      <path d="M45 26 C36 26 30 32 30 40 C35 37 40 37 45 39 Z" fill="var(--tx)"/>
+      <circle cx="48.5" cy="86" r="4" fill="var(--acc)"/></svg>
+      <span class="ct">O Código do <b>Viking</b></span>
+      <span class="cs">Manual de treino para uma mentalidade de líder, vencedor e inquebrável</span>
+      <span class="meter"><span class="mt" data-meter="v"></span>
+        <span class="track"><span class="fill" data-fill="v"></span></span></span>
+    </a>
   </section>
-  <section class="chapter" id="c0" data-i="0"><h2>Como usar este manual</h2>
+  
+  <div class="book" id="book-a" data-book="a" data-store="manual-assassino.v1" data-title="Manual do Assassino">
+    <section class="home">
+      <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="47" fill="none" stroke="var(--acc)" stroke-width="3"/>
+      <path d="M50 14 L57 58 L50 66 L43 58 Z" fill="var(--tx)"/>
+      <rect x="33" y="60" width="34" height="6" rx="3" fill="var(--acc2)"/>
+      <rect x="46" y="66" width="8" height="16" rx="2" fill="var(--acc)"/>
+      <circle cx="50" cy="85" r="4" fill="var(--acc2)"/></svg>
+      <h1>Manual do <b>Assassino</b></h1>
+      <p class="sub">Persuasão, negociação e influência do mais alto nível — e como nunca ser manipulado</p>
+      <button class="cta go">Começar a ler</button>
+      <button class="cta alt open-toc">Ver sumário</button>
+      <div class="meter"><span class="mt" data-meter="a"></span>
+        <div class="track"><div class="fill" data-fill="a"></div></div></div>
+      <a class="back" href="#biblioteca">&larr; Biblioteca</a>
+    </section>
+    <section class="chapter" id="a-c0" data-i="0"><h2>Como usar este manual</h2>
 <p>"Assassino" aqui é no sentido de quem é letal com as palavras: fecha negócios, ganha discussões, lidera pessoas e <strong>ninguém consegue enganar</strong>. Este manual reúne o que os melhores livros do mundo sobre persuasão, negociação e poder ensinam, com exercícios para você treinar na vida real.</p>
 <h3>Persuasão x manipulação: a diferença que importa</h3>
 <p>As técnicas são quase as mesmas. O que muda é a intenção e a verdade.</p>
@@ -164,8 +216,7 @@ body.toc-open #scrim{display:block}
 <li><strong>Teste do jornal.</strong> Antes de usar uma técnica, pergunte: "Eu ficaria tranquilo se a pessoa soubesse exatamente o que estou fazendo?" Se a resposta for não, não faça.</li>
 <li><strong>Leia os livros originais.</strong> Este manual é o mapa. Os livros da Biblioteca são o território.</li>
 </ol>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c1" data-i="1"><h2>A Biblioteca do Assassino</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c1" data-i="1"><h2>A Biblioteca do Assassino</h2>
 <p>Os 12 livros abaixo são a base deste manual, na ordem em que vale a pena ler. Comece pelos 3 primeiros: eles sozinhos já mudam a forma como você conversa, vende e negocia.</p>
 <div class="tw"><table>
 <thead>
@@ -300,8 +351,7 @@ body.toc-open #scrim{display:block}
 </tr>
 </tbody>
 </table></div>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c2" data-i="2"><h2>Capítulo 1 — Ler a Mente</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c2" data-i="2"><h2>Capítulo 1 — Ler a Mente</h2>
 <p>Antes de influenciar alguém, você precisa entender como essa pessoa decide. E a resposta surpreende: quase nunca pela lógica.</p>
 <h3>Os dois pilotos do cérebro</h3>
 <p>O psicólogo Daniel Kahneman, Nobel de Economia em 2002, explica que pensamos com dois sistemas:</p>
@@ -354,8 +404,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c2-3"><span>Observei o "normal" em 3 conversas</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c2-4"><span>Usei o nome e fiz 2 perguntas a cada pessoa nova</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c3" data-i="3"><h2>Capítulo 2 — As 7 Armas da Influência</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c3" data-i="3"><h2>Capítulo 2 — As 7 Armas da Influência</h2>
 <p>Robert Cialdini passou anos estudando vendedores, recrutadores e publicitários por dentro, às vezes trabalhando disfarçado com eles. Ele descobriu que quase toda influência usa poucos gatilhos. No livro original eram 6; no <em>Pré-Suasão</em> ele acrescentou o 7º, a unidade.</p>
 <div class="tw"><table>
 <thead>
@@ -439,8 +488,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c3-4"><span>Fiz a Auditoria de Ataques por 7 dias</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c3-5"><span>Achei 3 pontos em comum em 3 conversas</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c4" data-i="4"><h2>Capítulo 3 — Negociação de Refém</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c4" data-i="4"><h2>Capítulo 3 — Negociação de Refém</h2>
 <p>Chris Voss foi o principal negociador internacional de sequestros do FBI. A ideia central dele: <strong>as pessoas não decidem pela lógica, decidem pela emoção</strong>. Por isso a arma mais forte não é o argumento, é a "empatia tática": mostrar que você entende o que o outro sente, sem necessariamente concordar.</p>
 <h3>O arsenal de Voss</h3>
 <div class="tw"><table>
@@ -530,8 +578,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c4-4"><span>Negociei algo pequeno e anotei o resultado</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c4-5"><span>Preparei a folha de Ensaio para uma negociação real</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c5" data-i="5"><h2>Capítulo 4 — Palavras que Entram na Cabeça</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c5" data-i="5"><h2>Capítulo 4 — Palavras que Entram na Cabeça</h2>
 <p>Quem domina as palavras domina a sala. Há mais de 2.300 anos, Aristóteles já tinha descoberto os 3 pilares que ainda hoje sustentam todo discurso que convence.</p>
 <h3>Os 3 pilares de Aristóteles</h3>
 <div class="tw"><table>
@@ -608,8 +655,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c5-4"><span>Usei "porque" em todos os pedidos da semana</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c5-5"><span>Preparei o terreno antes de 3 pedidos</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c6" data-i="6"><h2>Capítulo 5 — Presença e Poder</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c6" data-i="6"><h2>Capítulo 5 — Presença e Poder</h2>
 <p>Antes de você abrir a boca, as pessoas já decidiram se vão te levar a sério. Presença é calma, clareza e controle de si mesmo. Quem precisa provar demais transmite fraqueza; quem fala pouco e com segurança transmite poder.</p>
 <h3>Robert Greene: o que usar e o que jogar fora</h3>
 <p><em>As 48 Leis do Poder</em> é um dos livros mais lidos sobre poder, e um dos mais perigosos se lido sem filtro. Ele descreve como pessoas poderosas agiram ao longo da história, não como você deve viver. Algumas leis são sabedoria pura; outras destroem reputações.</p>
@@ -700,8 +746,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c6-4"><span>Gravei e analisei meu vídeo</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c6-5"><span>Planejei 3 cenários para uma decisão real</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c7" data-i="7"><h2>Capítulo 6 — O Lado Sombrio</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c7" data-i="7"><h2>Capítulo 6 — O Lado Sombrio</h2>
 <p>O Assassino de verdade enxerga a manipulação de longe e desarma na hora. Este capítulo é o seu escudo: as táticas mais usadas por manipuladores, como reconhecer cada uma e o que fazer.</p>
 <p>O psicólogo George K. Simon, em <em>In Sheep's Clothing</em>, explica que manipuladores raramente atacam de frente. Eles usam táticas "encobertas": a pessoa sente que algo está errado, mas não consegue explicar o quê. Dar nome à tática é metade da defesa.</p>
 <h3>O catálogo das táticas sujas</h3>
@@ -802,8 +847,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c7-4"><span>Encontrei 6 táticas na Caça às Táticas</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c7-5"><span>Fiz o Raio-X do meu Círculo</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c8" data-i="8"><h2>Capítulo 7 — O Motor das Emoções</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c8" data-i="8"><h2>Capítulo 7 — O Motor das Emoções</h2>
 <p>Quem não controla as próprias emoções é controlado por quem sabe provocá-las. Raiva, medo e vergonha são os botões que vendedores, manipuladores e adversários apertam. Este capítulo ensina como esse motor funciona e como colocar a mão no volante.</p>
 <h3>O que é uma emoção</h3>
 <p>Uma emoção é um alarme do cérebro que prepara o corpo para agir <strong>antes</strong> de você pensar. Ela acontece em 3 camadas ao mesmo tempo:</p>
@@ -916,8 +960,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c8-4"><span>Fiz o Suspiro Cíclico 6 dias</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c8-5"><span>Fiz a Checagem do Corpo antes de uma conversa importante</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c9" data-i="9"><h2>Capítulo 8 — Ler o Corpo</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c9" data-i="9"><h2>Capítulo 8 — Ler o Corpo</h2>
 <p>O corpo fala o tempo todo, mas não fala em código secreto. Ele mostra <strong>conforto ou desconforto, interesse ou desinteresse, confiança ou insegurança</strong>. Quem lê esses sinais sabe quando insistir, quando recuar e qual assunto mexeu com a pessoa.</p>
 <p>Joe Navarro, ex-agente de contrainteligência do FBI e autor de <em>O que Todo Corpo Fala</em>, resume assim: o corpo reage primeiro ao conforto e ao desconforto, e essas reações são mais difíceis de fingir do que as palavras.</p>
 <h3>As 4 leis da leitura corporal</h3>
@@ -1033,8 +1076,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c9-3"><span>Só concluí algo com 3 sinais em 3 conversas</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c9-4"><span>Vi meu próprio corpo num vídeo e anotei meus sinais</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c10" data-i="10"><h2>Capítulo 9 — Impor Respeito</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c10" data-i="10"><h2>Capítulo 9 — Impor Respeito</h2>
 <p>Intimidar de verdade não é gritar, ameaçar ou humilhar. Isso é sinal de descontrole, e as pessoas sentem o cheiro do descontrole de longe. O que intimida de verdade é alguém <strong>calmo, firme e inabalável para quem tenta pressioná-lo</strong>: alguém que não precisa de aprovação, não se abala e cumpre o que diz.</p>
 <p>Regra simples: <strong>a pessoa mais calma da sala é a mais perigosa da sala.</strong></p>
 <h3>Os dois eixos de como os outros te veem</h3>
@@ -1116,8 +1158,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c10-4"><span>Passei 7 dias sem justificativas desnecessárias</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c10-5"><span>Usei a Postura do Rei antes de 3 situações importantes</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c11" data-i="11"><h2>Capítulo 10 — Conquistar Pessoas</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c11" data-i="11"><h2>Capítulo 10 — Conquistar Pessoas</h2>
 <p>Vamos ser honestos: ninguém conquista 100% das pessoas, nem a mais bonita do mundo. Aparência pesa nos primeiros segundos. Mas a ciência mostra que, depois disso, o que mais conta está sob seu controle: como você faz a pessoa se sentir.</p>
 <p>Num estudo famoso com mais de 10 mil pessoas em 37 culturas, o psicólogo David Buss (1989) descobriu que homens e mulheres colocaram <strong>bondade e inteligência</strong> entre as qualidades mais importantes num parceiro. Beleza importa, mas não está sozinha no topo.</p>
 <h3>O que a ciência diz que faz as pessoas gostarem de você</h3>
@@ -1206,8 +1247,7 @@ body.toc-open #scrim{display:block}
 <li class="task"><label><input type="checkbox" data-k="c11-4"><span>Fiz uma pessoa se sentir importante todos os dias</span></label></li>
 <li class="task"><label><input type="checkbox" data-k="c11-5"><span>Comecei meu Plano de Aparência Controlável</span></label></li>
 </ul>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c12" data-i="12"><h2>O Desafio de 30 Dias</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c12" data-i="12"><h2>O Desafio de 30 Dias</h2>
 <p>Depois das 10 semanas, junte tudo em 30 dias de treino real. Todo dia tem uma rotina fixa de 10 minutos e uma missão de campo.</p>
 <h3>Rotina fixa (todos os dias)</h3>
 <ul>
@@ -1408,8 +1448,7 @@ body.toc-open #scrim{display:block}
 </tbody>
 </table></div>
 <p>Regra: perdeu um dia, continue no seguinte. A comparação entre o vídeo do dia 1 e o do dia 29 é a sua prova de evolução.</p>
-<nav class="pager"></nav></section>
-<section class="chapter" id="c13" data-i="13"><h2>Fontes</h2>
+<nav class="pager"></nav></section><section class="chapter" id="a-c13" data-i="13"><h2>Fontes</h2>
 <div class="tw"><table>
 <thead>
 <tr>
@@ -1497,104 +1536,881 @@ body.toc-open #scrim{display:block}
 </tbody>
 </table></div>
 <p>Notas sem link aberto: <em>Retórica</em> (Aristóteles), <em>Como Fazer Amigos e Influenciar Pessoas</em> (Dale Carnegie, 1936), <em>Como Chegar ao Sim</em> (Fisher, Ury e Patton), <em>In Sheep's Clothing</em> (George K. Simon), <em>O Efeito Gaslighting</em> (Robin Stern), <em>O que Todo Corpo Fala</em> (Joe Navarro) e <em>O Mito do Carisma</em> (Olivia Fox Cabane) foram resumidos a partir do conhecimento geral sobre essas obras. Leia os originais antes de aplicar em situações de alto risco.</p><nav class="pager"></nav></section>
+  </div>
+  <div class="book" id="book-v" data-book="v" data-store="codigo-viking.v1" data-title="O Código do Viking">
+    <section class="home">
+      <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="47" fill="none" stroke="var(--acc)" stroke-width="3"/>
+      <rect x="45" y="16" width="7" height="68" rx="3" fill="var(--acc2)"/>
+      <path d="M52 22 C70 18 82 32 80 54 C72 46 62 44 52 47 Z" fill="var(--tx)"/>
+      <path d="M45 26 C36 26 30 32 30 40 C35 37 40 37 45 39 Z" fill="var(--tx)"/>
+      <circle cx="48.5" cy="86" r="4" fill="var(--acc)"/></svg>
+      <h1>O Código do <b>Viking</b></h1>
+      <p class="sub">Manual de treino para uma mentalidade de líder, vencedor e inquebrável</p>
+      <button class="cta go">Começar a ler</button>
+      <button class="cta alt open-toc">Ver sumário</button>
+      <div class="meter"><span class="mt" data-meter="v"></span>
+        <div class="track"><div class="fill" data-fill="v"></div></div></div>
+      <a class="back" href="#biblioteca">&larr; Biblioteca</a>
+    </section>
+    <section class="chapter" id="v-c0" data-i="0"><h2>Como usar este livro</h2>
+<p>Este livro não é para ler. É para treinar. Cada capítulo termina com exercícios reais, e só conta o que você fizer.</p>
+<p>Os vikings não viraram lenda por pensar positivo. Atravessavam o mar do Norte em barcos abertos, no frio, sem garantia de volta. A mentalidade deles nasceu da prática diária de encarar o difícil. É isso que você vai copiar.</p>
+<h3>As 5 regras do treino</h3>
+<ol>
+<li><strong>Um capítulo por semana.</strong> Leia no domingo, treine de segunda a sábado.</li>
+<li><strong>Diário obrigatório.</strong> Um caderno físico só para isto. Todo exercício escrito vai nele, com data.</li>
+<li><strong>Comece menor do que o seu ego quer.</strong> Quem promete 100 e faz 0 perde. Quem promete 10 e faz 12 vence.</li>
+<li><strong>Falhou um dia? Nunca falhe dois seguidos.</strong> A regra do guerreiro não é ser perfeito, é voltar para a batalha.</li>
+<li><strong>Segurança primeiro.</strong> Exercícios físicos e de frio têm limites claros. Se tiver problema de coração, pressão ou outra condição de saúde, fale com um médico antes.</li>
+</ol>
+<h3>Verdade e lenda</h3>
+<p>Os vikings reais tinham capacetes sem chifres (os chifres são invenção do século 19). Eram navegadores, comerciantes, fazendeiros e guerreiros. O que eles deixaram de mais útil para nós é o <strong>Hávamál</strong>, um poema nórdico de conselhos de vida. As citações deste livro vêm dele, de filósofos estoicos e de pesquisas de psicologia. Quando algo é inspiração e não fato, está dito.</p>
+<h3>O que você vai precisar</h3>
+<ul>
+<li>Um caderno e uma caneta</li>
+<li>Um despertador fora do quarto</li>
+<li>30 a 60 minutos por dia</li>
+<li>Coragem para ser honesto consigo mesmo</li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c1" data-i="1"><h2>Capítulo 1 — O Juramento</h2>
+<p>Um viking sem destino é só um homem num barco à deriva. Antes de treinar o corpo ou a disciplina, você precisa decidir <strong>quem vai ser</strong> e <strong>pelo que vai lutar</strong>.</p>
+<blockquote>
+<p>"O gado morre, os parentes morrem, você mesmo também morrerá. Mas o nome nunca morre para quem conquista um bom nome." — Hávamál, estrofe 76</p>
+</blockquote>
+<p>Para os nórdicos, a vida era curta e a reputação era eterna. A pergunta deste capítulo é simples: que nome você quer deixar?</p>
+<h3>Exercício 1.1 — A Saga do seu Funeral (40 min, uma vez)</h3>
+<p>As sagas eram histórias contadas sobre a vida de um herói depois da morte dele. Escreva a sua.</p>
+<ol>
+<li>Imagine que você morreu aos 85 anos. Três pessoas falam no seu funeral: alguém da família, um amigo e alguém que trabalhou com você.</li>
+<li>Escreva o que você <strong>gostaria</strong> que cada um dissesse. Meia página para cada.</li>
+<li>Agora escreva o que eles diriam <strong>se você morresse hoje</strong>. Seja brutalmente honesto.</li>
+<li>Sublinhe a maior diferença entre as duas versões. Essa distância é a sua missão.</li>
+</ol>
+<h3>Exercício 1.2 — As 3 Runas (20 min, uma vez)</h3>
+<p>Runas eram o alfabeto dos nórdicos, gravadas em pedra para durar. Escolha seus 3 valores inegociáveis.</p>
+<ol>
+<li>Escreva 15 palavras que você admira numa pessoa (ex.: coragem, lealdade, força, honestidade, calma, generosidade).</li>
+<li>Corte até sobrar 5.</li>
+<li>Corte até sobrar 3. Dói? Ótimo, é para doer.</li>
+<li>Para cada valor, escreva uma frase: "Na prática, isso significa que eu ___". Exemplo: "Lealdade: na prática, eu nunca falo mal de um amigo pelas costas."</li>
+</ol>
+<h3>Exercício 1.3 — O Juramento do Guerreiro (15 min + leitura diária)</h3>
+<p>Escreva um juramento de no máximo 6 linhas, no presente, como se já fosse verdade. Use seus 3 valores e a missão do exercício 1.1.</p>
+<p>Modelo:</p>
+<blockquote>
+<p>Eu sou [nome], e eu cumpro o que prometo. Eu enfrento o difícil em vez de fugir dele. Eu protejo e fortaleço as pessoas do meu clã. Meu nome será lembrado por [sua missão].</p>
+</blockquote>
+<p>Leia em voz alta toda manhã, logo depois de levantar, durante 30 dias. Parece bobo nos primeiros dias. Depois vira sua identidade.</p>
+<h3>Exercício 1.4 — O Teste da Escolha (diário, 2 min)</h3>
+<p>Toda noite, escreva no diário:</p>
+<ul>
+<li>Uma escolha que fiz hoje e que o homem do meu juramento faria.</li>
+<li>Uma escolha que fiz hoje e que ele <strong>não</strong> faria.</li>
+<li>O que farei diferente amanhã.</li>
+</ul>
+<h3>Checklist da semana 1</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c1-1"><span>Escrevi a Saga do meu Funeral</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c1-2"><span>Escolhi minhas 3 Runas</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c1-3"><span>Escrevi meu Juramento</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c1-4"><span>Li o Juramento em voz alta 6 dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c1-5"><span>Fiz o Teste da Escolha 6 noites</span></label></li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c2" data-i="2"><h2>Capítulo 2 — Disciplina de Ferro</h2>
+<p>Motivação é vento: às vezes sopra, às vezes some. Disciplina é o remo. Quando o vento para, o viking rema.</p>
+<blockquote>
+<p>"Levanta cedo quem quer a vida ou os bens de outro. Lobo deitado raramente pega a presa, nem homem dormindo conquista a vitória." — Hávamál, estrofe 58</p>
+</blockquote>
+<p>Disciplina não é força de vontade infinita. É <strong>cumprir promessas pequenas a si mesmo, todo dia</strong>, até seu cérebro acreditar que sua palavra vale algo. Cada promessa cumprida é um tijolo. Cada promessa quebrada tira dois.</p>
+<h3>Exercício 2.1 — As 3 Batalhas do Dia (5 min, toda noite)</h3>
+<ol>
+<li>Antes de dormir, escreva as <strong>3 tarefas mais importantes</strong> de amanhã. Não 10. Três.</li>
+<li>Marque a mais difícil com um X. Essa é a "batalha principal".</li>
+<li>Amanhã, faça a batalha principal <strong>antes</strong> de abrir rede social, mensagens ou e-mail.</li>
+<li>À noite, marque quantas venceu. Meta: 3 de 3 em pelo menos 5 dias da semana.</li>
+</ol>
+<h3>Exercício 2.2 — O Plano "Quando... então" (10 min, uma vez)</h3>
+<p>Pesquisas do psicólogo Peter Gollwitzer mostram que quem decide <strong>quando e onde</strong> vai agir cumpre muito mais do que quem só decide <strong>o que</strong> vai fazer. Escreva 3 frases assim:</p>
+<ul>
+<li>"<strong>Quando</strong> o despertador tocar, <strong>então</strong> eu levanto na hora e bebo um copo de água."</li>
+<li>"<strong>Quando</strong> eu chegar em casa, <strong>então</strong> eu troco de roupa e treino antes de sentar."</li>
+<li>"<strong>Quando</strong> eu sentir vontade de pegar o celular sem motivo, <strong>então</strong> eu faço 10 flexões."</li>
+</ul>
+<p>Cole as 3 frases onde você veja todo dia.</p>
+<h3>Exercício 2.3 — Despertar do Guerreiro (todos os dias)</h3>
+<ol>
+<li>Escolha um horário fixo para acordar. O mesmo todos os dias, inclusive fim de semana (no máximo 1 hora de diferença).</li>
+<li>Coloque o despertador <strong>fora do alcance da cama</strong>. Você vai ter que levantar para desligá-lo.</li>
+<li>Zero soneca. Tocou, levantou. A primeira decisão do dia é a primeira vitória.</li>
+<li>Nos primeiros 20 minutos: água, luz natural (janela ou rua), leitura do Juramento.</li>
+</ol>
+<h3>Exercício 2.4 — Jejum de Dopamina Barata (7 dias)</h3>
+<p>Redes sociais, vídeos curtos e jogos dão recompensa sem esforço. Isso enfraquece sua capacidade de fazer coisas difíceis.</p>
+<ol>
+<li>Veja no celular quanto tempo de tela você usou na última semana. Anote.</li>
+<li>Durante 7 dias: celular fora do quarto à noite e apps de vídeo curto apagados ou bloqueados.</li>
+<li>Corte seu tempo de tela pela metade. Anote o novo número no domingo.</li>
+<li>Escreva o que você fez com o tempo recuperado.</li>
+</ol>
+<h3>Exercício 2.5 — A Corrente de Ferro (30 dias)</h3>
+<p>Desenhe uma tabela com 30 quadrados. Escolha <strong>um</strong> hábito (ex.: treinar, ler 10 páginas, acordar no horário). Cada dia cumprido, um X. Sua única tarefa é não quebrar a corrente. Quebrou? Regra 4: nunca dois dias seguidos.</p>
+<h3>Checklist da semana 2</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c2-1"><span>Escrevi as 3 Batalhas todas as noites</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-2"><span>Venci a batalha principal antes do celular em 5 dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-3"><span>Escrevi e colei meus 3 planos "Quando... então"</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-4"><span>Acordei no mesmo horário, sem soneca, 6 dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-5"><span>Cortei meu tempo de tela pela metade</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-6"><span>Comecei a Corrente de Ferro</span></label></li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c3" data-i="3"><h2>Capítulo 3 — Forjar o Corpo</h2>
+<p>A mente forte mora num corpo treinado. Remar por dias, carregar carga, aguentar frio e fome: o corpo do viking era a ferramenta dele. O seu também é.</p>
+<p>A Organização Mundial da Saúde recomenda para adultos de 150 a 300 minutos de atividade moderada por semana, mais treino de força pelo menos 2 vezes. Este capítulo te leva até lá sem academia.</p>
+<h3>Exercício 3.1 — O Treino do Remador (4 semanas, 3 vezes por semana)</h3>
+<p>Faça em circuito: um exercício depois do outro, descanse 90 segundos no final, repita o número de voltas. Não consegue a flexão normal? Faça com os joelhos no chão ou com as mãos numa mesa.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Semana</th>
+<th>Voltas</th>
+<th>Flexões</th>
+<th>Agachamentos</th>
+<th>Prancha</th>
+<th>Afundos (cada perna)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>3</td>
+<td>8</td>
+<td>15</td>
+<td>20 s</td>
+<td>8</td>
+</tr>
+<tr>
+<td>2</td>
+<td>3</td>
+<td>10</td>
+<td>20</td>
+<td>30 s</td>
+<td>10</td>
+</tr>
+<tr>
+<td>3</td>
+<td>4</td>
+<td>12</td>
+<td>20</td>
+<td>40 s</td>
+<td>10</td>
+</tr>
+<tr>
+<td>4</td>
+<td>4</td>
+<td>15</td>
+<td>25</td>
+<td>60 s</td>
+<td>12</td>
+</tr>
+</tbody>
+</table></div>
+<p>Teste no dia 1 e no dia 28: máximo de flexões seguidas e tempo máximo de prancha. Anote os dois números no diário.</p>
+<h3>Exercício 3.2 — A Marcha (2 a 3 vezes por semana)</h3>
+<p>Caminhe rápido por 30 minutos, num ritmo em que você consegue falar mas não cantar. A partir da semana 3, carregue uma mochila com 5 a 10 kg (livros ou garrafas de água). Os guerreiros nórdicos marchavam carregados; você também vai.</p>
+<h3>Exercício 3.3 — O Teste da Pedra (fim de cada semana)</h3>
+<p>Na Islândia ainda existem pedras de levantamento tradicionais, usadas para provar força. Seu teste: <strong>carregue dois pesos iguais (baldes com água, sacolas ou galões) e caminhe até não conseguir mais segurar</strong>. Costas retas, ombros para trás. Anote o tempo e tente bater o recorde toda semana.</p>
+<h3>Exercício 3.4 — O Banho do Mar do Norte (diário)</h3>
+<p>O frio treina uma habilidade mental valiosa: manter a calma quando o corpo grita para fugir.</p>
+<ol>
+<li>Tome o banho normal. No final, deixe só a água fria.</li>
+<li>Semana 1: 30 segundos. Semana 2: 60 segundos. Semana 3: 90 segundos. Semana 4: 2 minutos.</li>
+<li>Durante o frio, respire devagar pelo nariz: 4 segundos entrando, 6 saindo. Não prenda a respiração.</li>
+<li><strong>Limites:</strong> nada de gelo ou água aberta sozinho, e nunca prender a respiração dentro da água. Com problema cardíaco ou pressão alta, só com liberação médica.</li>
+</ol>
+<h3>Exercício 3.5 — O Descanso do Guerreiro (todas as noites)</h3>
+<p>O músculo e a mente crescem no descanso, não no treino. Adultos precisam de pelo menos 7 horas de sono.</p>
+<ul>
+<li>Horário fixo para deitar.</li>
+<li>Telas desligadas 30 minutos antes.</li>
+<li>Quarto escuro, fresco e silencioso.</li>
+<li>Cafeína só até o início da tarde.</li>
+</ul>
+<h3>Exercício 3.6 — Combustível de Guerreiro (7 dias)</h3>
+<p>Vikings comiam peixe, carne, ovos, grãos, legumes e frutas. Nada de ultraprocessado. Por 7 dias:</p>
+<ul>
+<li>Proteína em todas as refeições (ovo, carne, frango, peixe, feijão).</li>
+<li>Zero refrigerante e zero doce industrializado.</li>
+<li>2 litros de água por dia, ou mais se treinar no calor.</li>
+</ul>
+<h3>Checklist da semana 3</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c3-1"><span>Fiz o Treino do Remador 3 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-2"><span>Marchei 2 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-3"><span>Registrei meu Teste da Pedra</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-4"><span>Banho frio no final em 6 dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-5"><span>Dormi 7 horas ou mais em 5 noites</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-6"><span>Cumpri o Combustível de Guerreiro por 7 dias</span></label></li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c4" data-i="4"><h2>Capítulo 4 — Mente de Aço</h2>
+<p>Coragem não é não sentir medo. É sentir medo e agir mesmo assim. O viking também tremia antes de entrar no barco; ele só não deixava o tremor decidir.</p>
+<blockquote>
+<p>"Calado e atento e ousado na luta deve ser o filho do chefe; alegre e contente deve ser cada homem, até o dia de sua morte." — Hávamál, estrofe 15</p>
+</blockquote>
+<h3>Exercício 4.1 — O que é meu e o que é do mar (10 min, sempre que estiver preocupado)</h3>
+<p>O filósofo estoico Epicteto ensinava: algumas coisas dependem de nós, outras não. O marinheiro não controla a tempestade, controla a vela.</p>
+<ol>
+<li>Divida uma página em duas colunas: <strong>"Depende de mim"</strong> e <strong>"Não depende de mim"</strong>.</li>
+<li>Escreva tudo que te preocupa, cada item na coluna certa.</li>
+<li>Para cada item de "Depende de mim", escreva uma ação que você fará nas próximas 24 horas.</li>
+<li>Para cada item de "Não depende de mim", escreva: "Aceito. Vou responder da melhor forma quando acontecer."</li>
+</ol>
+<h3>Exercício 4.2 — A Escada do Medo (4 semanas)</h3>
+<p>O medo diminui quando você o encara em doses crescentes. Psicólogos chamam isso de exposição gradual.</p>
+<ol>
+<li>Liste 10 situações que te dão medo ou vergonha, do mais leve ao mais pesado. Dê uma nota de 0 a 10 para cada.</li>
+<li>Exemplos: puxar conversa com um desconhecido, pedir desconto, falar numa reunião, discordar de alguém em público, pedir um aumento, falar para 20 pessoas.</li>
+<li>Toda semana, faça <strong>2 degraus</strong>, começando pelo mais leve.</li>
+<li>Depois de cada um, anote: nota do medo antes, nota depois, e o que realmente aconteceu.</li>
+<li>Quase sempre o medo antes é maior que o depois. Esse registro é a prova que seu cérebro precisa.</li>
+</ol>
+<h3>Exercício 4.3 — Visualizar a Tempestade (5 min, toda manhã)</h3>
+<p>Sêneca, outro estoico, imaginava de manhã o que poderia dar errado no dia. Não para sofrer, mas para estar pronto.</p>
+<ol>
+<li>Pense no dia que vem pela frente.</li>
+<li>Escolha 2 coisas que podem dar errado.</li>
+<li>Para cada uma, decida agora como você vai reagir. Exemplo: "Se meu chefe me criticar, eu escuto até o fim, agradeço e pergunto o que fazer melhor."</li>
+</ol>
+<h3>Exercício 4.4 — A Respiração do Escudo (quando a raiva ou o pânico subir)</h3>
+<ol>
+<li>Inspire pelo nariz em 4 segundos.</li>
+<li>Segure 4 segundos.</li>
+<li>Solte pela boca em 4 segundos.</li>
+<li>Segure 4 segundos.</li>
+<li>Repita 4 vezes. Só depois fale ou decida.</li>
+</ol>
+<p>Regra do chefe: <strong>nunca responda com raiva na hora</strong>. Espere pelo menos 10 minutos antes de mandar aquela mensagem.</p>
+<h3>Exercício 4.5 — "Estou pronto para a batalha" (antes de qualquer desafio)</h3>
+<p>Uma pesquisa da professora Alison Wood Brooks, de Harvard, mostrou que dizer "estou animado" antes de falar em público ajudou as pessoas a se saírem melhor do que tentar se acalmar. O coração acelerado do medo e da empolgação é o mesmo. Antes de um desafio, diga em voz alta: <strong>"Meu corpo está se preparando para a batalha. Estou pronto."</strong></p>
+<h3>Exercício 4.6 — Um desconforto voluntário por dia</h3>
+<p>Escolha um por dia: banho frio mais longo, ficar 1 dia sem açúcar, subir de escada, ficar 1 hora sem celular, treinar quando não está com vontade. Quem escolhe o desconforto não é dominado por ele.</p>
+<h3>Checklist da semana 4</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c4-1"><span>Fiz a tabela "Depende de mim" pelo menos 2 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-2"><span>Montei minha Escada do Medo com 10 degraus</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-3"><span>Subi 2 degraus e registrei o resultado</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-4"><span>Visualizei a Tempestade 6 manhãs</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-5"><span>Usei a Respiração do Escudo numa situação real</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-6"><span>Escolhi um desconforto voluntário 6 dias</span></label></li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c5" data-i="5"><h2>Capítulo 5 — O Chefe do Clã</h2>
+<p>Líder não é quem grita mais alto. É quem os outros seguem quando ele não está olhando. Na Islândia viking, os chefes resolviam disputas numa assembleia chamada <strong>Althing</strong>, criada por volta do ano 930 e considerada um dos parlamentos mais antigos do mundo. Até os guerreiros precisavam convencer, não só mandar.</p>
+<blockquote>
+<p>"Generosos e corajosos são os que vivem melhor; raramente alimentam tristezas." — Hávamál, estrofe 48</p>
+</blockquote>
+<h3>Exercício 5.1 — Responsabilidade Total (15 min, uma vez + diário)</h3>
+<p>No livro <em>Extreme Ownership</em>, os ex-oficiais da Marinha americana Jocko Willink e Leif Babin defendem que o líder assume a culpa por tudo que acontece no seu território. Sem desculpas.</p>
+<ol>
+<li>Escreva 3 problemas da sua vida que você costuma culpar outros (chefe, família, governo, sorte).</li>
+<li>Para cada um, reescreva começando com: <strong>"A minha parte nisso é..."</strong></li>
+<li>Escreva uma ação que você pode fazer esta semana sobre a sua parte.</li>
+<li>Por 7 dias, toda vez que pensar "a culpa é dele", troque por "o que eu posso fazer?".</li>
+</ol>
+<h3>Exercício 5.2 — O Primeiro no Barco (toda semana)</h3>
+<p>O chefe rema junto. Escolha uma tarefa chata ou pesada do seu grupo (em casa, no trabalho, no time) e faça <strong>você primeiro</strong>, sem pedir reconhecimento. Exemplos: arrumar a bagunça, chegar antes, carregar o peso, assumir a tarefa que ninguém quer.</p>
+<h3>Exercício 5.3 — O Ouvido do Chefe (3 conversas por semana)</h3>
+<ol>
+<li>Escolha uma pessoa por conversa.</li>
+<li>Pergunte: "Qual é o seu maior desafio agora?" e "Como eu posso te ajudar?"</li>
+<li>Durante 10 minutos, só escute. Não dê conselho, não fale de você, não pegue o celular.</li>
+<li>No final, repita com suas palavras o que entendeu: "Então o que você está dizendo é..."</li>
+<li>Anote no diário o que aprendeu sobre essa pessoa.</li>
+</ol>
+<h3>Exercício 5.4 — Feedback de Guerreiro (2 vezes por semana)</h3>
+<p>Use o modelo <strong>Situação → Comportamento → Impacto</strong>, criado pelo Center for Creative Leadership:</p>
+<ul>
+<li>Elogio: "Na reunião de ontem (situação), você trouxe os números prontos (comportamento), e isso fez a gente decidir em 10 minutos (impacto)."</li>
+<li>Correção: "Hoje de manhã (situação), você chegou 30 minutos atrasado (comportamento), e o time ficou parado esperando (impacto). O que aconteceu?"</li>
+</ul>
+<p>Regra: elogie em público, corrija em particular.</p>
+<h3>Exercício 5.5 — Montar o Clã (30 min, uma vez)</h3>
+<p>Você é a média das pessoas com quem mais anda.</p>
+<ol>
+<li>Liste as 10 pessoas com quem você mais passa tempo (inclusive online).</li>
+<li>Ao lado de cada uma, marque: <strong>+</strong> (me puxa para cima), <strong>=</strong> (neutro) ou <strong>−</strong> (me puxa para baixo).</li>
+<li>Escolha uma pessoa <strong>+</strong> para passar mais tempo este mês.</li>
+<li>Escolha uma pessoa <strong>−</strong> para passar menos tempo, sem drama.</li>
+<li>Escreva o nome de uma pessoa mais experiente que você admira. Mande uma mensagem pedindo 20 minutos de conselho.</li>
+</ol>
+<h3>Exercício 5.6 — A Voz do Comandante (diário, 5 min)</h3>
+<ul>
+<li>Grave um áudio de 1 minuto explicando uma ideia. Ouça.</li>
+<li>Corte os "é...", "tipo", "né" e as desculpas antes da ideia.</li>
+<li>Fale devagar, frases curtas, termine com voz firme, não com tom de pergunta.</li>
+<li>Grave de novo. Repita até soar como alguém que você seguiria.</li>
+</ul>
+<h3>Checklist da semana 5</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c5-1"><span>Reescrevi 3 problemas com "A minha parte nisso é..."</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-2"><span>Fui o Primeiro no Barco pelo menos uma vez</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-3"><span>Fiz 3 conversas só ouvindo</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-4"><span>Dei 2 feedbacks no modelo Situação → Comportamento → Impacto</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-5"><span>Montei meu Clã e mandei a mensagem para um mentor</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-6"><span>Treinei a Voz do Comandante 5 dias</span></label></li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c6" data-i="6"><h2>Capítulo 6 — A Expedição</h2>
+<p>Os nórdicos chegaram à América do Norte quase 500 anos antes de Colombo. Um estudo publicado na revista <em>Nature</em> em 2021 datou madeira cortada por eles no assentamento de L'Anse aux Meadows, no Canadá, no ano de 1021. Ninguém cruza um oceano por acaso: é destino claro, preparação e correção de rota todo dia.</p>
+<blockquote>
+<p>"Em todas as portas, antes de entrar, olhe bem, examine com cuidado; pois não se sabe ao certo onde os inimigos estão sentados no salão." — Hávamál, estrofe 1</p>
+</blockquote>
+<h3>Exercício 6.1 — Escolher a Terra Distante (30 min, uma vez)</h3>
+<ol>
+<li>Escreva uma meta grande para os próximos 12 meses em cada área: <strong>corpo, dinheiro/carreira, relacionamentos, mente</strong>.</li>
+<li>Escolha <strong>uma</strong> como expedição principal. As outras ficam em manutenção.</li>
+<li>Reescreva a meta para que alguém de fora consiga dizer se você chegou ou não. Ruim: "ficar em forma". Bom: "correr 5 km em menos de 30 minutos até 31 de março".</li>
+</ol>
+<h3>Exercício 6.2 — O Mapa de Navegação (20 min, uma vez)</h3>
+<p>Quebre a expedição em pedaços até chegar em algo que você faz hoje.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Nível</th>
+<th>Pergunta</th>
+<th>Exemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>12 meses</td>
+<td>Onde quero chegar?</td>
+<td>Correr 5 km em 30 min</td>
+</tr>
+<tr>
+<td>3 meses</td>
+<td>Que marco prova que estou no caminho?</td>
+<td>Correr 3 km sem parar</td>
+</tr>
+<tr>
+<td>1 mês</td>
+<td>O que preciso conseguir este mês?</td>
+<td>Correr 1 km sem parar</td>
+</tr>
+<tr>
+<td>1 semana</td>
+<td>Qual é o treino desta semana?</td>
+<td>3 treinos de 20 min alternando corrida e caminhada</td>
+</tr>
+<tr>
+<td>Hoje</td>
+<td>Qual a primeira ação?</td>
+<td>Separar o tênis e marcar o horário</td>
+</tr>
+</tbody>
+</table></div>
+<h3>Exercício 6.3 — WOOP: o Plano contra a Tempestade (10 min, uma vez por meta)</h3>
+<p>A psicóloga Gabriele Oettingen descobriu que sonhar sem pensar nos obstáculos atrapalha. O método dela, WOOP, junta sonho e realidade:</p>
+<ol>
+<li><strong>Desejo:</strong> o que eu quero? (uma frase)</li>
+<li><strong>Resultado:</strong> qual a melhor coisa que vai acontecer quando eu conseguir? Imagine com detalhes.</li>
+<li><strong>Obstáculo:</strong> qual o principal obstáculo <strong>dentro de mim</strong>? (preguiça, medo, celular...)</li>
+<li><strong>Plano:</strong> "Quando [obstáculo] aparecer, então eu vou [ação]".</li>
+</ol>
+<h3>Exercício 6.4 — O Naufrágio Imaginário (15 min, antes de começar)</h3>
+<p>Técnica do pesquisador Gary Klein, chamada "pré-mortem":</p>
+<ol>
+<li>Imagine que já se passou 1 ano e sua expedição <strong>fracassou completamente</strong>.</li>
+<li>Escreva 10 motivos de por que fracassou.</li>
+<li>Para os 3 motivos mais prováveis, escreva o que você vai fazer agora para evitá-los.</li>
+</ol>
+<h3>Exercício 6.5 — O Conselho do Domingo (30 min, toda semana)</h3>
+<p>Revisão semanal inspirada na "revisão pós-ação" usada pelo exército americano. Responda no diário:</p>
+<ol>
+<li>O que eu planejei para esta semana?</li>
+<li>O que realmente aconteceu?</li>
+<li>Por que houve diferença?</li>
+<li>O que vou manter, e o que vou mudar na próxima semana?</li>
+<li>Quais são as 3 batalhas principais da semana que vem?</li>
+</ol>
+<h3>Checklist da semana 6</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c6-1"><span>Escolhi minha expedição principal e escrevi de forma mensurável</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-2"><span>Fiz o Mapa de Navegação até o nível "Hoje"</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-3"><span>Fiz o WOOP da expedição</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-4"><span>Fiz o Naufrágio Imaginário</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-5"><span>Fiz o Conselho do Domingo</span></label></li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c7" data-i="7"><h2>Capítulo 7 — Honra e Legado</h2>
+<p>Força sem honra é só violência. O que transforma um guerreiro em lenda é a palavra dele valer ouro. Na Escandinávia existem milhares de <strong>pedras rúnicas</strong>, monumentos gravados para lembrar pessoas que viveram com valor. Este capítulo é sobre merecer a sua.</p>
+<blockquote>
+<p>"Se você tem um amigo em quem confia bem, e de quem só quer o bem, misture sua alma com a dele, troque presentes, visite-o com frequência." — Hávamál, estrofe 44</p>
+</blockquote>
+<h3>Exercício 7.1 — O Dia sem Mentiras (7 dias)</h3>
+<ol>
+<li>Por 7 dias, nenhuma mentira. Nem as pequenas ("tô chegando", "adorei", "não vi sua mensagem").</li>
+<li>Quando não quiser dizer a verdade, escolha o silêncio ou a gentileza honesta, não a mentira.</li>
+<li>Toda noite, anote quantas vezes sentiu vontade de mentir e em que situação. Isso mostra onde você ainda tem medo.</li>
+</ol>
+<h3>Exercício 7.2 — Pagar as Dívidas de Honra (uma semana)</h3>
+<ol>
+<li>Liste tudo que você prometeu e não cumpriu: dinheiro emprestado, favores, ligar para alguém, devolver algo, um pedido de desculpas.</li>
+<li>Resolva pelo menos 3 itens esta semana.</li>
+<li>Para o que não dá para resolver agora, fale com a pessoa e dê uma data nova. E cumpra.</li>
+<li>Daqui para frente: <strong>prometa menos, entregue mais</strong>.</li>
+</ol>
+<h3>Exercício 7.3 — O Presente ao Clã (toda semana)</h3>
+<p>Para os nórdicos, trocar presentes criava laços de lealdade. Toda semana, dê algo a alguém sem esperar nada de volta: seu tempo, uma ajuda prática, um elogio sincero, uma mensagem de gratidão explicando exatamente o que aquela pessoa fez por você.</p>
+<h3>Exercício 7.4 — Ensinar um Jovem Guerreiro (1 vez por mês)</h3>
+<p>O líder de verdade cria outros líderes. Escolha alguém mais novo ou com menos experiência e ensine algo que você sabe fazer bem: um treino, uma habilidade do trabalho, como organizar o dinheiro. Ensinar também fixa o conhecimento em você.</p>
+<h3>Exercício 7.5 — A sua Pedra Rúnica (20 min, no fim do livro)</h3>
+<p>As pedras rúnicas tinham frases curtas, tipo: "Fulano ergueu esta pedra em memória de seu pai, que foi bom com seu povo."</p>
+<ol>
+<li>Escreva a frase que você gostaria de ter na sua pedra. Máximo 2 linhas.</li>
+<li>Compare com a Saga do seu Funeral do Capítulo 1. O que mudou em você desde então?</li>
+<li>Escreva as 3 ações dos próximos 90 dias que vão fazer essa frase ser verdade.</li>
+</ol>
+<h3>Checklist da semana 7</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c7-1"><span>Fiquei 7 dias sem mentir</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-2"><span>Paguei pelo menos 3 Dívidas de Honra</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-3"><span>Dei um presente ao Clã</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-4"><span>Combinei de ensinar alguém este mês</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-5"><span>Escrevi minha Pedra Rúnica</span></label></li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c8" data-i="8"><h2>O Desafio de 30 Dias</h2>
+<p>Terminou as 7 semanas? Agora junte tudo em 30 dias seguidos. Se preferir um choque, pode começar por aqui e voltar aos capítulos para entender cada exercício.</p>
+<h3>O ritual fixo (todos os 30 dias)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Momento</th>
+<th>Ação</th>
+<th>Tempo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ao acordar</td>
+<td>Levantar sem soneca, água, luz natural</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>Manhã</td>
+<td>Ler o Juramento em voz alta + Visualizar a Tempestade</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>Antes do celular</td>
+<td>Vencer a batalha principal do dia</td>
+<td>30 a 90 min</td>
+</tr>
+<tr>
+<td>Durante o dia</td>
+<td>Treino ou Marcha (veja a missão)</td>
+<td>30 a 45 min</td>
+</tr>
+<tr>
+<td>Banho</td>
+<td>Final frio, respiração 4 entrando, 6 saindo</td>
+<td>1 a 2 min</td>
+</tr>
+<tr>
+<td>Noite</td>
+<td>Teste da Escolha + 3 Batalhas de amanhã + X na Corrente</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>Dormir</td>
+<td>Telas desligadas 30 min antes, 7 horas ou mais</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<h3>As missões diárias</h3>
+<p>Além do ritual, cada dia tem uma missão extra. Marque a coluna "Feito" no fim do dia.</p>
+<div class="tw"><table class="missions">
+<thead>
+<tr>
+<th>Dia</th>
+<th>Missão extra</th>
+<th>Capítulo</th>
+<th>Feito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Testes iniciais: máximo de flexões, prancha, Teste da Pedra. Anote.</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d8-1" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Reler o Juramento e ajustar o que não soa verdadeiro</td>
+<td>1</td>
+<td class="done"><input type="checkbox" data-k="d8-2" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Treino do Remador + escrever 3 planos "Quando... então"</td>
+<td>2, 3</td>
+<td class="done"><input type="checkbox" data-k="d8-3" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Apagar os apps de vídeo curto por 30 dias</td>
+<td>2</td>
+<td class="done"><input type="checkbox" data-k="d8-4" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Treino do Remador + 1 degrau da Escada do Medo</td>
+<td>3, 4</td>
+<td class="done"><input type="checkbox" data-k="d8-5" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Marcha de 30 min + uma conversa só ouvindo</td>
+<td>3, 5</td>
+<td class="done"><input type="checkbox" data-k="d8-6" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Conselho do Domingo</td>
+<td>6</td>
+<td class="done"><input type="checkbox" data-k="d8-7" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Treino do Remador + listar as Dívidas de Honra</td>
+<td>3, 7</td>
+<td class="done"><input type="checkbox" data-k="d8-8" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Ser o Primeiro no Barco numa tarefa pesada</td>
+<td>5</td>
+<td class="done"><input type="checkbox" data-k="d8-9" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>10</td>
+<td>Treino do Remador + tabela "Depende de mim"</td>
+<td>3, 4</td>
+<td class="done"><input type="checkbox" data-k="d8-10" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>11</td>
+<td>Marcha com mochila + pagar 1 Dívida de Honra</td>
+<td>3, 7</td>
+<td class="done"><input type="checkbox" data-k="d8-11" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>12</td>
+<td>Treino do Remador + 1 degrau da Escada do Medo</td>
+<td>3, 4</td>
+<td class="done"><input type="checkbox" data-k="d8-12" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>13</td>
+<td>Um dia inteiro sem açúcar</td>
+<td>4</td>
+<td class="done"><input type="checkbox" data-k="d8-13" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>14</td>
+<td>Conselho do Domingo + Teste da Pedra</td>
+<td>6, 3</td>
+<td class="done"><input type="checkbox" data-k="d8-14" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>15</td>
+<td>Metade do caminho: reler a Saga do seu Funeral</td>
+<td>1</td>
+<td class="done"><input type="checkbox" data-k="d8-15" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>16</td>
+<td>Treino do Remador + feedback Situação → Comportamento → Impacto</td>
+<td>3, 5</td>
+<td class="done"><input type="checkbox" data-k="d8-16" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>17</td>
+<td>Marcha com mochila + mandar mensagem para um mentor</td>
+<td>3, 5</td>
+<td class="done"><input type="checkbox" data-k="d8-17" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>18</td>
+<td>Treino do Remador + 1 degrau da Escada do Medo</td>
+<td>3, 4</td>
+<td class="done"><input type="checkbox" data-k="d8-18" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>19</td>
+<td>Presente ao Clã</td>
+<td>7</td>
+<td class="done"><input type="checkbox" data-k="d8-19" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>20</td>
+<td>Treino do Remador + pagar 1 Dívida de Honra</td>
+<td>3, 7</td>
+<td class="done"><input type="checkbox" data-k="d8-20" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>21</td>
+<td>Conselho do Domingo + revisar o Mapa de Navegação</td>
+<td>6</td>
+<td class="done"><input type="checkbox" data-k="d8-21" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>22</td>
+<td>Treino do Remador + 24 horas sem nenhuma mentira</td>
+<td>3, 7</td>
+<td class="done"><input type="checkbox" data-k="d8-22" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>23</td>
+<td>Marcha com mochila + uma conversa só ouvindo</td>
+<td>3, 5</td>
+<td class="done"><input type="checkbox" data-k="d8-23" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>24</td>
+<td>Treino do Remador + 1 degrau da Escada do Medo (um dos pesados)</td>
+<td>3, 4</td>
+<td class="done"><input type="checkbox" data-k="d8-24" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>25</td>
+<td>Gravar a Voz do Comandante 3 vezes</td>
+<td>5</td>
+<td class="done"><input type="checkbox" data-k="d8-25" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>26</td>
+<td>Treino do Remador + ensinar algo a alguém</td>
+<td>3, 7</td>
+<td class="done"><input type="checkbox" data-k="d8-26" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>27</td>
+<td>Marcha mais longa: 45 min com mochila</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d8-27" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>28</td>
+<td>Conselho do Domingo + Teste da Pedra</td>
+<td>6, 3</td>
+<td class="done"><input type="checkbox" data-k="d8-28" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>29</td>
+<td>Testes finais: flexões, prancha, Teste da Pedra. Compare com o dia 1.</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d8-29" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>30</td>
+<td>Escrever sua Pedra Rúnica e o plano dos próximos 90 dias</td>
+<td>7</td>
+<td class="done"><input type="checkbox" data-k="d8-30" aria-label="Feito"></td>
+</tr>
+</tbody>
+</table></div>
+<h3>Regras do desafio</h3>
+<ul>
+<li>Perdeu um dia? Continue no dia seguinte. <strong>Nunca dois dias seguidos.</strong></li>
+<li>Doente ou machucado? Pule o treino físico e mantenha o resto. Guerreiro inteligente não se destrói.</li>
+<li>No dia 30, compare os números do dia 1 com os do dia 29. Isso é prova, não opinião.</li>
+</ul>
+<nav class="pager"></nav></section><section class="chapter" id="v-c9" data-i="9"><h2>Fontes e notas</h2>
+<p>As citações do Hávamál são adaptações livres para o português, feitas a partir da tradução inglesa de Henry Adams Bellows (1923). A numeração das estrofes pode variar 1 ou 2 números entre edições.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tema no livro</th>
+<th>Fonte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hávamál (texto completo)</td>
+<td><a target="_blank" rel="noopener" href="https://wevikings.com/library/poetry/havamal/henry-adams-bellows/">Tradução de Henry Adams Bellows</a></td>
+</tr>
+<tr>
+<td>Hávamál (contexto e estrofes 76–77)</td>
+<td><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/H%C3%A1vam%C3%A1l">Wikipedia: Hávamál</a></td>
+</tr>
+<tr>
+<td>Capacetes sem chifres</td>
+<td><a target="_blank" rel="noopener" href="https://www.historyhit.com/myths-about-the-viking-age/">History Hit: 10 mitos da Era Viking</a></td>
+</tr>
+<tr>
+<td>Atividade física: 150–300 min e força 2 dias por semana</td>
+<td><a target="_blank" rel="noopener" href="https://www.who.int/initiatives/behealthy/physical-activity">OMS: Be Healthy — Physical activity</a></td>
+</tr>
+<tr>
+<td>Sono: 7 horas ou mais</td>
+<td><a target="_blank" rel="noopener" href="https://www.cdc.gov/sleep/about/index.html">CDC: About Sleep</a></td>
+</tr>
+<tr>
+<td>Planos "Quando... então"</td>
+<td><a target="_blank" rel="noopener" href="https://www.socmot.uni-konstanz.de/publications/implementation-intentions-strong-effects-simple-plans">Gollwitzer (1999), Implementation intentions, American Psychologist</a></td>
+</tr>
+<tr>
+<td>"Estou animado" antes do desafio</td>
+<td><a target="_blank" rel="noopener" href="https://www.apa.org/news/press/releases/2013/12/performance-anxiety">APA: Brooks (2014), Get excited</a></td>
+</tr>
+<tr>
+<td>Althing, por volta de 930</td>
+<td><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Althing">Wikipedia: Althing</a></td>
+</tr>
+<tr>
+<td>Modelo Situação → Comportamento → Impacto</td>
+<td><a target="_blank" rel="noopener" href="https://www.ccl.org/articles/leading-effectively-articles/closing-the-gap-between-intent-vs-impact-sbii/">Center for Creative Leadership: SBI</a></td>
+</tr>
+<tr>
+<td>L'Anse aux Meadows, ano 1021</td>
+<td><a target="_blank" rel="noopener" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8770119">Kuitems et al. (2021), Nature, via PubMed Central</a></td>
+</tr>
+<tr>
+<td>WOOP</td>
+<td><a target="_blank" rel="noopener" href="https://woopmylife.org/en/science">WOOP: a ciência por trás</a></td>
+</tr>
+<tr>
+<td>Pré-mortem</td>
+<td><a target="_blank" rel="noopener" href="https://hbr.org/2007/09/performing-a-project-premortem">Gary Klein (2007), Performing a Project Premortem, HBR</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>Notas sem link aberto: as ideias de Epicteto e Sêneca vêm do <em>Manual</em> (Encheirídion) e das <em>Cartas a Lucílio</em>. <em>Extreme Ownership</em> é o livro de Jocko Willink e Leif Babin (2015). Este livro não substitui orientação médica ou psicológica.</p><nav class="pager"></nav></section>
+  </div>
 </main>
 <button id="totop" aria-label="Voltar ao topo">&#8593;</button>
 
 <script>
 (function(){
-  var KEY='manual-assassino.v1';
-  var st={};
-  try{st=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){st={};}
-  st.checks=st.checks||{}; st.scroll=st.scroll||{};
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+  function load(k){try{return JSON.parse(localStorage.getItem(k))||{};}catch(e){return {};}}
+  function put(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  var root=document.documentElement,body=document.body;
 
-  var root=document.documentElement;
-  var chapters=[].slice.call(document.querySelectorAll('.chapter'));
-  var titles=chapters.map(function(c){return c.querySelector('h2').textContent;});
-  var boxes=[].slice.call(document.querySelectorAll('input[type=checkbox][data-k]'));
-  var cur=-1;
-
-  // Tema e tamanho da letra
-  function applyLook(){
-    root.setAttribute('data-theme',st.theme||'dark');
-    root.style.setProperty('--fs',(st.fs||17)+'px');
-  }
+  // Preferências gerais (tema e letra). Na versão 1.0 elas ficavam junto do Manual do Assassino.
+  var prefs=load('app.prefs');
+  if(prefs.theme==null&&prefs.fs==null){var old=load('manual-assassino.v1');prefs={theme:old.theme,fs:old.fs};}
+  function savePrefs(){put('app.prefs',prefs);}
+  function applyLook(){root.setAttribute('data-theme',prefs.theme||'dark');root.style.setProperty('--fs',(prefs.fs||17)+'px');}
   applyLook();
-  document.getElementById('theme').onclick=function(){st.theme=(st.theme==='light')?'dark':'light';applyLook();save();};
-  document.getElementById('fplus').onclick=function(){st.fs=Math.min(26,(st.fs||17)+1);applyLook();save();};
-  document.getElementById('fminus').onclick=function(){st.fs=Math.max(13,(st.fs||17)-1);applyLook();save();};
+  document.getElementById('theme').onclick=function(){prefs.theme=(prefs.theme==='light')?'dark':'light';applyLook();savePrefs();};
+  document.getElementById('fplus').onclick=function(){prefs.fs=Math.min(26,(prefs.fs||17)+1);applyLook();savePrefs();};
+  document.getElementById('fminus').onclick=function(){prefs.fs=Math.max(13,(prefs.fs||17)-1);applyLook();savePrefs();};
 
-  // Caixas de marcar salvas
-  boxes.forEach(function(b){
-    b.checked=!!st.checks[b.dataset.k];
-    b.addEventListener('change',function(){
-      if(b.checked)st.checks[b.dataset.k]=1; else delete st.checks[b.dataset.k];
-      save(); progress();
-    });
+  // Um registro por livro: tarefas marcadas, posição de leitura e último capítulo.
+  var books={},order=[];
+  [].forEach.call(document.querySelectorAll('.book'),function(el){
+    var b=el.dataset.book,st=load(el.dataset.store);
+    st.checks=st.checks||{};st.scroll=st.scroll||{};
+    var chapters=[].slice.call(el.querySelectorAll('.chapter'));
+    books[b]={id:b,el:el,st:st,store:el.dataset.store,title:el.dataset.title,home:el.querySelector('.home'),
+      chapters:chapters,titles:chapters.map(function(c){return c.querySelector('h2').textContent;}),
+      toc:document.querySelector('.toclist[data-book="'+b+'"]')};
+    order.push(b);
   });
-  function progress(){
+  function save(bk){put(bk.store,bk.st);}
+
+  order.forEach(function(b){
+    var bk=books[b];
+    [].forEach.call(bk.el.querySelectorAll('input[type=checkbox][data-k]'),function(x){
+      x.checked=!!bk.st.checks[x.dataset.k];
+      x.addEventListener('change',function(){
+        if(x.checked)bk.st.checks[x.dataset.k]=1; else delete bk.st.checks[x.dataset.k];
+        save(bk);progress(bk);
+      });
+    });
+    bk.chapters.forEach(function(c,i){
+      var h='';
+      if(i>0)h+='<a class="prev" href="#'+b+'/'+(i-1)+'"><small>&larr; Anterior</small>'+bk.titles[i-1]+'</a>';
+      else h+='<a class="prev" href="#'+b+'"><small>&larr; Voltar</small>Capa</a>';
+      if(i<bk.chapters.length-1)h+='<a class="next" href="#'+b+'/'+(i+1)+'"><small>Próximo &rarr;</small>'+bk.titles[i+1]+'</a>';
+      c.querySelector('.pager').innerHTML=h;
+    });
+    bk.home.querySelector('.go').onclick=function(){location.hash='#'+b+'/'+(bk.st.last!=null?bk.st.last:0);};
+    bk.home.querySelector('.open-toc').onclick=openToc;
+    progress(bk);
+  });
+
+  function progress(bk){
     var total=0,done=0;
-    chapters.forEach(function(c,i){
+    bk.chapters.forEach(function(c,i){
       var bs=c.querySelectorAll('input[type=checkbox][data-k]'),d=0;
       for(var j=0;j<bs.length;j++){if(bs[j].checked)d++;}
       total+=bs.length;done+=d;
-      var el=document.querySelector('#toc .p[data-p="'+i+'"]');
+      var el=bk.toc.querySelector('.p[data-p="'+i+'"]');
       if(el){el.textContent=bs.length?d+'/'+bs.length:'';el.classList.toggle('full',bs.length>0&&d===bs.length);}
     });
     var pct=total?Math.round(done*100/total):0;
-    document.getElementById('meter-txt').textContent='Treino concluído: '+pct+'% ('+done+' de '+total+' tarefas)';
-    document.getElementById('meter-fill').style.width=pct+'%';
+    [].forEach.call(document.querySelectorAll('[data-meter="'+bk.id+'"]'),function(e){e.textContent='Treino concluído: '+pct+'% ('+done+' de '+total+' tarefas)';});
+    [].forEach.call(document.querySelectorAll('[data-fill="'+bk.id+'"]'),function(e){e.style.width=pct+'%';});
   }
 
-  // Botões anterior / próximo
-  chapters.forEach(function(c,i){
-    var nav=c.querySelector('.pager'),h='';
-    if(i>0)h+='<a class="prev" href="#c'+(i-1)+'"><small>&larr; Anterior</small>'+titles[i-1]+'</a>';
-    else h+='<a class="prev" href="#inicio"><small>&larr; Voltar</small>Capa</a>';
-    if(i<chapters.length-1)h+='<a class="next" href="#c'+(i+1)+'"><small>Próximo &rarr;</small>'+titles[i+1]+'</a>';
-    nav.innerHTML=h;
-  });
-
-  // Navegação por endereço (#c3) para o botão voltar do Android funcionar
+  // Endereços: #biblioteca, #a (capa), #a/3 (capítulo). O botão voltar do Android segue esse histórico.
+  var cur={b:null,i:-1};
+  function route(){
+    var h=location.hash;
+    var legacy=/^#c(\d+)$/.exec(h);
+    if(legacy){location.replace('#a/'+legacy[1]);return null;}
+    var m=/^#([a-z])(?:\/(\d+))?$/.exec(h);
+    if(!m||!books[m[1]])return {b:null,i:-1};
+    var i=m[2]==null?-1:+m[2];
+    if(i>=books[m[1]].chapters.length)i=-1;
+    return {b:m[1],i:i};
+  }
   function show(){
-    var m=/^#c(\d+)$/.exec(location.hash),i=m?+m[1]:-1;
-    if(i>=chapters.length)i=-1;
-    if(cur>=0)st.scroll[cur]=window.scrollY;
-    cur=i;
-    document.getElementById('home').style.display=i<0?'':'none';
-    chapters.forEach(function(c,j){c.classList.toggle('on',j===i);});
-    [].forEach.call(document.querySelectorAll('#toc a'),function(a){a.classList.toggle('cur',+a.dataset.i===i);});
-    document.getElementById('barname').textContent=i<0?'Manual do Assassino':titles[i];
-    if(i>=0)st.last=i;
-    save(); closeToc();
-    window.scrollTo(0,i>=0&&st.scroll[i]?st.scroll[i]:0);
-    updateHome();
+    var r=route();if(!r)return;
+    if(cur.b&&cur.i>=0){books[cur.b].st.scroll[cur.i]=window.scrollY;save(books[cur.b]);}
+    cur=r;
+    var bk=r.b?books[r.b]:null;
+    document.getElementById('lib').style.display=bk?'none':'';
+    body.classList.toggle('at-lib',!bk);
+    if(bk)body.setAttribute('data-book',bk.id); else body.removeAttribute('data-book');
+    order.forEach(function(b){
+      var x=books[b],on=(x===bk);
+      x.el.classList.toggle('on',on);
+      x.home.classList.toggle('on',on&&r.i<0);
+      x.chapters.forEach(function(c,j){c.classList.toggle('on',on&&j===r.i);});
+      x.toc.classList.toggle('on',on);
+    });
+    var name='Biblioteca';
+    if(bk){
+      name=r.i<0?bk.title:bk.titles[r.i];
+      [].forEach.call(bk.toc.querySelectorAll('a'),function(a){a.classList.toggle('cur',+a.dataset.i===r.i);});
+      if(r.i>=0){bk.st.last=r.i;save(bk);}
+      bk.home.querySelector('.go').textContent=(bk.st.last!=null)?'Continuar: '+bk.titles[bk.st.last]:'Começar a ler';
+    }
+    document.getElementById('barname').textContent=name;
+    closeToc();
+    window.scrollTo(0,bk&&r.i>=0&&bk.st.scroll[r.i]?bk.st.scroll[r.i]:0);
   }
-  function updateHome(){
-    var go=document.getElementById('go');
-    go.textContent=(st.last!=null)?'Continuar: '+titles[st.last]:'Começar a ler';
-  }
-  document.getElementById('go').onclick=function(){location.hash='#c'+(st.last!=null?st.last:0);};
   window.addEventListener('hashchange',show);
 
   // Sumário lateral
-  function openToc(){document.body.classList.add('toc-open');}
-  function closeToc(){document.body.classList.remove('toc-open');}
-  document.getElementById('menu').onclick=function(){document.body.classList.contains('toc-open')?closeToc():openToc();};
-  document.getElementById('open-toc').onclick=openToc;
+  function openToc(){if(cur.b)body.classList.add('toc-open');}
+  function closeToc(){body.classList.remove('toc-open');}
+  document.getElementById('menu').onclick=function(){body.classList.contains('toc-open')?closeToc():openToc();};
   document.getElementById('scrim').onclick=closeToc;
   [].forEach.call(document.querySelectorAll('#toc a'),function(a){a.addEventListener('click',closeToc);});
-  window.closeTocIfOpen=function(){if(document.body.classList.contains('toc-open')){closeToc();return true;}return false;};
+  window.closeTocIfOpen=function(){if(body.classList.contains('toc-open')){closeToc();return true;}return false;};
 
   // Voltar ao topo e memória da posição de leitura
   var totop=document.getElementById('totop'),t=null;
   window.addEventListener('scroll',function(){
     totop.style.display=window.scrollY>900?'block':'none';
-    clearTimeout(t);t=setTimeout(function(){if(cur>=0){st.scroll[cur]=window.scrollY;save();}},300);
+    clearTimeout(t);t=setTimeout(function(){if(cur.b&&cur.i>=0){books[cur.b].st.scroll[cur.i]=window.scrollY;save(books[cur.b]);}},300);
   },{passive:true});
   totop.onclick=function(){window.scrollTo({top:0,behavior:'smooth'});};
 
-  progress(); show();
+  show();
 })();
 </script>
 </body>

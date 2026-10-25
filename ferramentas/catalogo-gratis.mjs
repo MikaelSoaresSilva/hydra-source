@@ -21,6 +21,14 @@ const CHANNELS = [
     searches: ['Episódio 1', 'Episódio 2', 'Episódio', 'Dublado', 'Legendado', 'Dublado e Legendado', 'Filme'] },
   { handle: 'yugiohportuguesbrasileir', name: 'Yu-Gi-Oh! Brasil', lang: 'dub', pages: ['', '/videos'],
     searches: ['Português do Brasil', 'Episódio', 'Temporada', 'Yu-Gi-Oh! GX', 'Duel Monsters', "5D's"] },
+  { handle: 'crunchyroll', name: 'Crunchyroll (canal global)', lang: 'leg',
+    searches: ['Episódio 1 DUBLADO', 'Episódio 1 LEGENDADO', 'Episódio 1 LEG/DUB', 'Episódio 1 PT-BR'], onlyTitle: /epis[óo]dio|dublad|legendad/i },
+  { handle: 'CanalDoraemonPT', name: 'Doraemon (canal oficial)', lang: 'dub', forceLang: 'dub', pages: ['/videos'],
+    searches: ['EPISÓDIO COMPLETO', 'Doraemon (1979)', 'Doraemon (2005)'] },
+  { handle: 'beyblade-official', name: 'BEYBLADE (canal oficial)', lang: 'dub',
+    searches: ['PT-BR EPISÓDIO', 'PT-BR EPISÓDIO 1', 'BEYBLADE PT-BR'], onlyTitle: /pt-?br|portugu/i },
+  { handle: 'brasilbeybladeofficial', name: 'BEYBLADE Português Brasil', lang: 'dub', forceLang: 'dub', pages: ['/videos'],
+    searches: ['Ep.1', 'Episódio', 'BEYBLADE BURST', 'BEYBLADE X'] },
   { handle: 'pokemon', name: 'Pokémon (canal oficial)', lang: 'en',
     searches: ['Full Episode', 'FULL EPISODE Indigo League', 'FULL EPISODE Horizons', 'FULL EPISODE Journeys', 'Episode 1'],
     playlistTitle: /full episodes?/i, onlyTitle: /full episode|episode \d/i, skipTitle: /^UK:/i },
@@ -90,11 +98,13 @@ const PT_WORDS = /epis[óo]dio|temporada|portugu[eê]s|dublad|legendad/i;
 function parseTitle(title, defaultLang) {
   const t = clean(title);
   const ep = Number((t.match(/epis[óo]dio\s*(\d+)/i) || t.match(/\bepisode\s*(\d+)/i) || t.match(/\bep\.?\s*(\d+)/i) || t.match(/\b\d+x(\d+)\b/) || [])[1]) || null;
-  let lang = /dublado e legendado/i.test(t) ? 'dub-leg' : /dublad/i.test(t) ? 'dub' : /legendad/i.test(t) ? 'leg' : /portugu[eê]s/i.test(t) ? 'dub' : null;
+  let lang = /dublado e legendado|leg\s*\/\s*dub|legendado\s*\/\s*dublado/i.test(t) ? 'dub-leg' : /dublad/i.test(t) ? 'dub'
+    : /legendad/i.test(t) ? 'leg' : /portugu[eê]s|pt-?br/i.test(t) ? 'dub' : null;
   // canal brasileiro com título todo em inglês: provavelmente versão em inglês
   if (!lang && defaultLang === 'dub' && !PT_WORDS.test(t)) lang = 'en';
   const movie = /\bfilme\b|\bmovie\b/i.test(t);
-  return { ep, lang: lang || defaultLang, movie, ...seriesOf(t) };
+  const full = /epis[óo]dio completo|full episode/i.test(t); // episódio inteiro sem número no título
+  return { ep, lang: lang || defaultLang, movie, full, ...seriesOf(t) };
 }
 
 function seriesOf(t) {
@@ -102,6 +112,9 @@ function seriesOf(t) {
   // Pokémon: "Nome do episódio | Pokémon: Indigo League Episode 1"
   const parts = s.split(/\s\|\s/);
   if (parts.length > 1 && /pok[eé]mon/i.test(parts[parts.length - 1])) s = parts[parts.length - 1];
+  else if (parts.length > 1) s = parts[0];
+  s = s.replace(/\bPT-?BR\b/gi, '');
+  const year = (s.match(/\((19|20)\d{2}\)/) || [''])[0]; // "Doraemon (1979)" e "Doraemon (2005)" são animes diferentes
   s = s.replace(/\s*[-–|:]?\s*(?:epis[óo]dio|episode|ep\.?)\s*\d+.*$/i, '')
     .replace(/\s+\d+x\d+.*$/i, '')
     .replace(/\s*\[full episode\].*$/i, '')
@@ -109,10 +122,15 @@ function seriesOf(t) {
     .replace(/\([^)]*\)|\[[^\]]*\]/g, '');
   let season = null;
   s = s.replace(/\s*[-–,:]?\s*(?:temporada|season)\s*(\d+)\s*[,:-]?\s*$/i, (_, n) => { season = Number(n); return ''; });
-  s = s.replace(/[\s:,\-–|]+$/, '').trim();
+  s = s.replace(/[\s:,\-–|]+$/, '').replace(/\s+/g, ' ').trim();
+  if (year && !s.includes(year)) s = `${s} ${year}`;
   return { series: s, season };
 }
-const seriesFromPlaylist = (title) => seriesOf(clean(title).replace(/\|\s*full episodes?/i, ''));
+function seriesFromPlaylist(title) {
+  const t = clean(title).replace(/\|\s*full episodes?/i, '');
+  if (/^filmes?\b/i.test(t)) return null; // playlist de filmes: cada vídeo é um anime diferente
+  return seriesOf(t.replace(/^(?:todos os )?epis[óo]dios(?: completos)?\s+(?:de|do|da)\s+/i, ''));
+}
 
 /* ---------- AniList ---------- */
 // nomes que a busca do AniList não reconhece sozinha (títulos em português ou nomes de temporada)
@@ -123,7 +141,7 @@ const ALIASES = {
   'pokémon: diamond and pearl': 1565, 'pokémon the series: diamond and pearl': 1565, 'pokémon: black & white': 9107,
   'pokémon the series: xy': 19291, 'pokémon the series: xyz': 21356, 'pokémon the series: sun & moon': 97634,
   'pokémon journeys: the series': 112153, 'pokémon horizons: the series': 158871, 'pokémon horizons': 158871,
-  'hanako-kun e os mistérios do colégio kamome': 'Toilet-bound Hanako-kun',
+  'hanako-kun e os mistérios do colégio kamome': 'Toilet-bound Hanako-kun', 'beyblade vforce': 'Beyblade V-Force',
 };
 const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const tokens = (s) => norm(s).split(' ').filter((w) => w.length > 1 && !['the', 'of', 'a', 'no', 'wa', 'to'].includes(w));
@@ -201,9 +219,9 @@ async function main() {
       if (ch.onlyTitle && !ch.onlyTitle.test(v.title) && !seriesHint) return;
       if (ch.skipTitle && ch.skipTitle.test(v.title)) return;
       const p = parseTitle(v.title, ch.lang);
-      if (!p.ep && !p.movie) return;
+      if (!p.ep && !p.movie && !p.full) return;
       const hint = seriesHint || {};
-      found.set(v.id, { id: v.id, title: clean(v.title), dur: v.dur, ep: p.ep, movie: p.movie, lang: p.lang,
+      found.set(v.id, { id: v.id, title: clean(v.title), dur: v.dur, ep: p.ep, movie: p.movie, lang: ch.forceLang || p.lang,
         series: hint.series || p.series, season: hint.season ?? p.season, ch: ch.name });
     };
     // 1) playlists do canal (uma por anime, normalmente)
@@ -213,7 +231,7 @@ async function main() {
       if (ch.playlistTitle && !ch.playlistTitle.test(pl.title)) continue;
       const { videos } = await collect(`https://www.youtube.com/playlist?list=${pl.id}`, { max: 400 });
       const hint = seriesFromPlaylist(pl.title);
-      videos.forEach((v) => add(v, /trailer|abertura|resenha|awards|temporada\b(?!\s*\d)/i.test(hint.series) ? null : hint));
+      videos.forEach((v) => add(v, !hint || /trailer|abertura|resenha|awards|temporada\b(?!\s*\d)/i.test(hint.series) ? null : hint));
       await sleep(300);
     }
     // 2) páginas do canal (para canais sem playlists)

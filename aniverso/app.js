@@ -36,7 +36,12 @@ const LIST_STATUS = { watching: 'Assistindo', planning: 'Quero ver', completed: 
 // plataformas cujo site toca o vídeo dentro do app; as demais (Netflix, Prime Video…) abrem no app oficial
 const PLAY_INSIDE = new Set(['Crunchyroll', 'YouTube', 'Bilibili TV', 'HIDIVE', 'Tubi TV', 'RetroCrush', 'Pluto TV', 'iQ', 'iQIYI',
   'WeTV', 'Viki', 'Hoopla', 'Midnight Pulp', 'AsianCrush', 'Crackle', 'Vimeo', 'Cineverse', 'Bilibili']);
-const FREE_SITES = new Set(['YouTube', 'Tubi TV', 'RetroCrush', 'Pluto TV', 'Crackle', 'Midnight Pulp', 'AsianCrush']);
+const FREE_SITES = new Set(['YouTube', 'Tubi TV', 'RetroCrush', 'Pluto TV', 'Crackle', 'Midnight Pulp', 'AsianCrush', 'Bilibili TV', 'Bilibili', 'Plex']);
+// o app é 100% grátis por padrão: plataformas pagas só aparecem se a pessoa ligar a opção na aba Grátis
+const prefs = {
+  get showPaid() { return store.get('aniverso:showPaid', false) === true; },
+  set showPaid(v) { store.set('aniverso:showPaid', Boolean(v)); },
+};
 const EP_PREVIEW = 24;
 
 const CARD = `id idMal title { romaji english } coverImage { large color } format episodes seasonYear averageScore status`;
@@ -168,6 +173,125 @@ const freeReady = (async () => {
     store.set('aniverso:free', { t: Date.now(), data: best });
   }
 })();
+/* ---------- Pluto TV: grátis, com o catálogo do país de quem está usando ---------- */
+const pluto = { token: '', region: 'br', exp: 0 };
+const newId = () => (crypto.randomUUID ? crypto.randomUUID()
+  : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16)));
+async function plutoSession() {
+  if (pluto.token && Date.now() < pluto.exp) return pluto;
+  let clientID = store.get('aniverso:plutoId', '');
+  if (!clientID) { clientID = newId(); store.set('aniverso:plutoId', clientID); }
+  const qs = new URLSearchParams({ appName: 'web', appVersion: '9.10.0', deviceVersion: '130.0.0', deviceModel: 'web',
+    deviceMake: 'chrome', deviceType: 'web', clientID, clientModelNumber: '1.0.0' });
+  const r = await fetch(`https://boot.pluto.tv/v4/start?${qs}`);
+  if (!r.ok) throw new Error('A Pluto TV não respondeu.');
+  const j = await r.json();
+  pluto.token = j.sessionToken;
+  pluto.region = String(j.session?.activeRegion || 'br').toLowerCase();
+  pluto.exp = Date.now() + Math.min(Number(j.refreshInSec) || 3600, 4 * 3600) * 1000 - 60000;
+  return pluto;
+}
+async function plutoGet(url, retry = true) {
+  const sess = await plutoSession();
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${sess.token}` } });
+  if (r.status === 401 && retry) { pluto.exp = 0; return plutoGet(url, false); }
+  if (!r.ok) throw new Error('A Pluto TV não respondeu.');
+  return r.json();
+}
+const plutoLink = {
+  series: (slug) => `https://pluto.tv/${pluto.region}/on-demand/series/${encodeURIComponent(slug)}/details`,
+  episode: (slug, season, ep) => `https://pluto.tv/${pluto.region}/on-demand/series/${encodeURIComponent(slug)}/season/${season}/episode/${encodeURIComponent(ep)}`,
+  movie: (slug) => `https://pluto.tv/${pluto.region}/on-demand/movies/${encodeURIComponent(slug)}/details`,
+  live: (slug) => `https://pluto.tv/${pluto.region}/live-tv/${encodeURIComponent(slug)}`,
+};
+const isAnimeCat = (name) => /\banim[eê]s?\b/i.test(name || '') && !/animal/i.test(name || '');
+const PLUTO_LANG = { PT: 'Português', EN: 'Inglês', ES: 'Espanhol', JA: 'Japonês', FR: 'Francês', DE: 'Alemão', IT: 'Italiano' };
+const cover = (covers, ratio) => (covers || []).find((c) => c.aspectRatio === ratio)?.url || '';
+const tok = (x) => (x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9]+/g, ' ').split(' ').filter((w) => w.length > 1 && !['the', 'of', 'no', 'en', 'espanol'].includes(w));
+function nameSim(a, b) {
+  const A = tok(a), B = new Set(tok(b));
+  if (!A.length || !B.size) return 0;
+  const hit = A.filter((w) => B.has(w)).length;
+  return hit / Math.max(A.length, B.size);
+}
+// procura o anime na Pluto TV comparando com todos os nomes conhecidos dele
+async function plutoFind(m) {
+  const names = [...new Set([m.title.english, m.title.romaji, ...(m.synonyms || [])].filter(Boolean))].slice(0, 4);
+  const found = new Map();
+  for (const q of names.slice(0, 2)) {
+    const j = await plutoGet(`https://service-media-search.clusters.pluto.tv/v1/search?q=${encodeURIComponent(q)}&limit=30`);
+    for (const it of j.data || []) {
+      if (it.type !== 'series' && it.type !== 'movie') continue;
+      const sim = Math.max(...names.map((n) => nameSim(it.name, n)));
+      if (sim >= 0.8 && !found.has(it.id)) found.set(it.id, { ...it, sim });
+    }
+  }
+  const wantMovie = m.format === 'MOVIE';
+  const list = [...found.values()].filter((x) => (x.type === 'movie') === wantMovie || found.size === 1);
+  // português primeiro; depois a versão sem idioma no nome, inglês e por último espanhol
+  const rank = (x) => (x.language === 'PT' ? 0 : 2) + (/\(|en espa[nñ]ol/i.test(x.name) ? 1 : 0) + (x.language === 'ES' ? 2 : 0);
+  list.sort((a, b) => rank(a) - rank(b) || b.sim - a.sim);
+  return list;
+}
+async function plutoSeasons(id) {
+  const j = await plutoGet(`https://service-vod.clusters.pluto.tv/v4/vod/series/${encodeURIComponent(id)}/seasons?offset=1000&page=1`);
+  return j;
+}
+async function plutoAnimeChannels() {
+  const [cats, chans] = await Promise.all([
+    plutoGet('https://service-channels.clusters.pluto.tv/v2/guide/categories'),
+    plutoGet('https://service-channels.clusters.pluto.tv/v2/guide/channels?channelIds=&offset=0&limit=1000&sort=number%3Aasc'),
+  ]);
+  const ids = new Set((cats.data || []).filter((c) => isAnimeCat(c.name)).flatMap((c) => c.channelIDs || []));
+  const byId = new Map((chans.data || []).map((c) => [c.id, c]));
+  // canais com "anime" no nome também entram (no Brasil a categoria pode ter outro nome)
+  for (const c of chans.data || []) if (/anime|naruto|pok[eé]mon|yu-gi-oh|one piece|sailor moon|inuyasha|dragon ball/i.test(c.name)) ids.add(c.id);
+  const list = [...ids].map((id) => byId.get(id)).filter(Boolean);
+  if (list.length) {
+    try {
+      const start = new Date(Date.now() - 5 * 60000).toISOString();
+      const tl = await plutoGet(`https://service-channels.clusters.pluto.tv/v2/guide/timelines?start=${encodeURIComponent(start)}&channelIds=${list.map((c) => c.id).join(',')}&duration=60`);
+      const now = Date.now();
+      for (const t of tl.data || []) {
+        const cur = (t.timelines || []).find((x) => new Date(x.start) <= now && new Date(x.stop) > now) || t.timelines?.[0];
+        const ch = byId.get(t.channelId);
+        if (ch && cur) ch.now = cur.episode?.series?.name ? `${cur.episode.series.name}${cur.episode.number ? ` · ep. ${cur.episode.number}` : ''}` : cur.title;
+      }
+    } catch { /* sem grade: mostra só os canais */ }
+  }
+  return list;
+}
+async function plutoAnimeShows() {
+  const cats = await plutoGet('https://service-vod.clusters.pluto.tv/v4/vod/categories?includeItems=false&offset=1000&page=1');
+  const animeCats = (cats.categories || []).filter((c) => isAnimeCat(c.name)).slice(0, 6);
+  const seen = new Map();
+  for (const c of animeCats) {
+    const j = await plutoGet(`https://service-vod.clusters.pluto.tv/v4/vod/categories/${encodeURIComponent(c._id || c.id)}/items?offset=200&page=1`).catch(() => null);
+    for (const it of j?.items || []) if (!seen.has(it._id)) seen.set(it._id, it);
+  }
+  return [...seen.values()];
+}
+// guarda as listas da Pluto por 10 minutos (início e aba Grátis usam as mesmas)
+const plutoMemo = (fn) => { let p = null, t = 0; return () => { if (!p || Date.now() - t > 600000) { t = Date.now(); p = fn().catch((e) => { p = null; throw e; }); } return p; }; };
+const plutoChannelsCached = plutoMemo(plutoAnimeChannels);
+const plutoShowsCached = plutoMemo(plutoAnimeShows);
+
+function plutoShowCard(it) {
+  const img = cover(it.covers, '347:500') || it.featuredImage?.path || '';
+  const url = it.type === 'movie' ? plutoLink.movie(it.slug) : plutoLink.series(it.slug);
+  return `<a class="card" href="${esc(url)}" data-inside data-resolve="${esc(it.name)}" data-kind="${it.type === 'movie' ? 'MOVIE' : ''}" target="_blank" rel="noopener">
+    <div class="poster">${img ? `<img loading="lazy" src="${esc(img)}" alt="">` : ''}<div class="badges"><span class="badge free">GRÁTIS</span><span class="badge pluto">PLUTO TV</span></div></div>
+    <div class="card-t">${esc(it.name)}</div>
+    <div class="card-m">${it.type === 'movie' ? 'Filme' : 'Série'}${it.seasonsNumbers?.length ? ` · ${it.seasonsNumbers.length} temp.` : ''}</div></a>`;
+}
+function plutoChannelCard(c) {
+  const logo = (c.images || []).find((i) => i.type === 'colorLogoPNG')?.url || (c.images || []).find((i) => i.type === 'logo')?.url || '';
+  return `<a class="live-card" href="${esc(plutoLink.live(c.slug))}" data-inside target="_blank" rel="noopener">
+    <span class="live-logo">${logo ? `<img src="${esc(logo)}" alt="">` : esc(c.name)}</span>
+    <span class="live-txt"><span class="live-dot">AO VIVO</span><strong>${esc(c.name)}</strong>${c.now ? `<small>Agora: ${esc(c.now)}</small>` : ''}</span></a>`;
+}
+
 const freeVideos = (m) => free.anime[m.id]?.videos || [];
 const freeIds = () => Object.keys(free.anime).map(Number);
 
@@ -240,9 +364,22 @@ document.addEventListener('click', (e) => {
   const a = e.target.closest('a[data-inside]');
   if (!a || e.defaultPrevented) return;
   e.preventDefault();
+  if (a.dataset.resolve) { resolveAndOpen(a); return; }
   if (a.dataset.free && !isNativeApp) openYouTubeModal(a.dataset.free);
   else openInside(a.href);
 });
+
+// capa da Pluto TV: procura o anime no catálogo e abre a página dele; se não achar, abre direto na Pluto
+async function resolveAndOpen(a) {
+  try {
+    const data = await gql(`query($s: String) { Page(perPage: 5) { media(search: $s, type: ANIME, isAdult: false) { id format title { romaji english } synonyms } } }`,
+      { s: a.dataset.resolve.replace(/\([^)]*\)/g, '').trim() });
+    const best = data.Page.media.map((m) => ({ m, s: Math.max(...[m.title.english, m.title.romaji, ...(m.synonyms || [])].map((n) => nameSim(a.dataset.resolve, n))) }))
+      .filter((x) => x.s >= 0.8).sort((x, y) => y.s - x.s || (a.dataset.kind ? (y.m.format === 'MOVIE') - (x.m.format === 'MOVIE') : 0))[0];
+    if (best) { location.hash = `#/anime/${best.m.id}`; return; }
+  } catch { /* abre na Pluto */ }
+  openInside(a.href);
+}
 
 function openYouTubeModal(id) {
   let modal = $('#yt-modal');
@@ -297,11 +434,12 @@ async function renderHome() {
     { key: 'movies', title: 'Filmes', more: '#/explorar?format=MOVIE' },
   ];
   view.innerHTML = `<div class="hero" id="hero"><div class="wrap hero-in" style="min-height:240px"></div></div>
-    <div class="wrap"><div id="continue-row"></div>${rows.map((r) => `<div class="section" data-row="${r.key}">
+    <div class="wrap"><div id="continue-row"></div><div id="pluto-live-row"></div><div id="pluto-shows-row"></div>${rows.map((r) => `<div class="section" data-row="${r.key}">
       <div class="section-head"><h2>${esc(r.title)}</h2><a href="${r.more}">Ver todos →</a></div>
       <div class="rail">${skeletons(8)}</div></div>`).join('')}</div>`;
 
   renderContinueRow();
+  renderPlutoRows();
   await Promise.race([Promise.all([dubsReady, freeReady]), new Promise((r) => setTimeout(r, 5000))]);
   const useDub = dubs.ready && dubs.pt.size > 0;
   const useFree = free.ready && freeIds().length > 0;
@@ -328,6 +466,17 @@ async function renderHome() {
     view.innerHTML = `<div class="wrap">${errorHTML(err.message, 'home-retry')}</div>`;
     $('#home-retry').onclick = () => renderHome();
   }
+}
+
+async function renderPlutoRows() {
+  const live = $('#pluto-live-row'), shows = $('#pluto-shows-row');
+  try {
+    const [chans, items] = await Promise.all([plutoChannelsCached(), plutoShowsCached()]);
+    if (live && chans.length) live.innerHTML = `<div class="section"><div class="section-head"><h2>Ao vivo grátis agora</h2><a href="#/gratis">Pluto TV →</a></div>
+      <div class="live-rail">${chans.map(plutoChannelCard).join('')}</div></div>`;
+    if (shows && items.length) shows.innerHTML = `<div class="section"><div class="section-head"><h2>Grátis na Pluto TV</h2><a href="#/gratis">Ver todos →</a></div>
+      <div class="rail">${items.slice(0, 30).map(plutoShowCard).join('')}</div></div>`;
+  } catch { /* Pluto TV fora do ar: as outras seções continuam */ }
 }
 
 function renderContinueRow() {
@@ -590,6 +739,7 @@ async function renderAnime(id) {
     document.title = `${titleOf(m)} · AniVerso`;
     view.innerHTML = animeHTML(m);
     bindAnime(m);
+    loadPlutoPanel(m);
   } catch (err) {
     view.innerHTML = `<div class="wrap">${errorHTML(err.message, 'anime-retry')}</div>`;
     $('#anime-retry').onclick = () => renderAnime(id);
@@ -634,10 +784,11 @@ function animeHTML(m) {
       <span>${enDub ? 'Existe versão dublada em inglês.' : (dubs.ready ? 'Ainda não consta na base de dublagens.' : 'Não foi possível verificar agora.')}</span></div></div>
   </div><p class="note">A dublagem pode estar disponível só em algumas plataformas ou países. Confira na plataforma antes de assinar.</p></div>`;
 
-  const streams = m.externalLinks.filter((l) => l.type === 'STREAMING' && safeUrl(l.url));
+  const showPaid = prefs.showPaid;
+  const streams = m.externalLinks.filter((l) => l.type === 'STREAMING' && safeUrl(l.url) && (showPaid || FREE_SITES.has(l.site)));
   const linkHTML = (l, sub, inside = false) => {
     const lc = /^#[0-9a-f]{3,8}$/i.test(l.color || '') ? ` style="--lc:${l.color}"` : '';
-    const free = FREE_SITES.has(l.site) ? '<span class="free">Grátis</span>' : '';
+    const free = FREE_SITES.has(l.site) || l.free ? '<span class="free">Grátis</span>' : '';
     return `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener"${inside ? ' data-inside' : ''}${lc}>
       <span class="ico">${l.icon ? `<img src="${esc(l.icon)}" alt="" loading="lazy">` : ''}</span>
       <span class="txt">${esc(l.site)}${free}<small>${esc(sub)}</small></span></a>`;
@@ -645,18 +796,19 @@ function animeHTML(m) {
   const insideLabel = isNativeApp ? 'Assistir aqui no app' : 'Assistir no site oficial';
   const streamSub = (l) => {
     const lang = l.language ? ` · ${LANG_PT[l.language] || l.language}` : '';
-    return (PLAY_INSIDE.has(l.site) ? insideLabel : (isNativeApp ? 'Abre no app oficial' : 'Abrir na plataforma')) + lang;
+    const vip = /bilibili/i.test(l.site) ? ' · alguns episódios só no VIP' : '';
+    return (PLAY_INSIDE.has(l.site) ? insideLabel : (isNativeApp ? 'Abre no app oficial' : 'Abrir na plataforma')) + vip + lang;
   };
   const q = encodeURIComponent(m.title.english || m.title.romaji);
-  const where = `<div class="panel" id="onde-assistir"><h3>Onde assistir legalmente</h3>
+  const where = `<div class="panel" id="onde-assistir"><h3>${showPaid ? 'Onde assistir legalmente' : 'Outros lugares grátis'}</h3>
     <div class="where">
       ${streams.map((l) => linkHTML(l, streamSub(l), PLAY_INSIDE.has(l.site))).join('')}
-      ${linkHTML({ site: 'JustWatch Brasil', url: `https://www.justwatch.com/br/busca?q=${q}`, color: '#FBC500' }, 'Ver onde está no Brasil')}
-      ${streams.some((l) => l.site === 'Crunchyroll') ? '' : linkHTML({ site: 'Crunchyroll', url: `https://www.crunchyroll.com/pt-br/search?q=${q}`, color: '#F47521' }, 'Procurar no catálogo BR', true)}
+      ${linkHTML({ site: 'Bilibili', url: 'https://www.bilibili.tv/', color: '#00A1D6', free: true }, 'App grátis · procure pelo nome', true)}
+      ${linkHTML({ site: 'JustWatch Brasil', url: `https://www.justwatch.com/br/busca?q=${q}`, color: '#FBC500' }, showPaid ? 'Ver onde está no Brasil' : 'Ver se está grátis em outro serviço')}
+      ${showPaid && !streams.some((l) => l.site === 'Crunchyroll') ? linkHTML({ site: 'Crunchyroll', url: `https://www.crunchyroll.com/pt-br/search?q=${q}`, color: '#F47521' }, 'Pago · procurar no catálogo BR', true) : ''}
     </div>
-    <p class="note">${streams.length ? 'Plataformas oficiais cadastradas no AniList.' : 'Nenhuma plataforma oficial cadastrada para este anime ainda.'}
-      ${isNativeApp ? '"Assistir aqui no app" abre o player da plataforma sem sair do AniVerso; feche no X para voltar. ' : ''}Plataformas pagas pedem login na sua conta.
-      O JustWatch mostra em quais serviços o anime está no Brasil e se tem áudio em português.</p></div>`;
+    <p class="note">${showPaid ? 'Plataformas oficiais cadastradas no AniList. As pagas pedem assinatura. ' : 'Só aparecem opções gratuitas. Para ver também as pagas, ligue a opção na aba Grátis. '}
+      ${isNativeApp ? 'Os links abrem dentro do AniVerso; feche no X para voltar. ' : ''}No JustWatch, use o filtro "Grátis" para ver serviços gratuitos.</p></div>`;
 
   const fv = freeVideos(m);
   const freeHTML = fv.length ? `<div class="panel free-panel" id="gratis">
@@ -668,7 +820,7 @@ function animeHTML(m) {
   </div>` : '';
   const firstFree = fv.find((v) => v.lang === 'dub' || v.lang === 'dub-leg') || fv[0];
 
-  const eps = parseEpisodes(m.streamingEpisodes);
+  const eps = showPaid ? parseEpisodes(m.streamingEpisodes) : [];
   const prog = progress.get(m.id);
   const seen = new Set(prog?.watched || []);
   const nextEp = eps.length ? (prog ? eps.find((e) => e.n > prog.last) || eps.find((e) => e.n === prog.last) : eps[0]) : null;
@@ -680,10 +832,11 @@ function animeHTML(m) {
   } else if (nextEp) {
     cta = `<a class="btn primary big" href="${esc(nextEp.url)}" data-inside data-epn="${nextEp.n}">▶ ${prog ? 'Continuar' : 'Assistir'}: episódio ${esc(String(nextEp.n).replace('.', ','))}</a>`;
   } else if (insideStream) {
-    cta = `<a class="btn primary big" href="${esc(insideStream.url)}" data-inside>▶ Assistir na ${esc(insideStream.site)}</a>`;
+    cta = `<a class="btn primary big" href="${esc(insideStream.url)}" data-inside>▶ Assistir ${FREE_SITES.has(insideStream.site) ? 'grátis ' : ''}na ${esc(insideStream.site)}</a>`;
   } else if (streams.length) {
     cta = `<a class="btn primary big" href="#onde-assistir" data-scroll>▶ Ver onde assistir</a>`;
   }
+  const ctaRow = `<div class="btns cta-row" id="cta-row"${cta ? '' : ' hidden'}>${cta}</div>`;
   const episodesHTML = eps.length ? `<div class="panel" id="episodios">
     <div class="ep-head"><h3>Episódios <span class="muted">${eps.length}</span></h3>
       <span class="note">${esc(eps[0].site || 'Crunchyroll')} · ${isNativeApp ? 'toque para assistir aqui no app' : 'abre no site oficial'}</span></div>
@@ -716,7 +869,7 @@ function animeHTML(m) {
         <h1>${esc(title)}</h1>
         ${alt ? `<p class="alt-titles">${esc(alt)}</p>` : ''}
         <div class="chips">${chips}</div>
-        ${cta ? `<div class="btns cta-row">${cta}</div>` : ''}
+        ${ctaRow}
       </div>
       <aside class="detail-side">
         <label class="field"><span class="eyebrow" style="color:var(--muted)">Minha lista</span>
@@ -729,6 +882,7 @@ function animeHTML(m) {
         <div class="btns"><button class="linkish" type="button" id="syn-more">Ler mais</button>
         <a class="linkish" href="${esc(translate)}" target="_blank" rel="noopener">Traduzir sinopse para português</a></div></div>` : ''}
       ${freeHTML}
+      <div id="pluto-panel" class="panel pluto-panel"><div class="ep-head"><h3>Grátis na Pluto TV</h3><span class="note">Procurando…</span></div></div>
       ${episodesHTML}
       ${audio}
       ${trailer ? `<div class="two-col">${where}${trailer}</div>` : where}
@@ -736,6 +890,71 @@ function animeHTML(m) {
     </div>
     ${relHTML}${recHTML}
   </div>`;
+}
+
+async function loadPlutoPanel(m) {
+  const panel = $('#pluto-panel');
+  if (!panel) return;
+  const stillHere = () => location.hash === `#/anime/${m.id}` && document.body.contains(panel);
+  let matches;
+  try { matches = await plutoFind(m); } catch {
+    if (stillHere()) panel.innerHTML = '<div class="ep-head"><h3>Grátis na Pluto TV</h3><span class="note">Não foi possível consultar a Pluto TV agora.</span></div>';
+    return;
+  }
+  if (!stillHere()) return;
+  if (!matches.length) {
+    panel.innerHTML = `<div class="ep-head"><h3>Grátis na Pluto TV</h3><span class="note">Este anime não está na Pluto TV do seu país agora.</span></div>
+      <p class="note">A Pluto TV troca o catálogo todo mês. Veja os animes que estão lá na aba <a class="linkish" href="#/gratis">Grátis</a>.</p>`;
+    if (!freeVideos(m).length) suggestFree(m);
+    return;
+  }
+  const best = matches[0];
+  const others = matches.slice(1, 4).map((x) => `<a class="btn small" href="${esc(x.type === 'movie' ? plutoLink.movie(x.slug) : plutoLink.series(x.slug))}" data-inside target="_blank" rel="noopener">${esc(x.name)}${x.language ? ` · ${esc(PLUTO_LANG[x.language] || x.language)}` : ''}</a>`).join('');
+  const lang = best.language ? (PLUTO_LANG[best.language] || best.language) : '';
+  let body = '';
+  let first = null;
+  if (best.type === 'series') {
+    try {
+      const data = await plutoSeasons(best.id);
+      const seasons = (data.seasons || []).filter((s) => s.episodes?.length);
+      const all = seasons.flatMap((s) => s.episodes.map((e) => ({ ...e, season: s.number })));
+      first = all[0];
+      body = seasons.map((s, si) => `<details class="season"${si === 0 ? ' open' : ''}><summary>Temporada ${s.number} <span class="muted">${s.episodes.length} episódios</span></summary>
+        <div class="eps">${s.episodes.map((e, ei) => `<div class="ep"${ei >= 12 ? ' hidden' : ''}>
+          <a class="ep-play" href="${esc(plutoLink.episode(best.slug, s.number, e.slug))}" data-inside${s.number === 1 && e.number ? ` data-epn="${e.number}"` : ''} target="_blank" rel="noopener">
+            <span class="ep-thumb"><img src="${esc(cover(e.covers, '16:9'))}" alt="" loading="lazy"><span class="ep-badge">▶</span></span>
+            <span class="ep-txt"><span class="ep-n">Episódio ${esc(e.number ?? '')}</span><span class="ep-t">${esc(e.name || '')}</span>
+            <span class="ep-t">${e.duration ? `${Math.round(e.duration / 60000)} min` : ''}</span></span></a></div>`).join('')}</div>
+        ${s.episodes.length > 12 ? `<button class="btn small" type="button" data-more-eps>Mostrar todos os ${s.episodes.length} episódios</button>` : ''}</details>`).join('');
+    } catch { body = ''; }
+  }
+  if (!stillHere()) return;
+  const mainUrl = best.type === 'movie' ? plutoLink.movie(best.slug) : plutoLink.series(best.slug);
+  panel.innerHTML = `<div class="ep-head"><h3>Grátis na Pluto TV <span class="free">Grátis</span></h3>
+      <span class="note">${esc(best.name)}${lang ? ` · áudio ${esc(lang)}` : ''} · sem cadastro, com anúncios</span></div>
+    <div class="btns" style="margin-bottom:12px"><a class="btn primary" href="${esc(first ? plutoLink.episode(best.slug, first.season, first.slug) : mainUrl)}" data-inside target="_blank" rel="noopener">▶ Assistir ${first ? 'episódio 1' : best.type === 'movie' ? 'o filme' : ''} grátis</a>${others}</div>
+    ${body}
+    <p class="note">${isNativeApp ? 'Abre o player da Pluto TV dentro do app; feche no X para voltar. ' : ''}O catálogo da Pluto TV muda com o tempo.</p>`;
+  panel.querySelectorAll('a[data-epn]').forEach((a) => a.addEventListener('click', () => progress.open(m, Number(a.dataset.epn))));
+  panel.querySelectorAll('[data-more-eps]').forEach((b) => b.addEventListener('click', () => {
+    b.closest('details').querySelectorAll('.ep[hidden]').forEach((e) => { e.hidden = false; });
+    b.remove();
+  }));
+  // sem vídeo grátis no YouTube: o botão principal vira "Assistir grátis na Pluto TV"
+  const cta = $('#cta-row');
+  if (cta && !freeVideos(m).length) {
+    cta.innerHTML = `<a class="btn primary big" href="${esc(first ? plutoLink.episode(best.slug, first.season, first.slug) : mainUrl)}" data-inside target="_blank" rel="noopener">▶ Assistir grátis na Pluto TV</a>`;
+    cta.hidden = false;
+  }
+}
+
+// quando não há nada grátis, sugere animes parecidos que estão grátis
+async function suggestFree(m) {
+  const cta = $('#cta-row');
+  if (cta && cta.hidden) {
+    cta.innerHTML = '<a class="btn primary big" href="#/gratis">▶ Ver animes parecidos grátis</a>';
+    cta.hidden = false;
+  }
 }
 
 function bindAnime(m) {
@@ -812,22 +1031,20 @@ function renderList() {
 
 /* ---------- Grátis ---------- */
 const FREE_SOURCES = [
-  { name: 'Pluto TV', url: 'https://pluto.tv/br/live-tv', tag: 'Grátis · sem cadastro', inside: true,
-    text: 'TV on-line gratuita com canais de anime 24 horas, a maioria dublada: Pokémon, Yu-Gi-Oh!, Naruto e outros. A grade muda com o tempo; procure a categoria Anime & Geek.' },
   { name: 'Crunchyroll Brasil no YouTube', url: 'https://www.youtube.com/@CrunchyrollBR', tag: 'Grátis · oficial', inside: true,
     text: 'Canal oficial com o episódio 1 de muitos animes, dublado e legendado (Jujutsu Kaisen, Blue Lock, Tokyo Revengers, Gachiakuta…).' },
   { name: 'Yu-Gi-Oh! Brasil no YouTube', url: 'https://www.youtube.com/@yugiohportuguesbrasileir', tag: 'Grátis · dublado', inside: true,
     text: 'Canal oficial da Konami com episódios dublados em português de Duel Monsters, GX e 5D’s.' },
+  { name: 'Doraemon no YouTube', url: 'https://www.youtube.com/@CanalDoraemonPT', tag: 'Grátis · dublado', inside: true,
+    text: 'Canal oficial com episódios e filmes completos do Doraemon em português.' },
+  { name: 'BEYBLADE no YouTube', url: 'https://www.youtube.com/@brasilbeybladeofficial', tag: 'Grátis · dublado', inside: true,
+    text: 'Episódios completos de Beyblade em português, no canal oficial brasileiro e no canal mundial.' },
   { name: 'Pokémon no YouTube', url: 'https://www.youtube.com/@pokemon', tag: 'Grátis · oficial', inside: true,
     text: 'Canal oficial com episódios completos de várias temporadas. Os títulos são em inglês; em alguns vídeos dá para trocar o áudio em ⚙ › Faixa de áudio.' },
   { name: 'Bilibili', url: 'https://www.bilibili.tv/', tag: 'App grátis · legendas PT', inside: true,
     text: 'Chegou ao Brasil em agosto de 2026 com app em português. Tem animes com legenda em português, mas o catálogo liberado aqui varia. Evite vídeos de usuários sem licença.' },
-  { name: 'Tubi e Plex', url: 'https://tubitv.com/category/anime', tag: 'Grátis com anúncios · confira no Brasil', inside: true,
-    text: 'Serviços gratuitos com anúncios e alguns animes clássicos. O catálogo muda por país e pode não abrir no Brasil.' },
-];
-const FREE_TRIALS = [
-  { name: 'Crunchyroll', url: 'https://www.crunchyroll.com/pt-br/premium', text: '7 dias grátis no plano pago (pede cartão; cancele antes para não ser cobrado). O plano grátis com anúncios acabou em 31/12/2025.' },
-  { name: 'Prime Video', url: 'https://www.primevideo.com/', text: '30 dias grátis para quem nunca assinou. Tem animes dublados e legendados.' },
+  { name: 'Plex', url: 'https://watch.plex.tv/', tag: 'Grátis com anúncios', inside: true,
+    text: 'Filmes e canais grátis com anúncios. Tem alguns animes; o catálogo muda por país.' },
 ];
 
 let freeTab = 'all';
@@ -842,8 +1059,12 @@ async function renderFree() {
   view.innerHTML = `<div class="wrap">
     <div class="explore-head"><h1>Assistir de graça</h1>
       <p>Só caminhos legais: vídeos publicados pelos próprios donos dos animes e serviços gratuitos oficiais.</p></div>
+    <div class="section" id="free-live"><div class="section-head"><h2>Ao vivo grátis agora · Pluto TV</h2></div>
+      <p class="note">Canais de anime 24 horas, sem cadastro. Carregando…</p></div>
+    <div class="section" id="free-pluto"><div class="section-head"><h2>Animes grátis na Pluto TV</h2></div>
+      <div class="grid">${skeletons(6)}</div></div>
     <div class="section">
-      <div class="section-head"><h2>Episódios grátis dentro do app</h2></div>
+      <div class="section-head"><h2>Episódios grátis no YouTube oficial</h2></div>
       <p class="note" id="free-summary">Carregando a lista…</p>
       <div class="tabs" role="tablist" id="free-tabs">
         ${[['all', 'Todos'], ['dub', 'Dublados'], ['leg', 'Legendados']].map(([k, l]) => `<button type="button" role="tab" data-ftab="${k}" aria-selected="${k === freeTab}">${l}</button>`).join('')}
@@ -854,9 +1075,11 @@ async function renderFree() {
       <div class="section-head"><h2>Outros jeitos grátis e legais</h2></div>
       <div class="sources">${FREE_SOURCES.map((x) => srcCard(x)).join('')}</div>
     </div>
-    <div class="section">
-      <div class="section-head"><h2>Testes grátis</h2></div>
-      <div class="sources">${FREE_TRIALS.map((x) => srcCard(x, false)).join('')}</div>
+    <div class="panel">
+      <h3>Modo 100% grátis</h3>
+      <label class="switch"><input type="checkbox" id="show-paid"${prefs.showPaid ? ' checked' : ''}>
+        <span>Mostrar também plataformas pagas (Crunchyroll, Netflix…)</span></label>
+      <p class="note">Desligado, o app só mostra opções gratuitas.</p>
     </div>
     <div class="panel warn">
       <h3>Por que o app não usa sites "piratas"</h3>
@@ -865,6 +1088,11 @@ async function renderFree() {
     </div>
   </div>`;
   view.querySelectorAll('[data-ftab]').forEach((b) => { b.onclick = () => { freeTab = b.dataset.ftab; drawFreeGrid(); }; });
+  $('#show-paid').addEventListener('change', (e) => {
+    prefs.showPaid = e.target.checked;
+    toast(e.target.checked ? 'Plataformas pagas vão aparecer nas páginas dos animes' : 'Modo 100% grátis ligado');
+  });
+  loadFreePluto();
 
   await freeReady;
   const ids = freeIds();
@@ -889,6 +1117,20 @@ async function renderFree() {
     $('#free-grid').innerHTML = `<div style="grid-column:1/-1">${errorHTML(err.message, 'free-retry')}</div>`;
     $('#free-retry').onclick = () => { freeLoaded = false; renderFree(); };
     freeLoaded = false;
+  }
+}
+
+async function loadFreePluto() {
+  try {
+    const [chans, items] = await Promise.all([plutoChannelsCached(), plutoShowsCached()]);
+    $('#free-live').innerHTML = `<div class="section-head"><h2>Ao vivo grátis agora · Pluto TV</h2></div>
+      ${chans.length ? `<div class="live-rail">${chans.map(plutoChannelCard).join('')}</div>` : '<p class="note">Nenhum canal de anime ao vivo no seu país agora.</p>'}`;
+    $('#free-pluto').innerHTML = `<div class="section-head"><h2>Animes grátis na Pluto TV</h2></div>
+      <p class="note">${fmtNum(items.length)} animes e filmes sob demanda, sem cadastro. Toque para ver episódios.</p>
+      <div class="grid">${items.map(plutoShowCard).join('')}</div>`;
+  } catch {
+    $('#free-live').innerHTML = '<div class="section-head"><h2>Pluto TV</h2></div><p class="note">Não foi possível consultar a Pluto TV agora. <a class="linkish" href="https://pluto.tv/" data-inside>Abrir a Pluto TV</a></p>';
+    $('#free-pluto').innerHTML = '';
   }
 }
 

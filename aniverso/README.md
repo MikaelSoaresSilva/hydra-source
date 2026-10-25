@@ -11,9 +11,14 @@ Aplicativo (site instalável no celular e no PC) com o catálogo de animes do mu
 - **Página do anime**: sinopse (com botão para traduzir), se é dublado ou legendado, trailer,
   ficha técnica, contagem para o próximo episódio, temporadas/filmes relacionados, recomendações
   e botões para as plataformas oficiais (Crunchyroll, Netflix, Prime Video etc.) + JustWatch Brasil.
+- **100% grátis por padrão**: plataformas pagas (Crunchyroll, Netflix, Prime Video…) ficam escondidas.
+  Quem quiser vê-las liga a opção "Mostrar também plataformas pagas" na aba Grátis.
+- **Pluto TV dentro do app** (grátis, sem cadastro): canais de anime ao vivo com o que está passando agora,
+  mais de 100 animes sob demanda e, na página de cada anime, a lista de temporadas e episódios disponíveis
+  na Pluto TV do seu país.
 - **Grátis**: episódios completos publicados de graça pelos donos dos animes em canais oficiais do YouTube
-  (Crunchyroll Brasil, Yu-Gi-Oh! Brasil, Pokémon), com selo **GRÁTIS** nas capas, filtro "Grátis" no Explorar
-  e um guia de outros caminhos gratuitos e legais (Pluto TV, Bilibili, testes grátis).
+  (Crunchyroll Brasil, Crunchyroll global, Yu-Gi-Oh! Brasil, Doraemon, BEYBLADE, Pokémon), com selo **GRÁTIS** nas capas, filtro "Grátis" no Explorar
+  e um guia de outros caminhos gratuitos e legais (Pluto TV, Bilibili, Plex).
 - **Episódios**: lista de episódios com miniatura (quando a Crunchyroll tem o anime). Toque para assistir;
   o app marca como visto e mostra **Continuar assistindo** no início.
 - **Assistir sem sair do app** (no APK): Crunchyroll, YouTube, Bilibili TV e outras abrem o player da
@@ -32,6 +37,7 @@ oficiais (algumas pedem assinatura), e o Player só toca arquivos e links que vo
 | --- | --- |
 | Catálogo, capas, sinopses, trailers, links de streaming | [AniList](https://anilist.co) (API pública GraphQL) |
 | Quais animes têm dublagem PT-BR / inglês | [MyDubList](https://github.com/Joelis57/MyDubList) (licença CC BY 4.0) |
+| Pluto TV (canais e animes grátis) | API pública da Pluto TV, consultada direto do aparelho |
 | Episódios grátis (`gratis.json`) | Canais oficiais do YouTube, lidos pelo robô `ferramentas/catalogo-gratis.mjs` |
 
 ## Atualizar a lista de episódios grátis

@@ -2,6 +2,14 @@
 
 App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app fica em `app/index.html`.
 
+## v1.5 — áudio
+- **🎧 Áudios dela**: escolher mensagens de voz (opus/ogg do WhatsApp, mp3, m4a, wav, aac) ou compartilhar o áudio direto do WhatsApp pro Puxa Papo.
+- **🎤 Gravar áudio**: grava pelo microfone (pra explicar a situação falando). Cada áudio pode ser marcado como "Áudio dela", "Áudio meu" ou "Eu explicando".
+- A IA ouve os áudios, transcreve, repara no tom de voz e responde cada áudio dela (uma por uma).
+- Objetivo novo: *Responder por áudio* (roteiro curto pra você gravar).
+- Áudio usa o Google Gemini (o Claude não ouve áudio). Limite ~12 MB por áudio.
+- A parte Android agora é compilada do código-fonte (`android/`), com a permissão de microfone.
+
 ## v1.4 — com o Manual do Assassino
 - A IA recebe um resumo do livro *Manual do Assassino* (Cialdini, Chris Voss, Carnegie, Kahneman, Heath, Greene filtrado, Cabane, Aron, Aronson, Fiske, Ekman) adaptado pra conversa por texto, mais a parte de emoções do *Código do Viking*.
 - Cada sugestão mostra a técnica usada (ex: "📚 Espelhamento · Chris Voss"), o resultado traz uma "📚 Lição do Manual" e um "🛡️ Sinal de alerta" se ela usar alguma tática de manipulação (Cap. 6 do livro).
@@ -25,12 +33,13 @@ App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app f
 - No Story, vários stories = uma resposta para cada.
 
 ## Instalar
-`dist/PuxaPapo-v1.4.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
+`dist/PuxaPapo-v1.5.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
 
 ## Reconstruir
 ```
-./build.sh PuxaPapo-original.apk 5 1.4
+./build.sh 6 1.5     # versionCode versionName
 ```
+Compila `android/` (Java, manifesto, ícones) + `app/index.html`, alinha e assina. Baixa sozinho as build-tools 36, o android.jar (API 30) e a chave do uber-apk-signer.
 
 ## Testar
 ```

@@ -99,6 +99,12 @@ small.mut{color:var(--mut)}
 .alert{background:#3a2a10;border:1px solid #7a5a1c;color:#ffe2a8;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px}
 .alert b,.manual b{display:block;margin-bottom:4px}
 .manual{background:#221a3a;border:1px solid #4b3a86;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px;color:#e6dcff}
+.aud{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:8px}
+.aud audio{flex:1;min-width:0;height:36px}
+.aud select{width:auto;flex:0 0 auto;padding:7px 8px;font-size:13px;border-radius:10px}
+.aud .x{width:30px;height:30px;border-radius:50%;border:0;background:#000b;color:#fff;font-size:15px;flex:0 0 auto}
+#recBtn.rec{background:#7a1630;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.7}}
 .pair{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}
 .pair .hd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .pair .n{width:22px;height:22px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-size:12px;letter-spacing:0}
@@ -126,6 +132,12 @@ small.mut{color:var(--mut)}
   <div class="card">
     <div class="drop" data-pick="conversa"><b>📸 Escolher prints da conversa</b>Pode mandar vários (até 10, em ordem, do mais antigo pro mais novo). O app lê a conversa inteira. Dica: no WhatsApp/Instagram, compartilhe o print direto pro Puxa Papo.</div>
     <div class="thumbs" id="th-conversa"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm" id="pickAud" style="flex:1">🎧 Áudios dela</button>
+      <button class="btn sm" id="recBtn" style="flex:1">🎤 Gravar áudio</button>
+    </div>
+    <div id="audList"></div>
+    <p class="note">Áudio também funciona: escolha os áudios dela, ou no WhatsApp segure o áudio › Compartilhar › Puxa Papo. Pra explicar a situação falando, toque em Gravar.</p>
 
     <label class="lbl">Com quem é a conversa?</label>
     <div class="row"><select id="person-conversa" class="personSel" style="flex:1"></select><button class="btn sm ghost" data-newperson>+ Nova</button></div>
@@ -142,6 +154,7 @@ small.mut{color:var(--mut)}
       <span class="chip" data-v="ela está chateada, cansada ou estressada: acolher primeiro (rotulagem de Chris Voss) e só depois seguir">Ela tá chateada</span>
       <span class="chip" data-v="consertar uma mancada ou clima ruim que eu criei (auditoria de acusações, sem se humilhar)">Consertar mancada</span>
       <span class="chip" data-v="ela recusou um convite ou disse não: responder com elegância, sem insistir e sem drama">Ela disse não</span>
+      <span class="chip" data-v="responder por ÁUDIO: cada sugestão é o roteiro curto (até 20 segundos falando) do que eu diria num áudio, do jeito que eu falo, natural, sem parecer lido">Responder por áudio</span>
     </div>
 
     <label class="lbl">📝 Descrição (opcional)</label>
@@ -278,7 +291,7 @@ small.mut{color:var(--mut)}
     <p class="note" style="margin-top:0">Tudo fica salvo só no seu celular. Os prints vão apenas para a IA que você escolheu, na hora da análise. No plano grátis do Gemini o Google pode usar os dados pra melhorar os produtos dele, então evite mandar prints com dados sensíveis (endereço, documentos).</p>
     <button class="btn sm danger" id="wipe">Apagar tudo do app</button>
   </div>
-  <p class="note" style="text-align:center">Puxa Papo v1.4 · com o Manual do Assassino</p>
+  <p class="note" style="text-align:center">Puxa Papo v1.5 · com o Manual do Assassino</p>
 </section>
 </main>
 
@@ -406,10 +419,106 @@ $$("[data-pick]").forEach(d => d.onclick = async () => {
   const k = d.dataset.pick; const arr = await pickImages();
   if (arr.length) { imgs[k].push(...arr); if (imgs[k].length > MAX_IMGS) toast("Máximo " + MAX_IMGS + " prints: fiquei com os últimos"); imgs[k] = imgs[k].slice(-MAX_IMGS); renderThumbs(k); }
 });
+/* ---------------- Áudios (só na aba Conversa) ---------------- */
+const MAX_AUDS = 10, MAX_PAYLOAD = 19000000; // limite do pedido inline da IA (base64)
+const auds = [];
+const QUEM = { dela: "Áudio dela", meu: "Áudio meu", explicando: "Eu explicando" };
+const payloadSize = () => auds.reduce((n, a) => n + a.data.length, 0) + imgs.conversa.reduce((n, b) => n + b.length, 0);
+function addAudios(list, quem) {
+  let skipped = 0;
+  for (const a of list || []) {
+    if (!a || a.big || !a.data) { skipped++; continue; }
+    if (auds.length >= MAX_AUDS) { toast("Máximo " + MAX_AUDS + " áudios"); break; }
+    if (payloadSize() + a.data.length > MAX_PAYLOAD) { toast("Áudio grande demais pra mandar junto (limite ~14 MB no total)"); break; }
+    auds.push({ mime: a.mime || "audio/ogg", data: a.data, name: a.name || "áudio", quem });
+  }
+  if (skipped) toast(skipped + " áudio(s) acima de 12 MB foram ignorados");
+  renderAuds();
+}
+function renderAuds() {
+  $("#audList").innerHTML = auds.map((a, i) => `<div class="aud"><audio controls preload="none" src="data:${esc(a.mime)};base64,${a.data}"></audio>` +
+    `<select data-quem="${i}">${Object.entries(QUEM).map(([k, v]) => `<option value="${k}" ${k === a.quem ? "selected" : ""}>${v}</option>`).join("")}</select>` +
+    `<button class="x" data-rmaud="${i}">×</button></div>`).join("");
+  $$("[data-quem]").forEach(sel => sel.onchange = () => { auds[+sel.dataset.quem].quem = sel.value; });
+  $$("[data-rmaud]").forEach(b => b.onclick = () => { auds.splice(+b.dataset.rmaud, 1); renderAuds(); });
+}
+function pickAudios() {
+  if (hasBridge && Android.pickAudios) return new Promise(r => { const id = "p" + (++seq); pend[id] = r; Android.pickAudios(id); });
+  return new Promise(r => {
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "audio/*,.opus,.ogg"; inp.multiple = true;
+    inp.onchange = async () => {
+      const out = [];
+      for (const f of inp.files) {
+        if (f.size > 12 * 1024 * 1024) { out.push({ big: true }); continue; }
+        const data = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1]); fr.readAsDataURL(f); });
+        out.push({ name: f.name, mime: audioMime(f.type, f.name), data });
+      }
+      r(out);
+    };
+    inp.click();
+  });
+}
+// Mesmo mapeamento do lado Android: tipos que a IA aceita.
+function audioMime(type, name) {
+  const t = ((type || "") + " " + (name || "")).toLowerCase();
+  if (/ogg|opus/.test(t)) return "audio/ogg";
+  if (/mpeg|mp3/.test(t)) return "audio/mp3";
+  if (/wav/.test(t)) return "audio/wav";
+  if (/flac/.test(t)) return "audio/flac";
+  if (/aac/.test(t) && !/mp4|m4a/.test(t)) return "audio/aac";
+  if (/mp4|m4a/.test(t)) return "audio/mp4";
+  if (/webm/.test(t)) return "audio/webm";
+  return type && type.startsWith("audio/") ? type : "audio/ogg";
+}
+$("#pickAud").onclick = async () => { addAudios(await pickAudios(), "dela"); };
+
+// Gravação: no app usa o microfone do Android; no navegador, MediaRecorder.
+let rec = null, recT = null, recStart = 0;
+function recUI(on) {
+  const b = $("#recBtn"); clearInterval(recT);
+  b.classList.toggle("rec", on);
+  if (!on) { b.textContent = "🎤 Gravar áudio"; return; }
+  recStart = Date.now();
+  const tick = () => { const s = Math.floor((Date.now() - recStart) / 1000); b.textContent = `⏹ Parar ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+  tick(); recT = setInterval(tick, 500);
+}
+window.__recState = (st, msg) => {
+  if (st === "on") { rec = rec || { native: true }; recUI(true); }
+  else { rec = null; recUI(false); if (msg) toast(msg); }
+};
+window.__recDone = (id, a) => {
+  rec = null; recUI(false);
+  if (a && a.data) { addAudios([a], "explicando"); toast("Áudio gravado"); } else toast("Não gravou nada. Tenta de novo.");
+};
+$("#recBtn").onclick = async () => {
+  if (rec) {
+    if (rec.native) Android.recStop(); else rec.mr.stop();
+    return;
+  }
+  if (hasBridge && Android.recStart) { rec = { native: true, pending: true }; Android.recStart("r" + (++seq)); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mr = new MediaRecorder(stream), chunks = [];
+    mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
+      const fr = new FileReader();
+      fr.onload = () => window.__recDone("web", { name: "gravacao", mime: audioMime(blob.type), data: String(fr.result).split(",")[1] });
+      fr.readAsDataURL(blob);
+    };
+    rec = { mr }; mr.start(); recUI(true);
+  } catch (e) { rec = null; toast("Sem acesso ao microfone"); }
+};
+
 function receiveShared() {
   if (!hasBridge) return;
-  let arr = []; try { arr = JSON.parse(Android.getShared() || "[]"); } catch (e) {}
-  if (arr.length) { imgs.conversa = arr.slice(0, MAX_IMGS); renderThumbs("conversa"); go("conversa"); toast("Print recebido! Escolha o objetivo e analise"); }
+  let arr = [], au = [];
+  try { arr = JSON.parse(Android.getShared() || "[]"); } catch (e) {}
+  try { if (Android.getSharedAudio) au = JSON.parse(Android.getSharedAudio() || "[]"); } catch (e) {}
+  if (arr.length) { imgs.conversa = arr.slice(0, MAX_IMGS); renderThumbs("conversa"); }
+  if (au.length) addAudios(au, "dela");
+  if (arr.length || au.length) { go("conversa"); toast((au.length ? "Áudio recebido!" : "Print recebido!") + " Escolha o objetivo e analise"); }
 }
 window.onSharedReady = receiveShared;
 
@@ -450,6 +559,7 @@ COMO LER O PRINT
 - As mensagens do Mikael ficam do lado DIREITO (balões coloridos: verde no WhatsApp, roxo/azul no Instagram). As da outra pessoa ficam à ESQUERDA.
 - Leia a conversa INTEIRA, do começo ao fim, em todos os prints e na ordem em que vieram. Prints seguidos podem repetir mensagens (rolagem): junte tudo numa conversa só, sem duplicar nada e sem pular nada.
 - Considere horários, "visto", áudios, figurinhas, reações e stories respondidos se aparecerem.
+- Também podem vir ÁUDIOS (mensagens de voz). Ouça todos: transcreva na transcrição como "Ela (áudio): ..." ou "Eu (áudio): ..." no lugar certo da conversa, e repare no TOM (animada, rindo, cansada, irritada, carinhosa), que diz muito sobre o interesse. Cada áudio dela é uma mensagem que pode precisar de resposta. Áudio do Mikael explicando a situação não é mensagem da conversa: use como descrição.
 - Se não houver print, a conversa ou a situação vem escrita pelo Mikael na DESCRIÇÃO (linhas "Ela:" e "Eu:" quando ele colar a conversa). Trate igual a um print.
 - Se o print estiver ilegível ou não for uma conversa, diga isso em leitura.resumo.
 
@@ -597,7 +707,8 @@ function buildPrompt(mode, o) {
     story: `MODO: STORY. A imagem é um story/status dela (pode vir junto print de conversa anterior). Sugira respostas ao story que puxem conversa, presas a algo específico do story.\nVIBE PEDIDA: ${o.goal}.`,
     musica: `MODO: MÚSICA. Situação: ${o.goal}.\nMÚSICA/ARTISTA INFORMADO: ${o.song || "não informado (descubra pelo print se tiver)"}.\nSugira respostas e, em "musicas", 3 a 5 músicas reais (que existem de verdade, populares no Brasil e combinando com o gosto dela e o momento), cada uma com mensagem curta pra mandar junto. Se ela postou uma música, a resposta pode comentar a música, o artista ou a vibe.`
   }[mode];
-  return `${head}\n${eachBlock(mode, o)}\n${personBlock(o.personId)}\n${meBlock()}\nDESCRIÇÃO ESCRITA PELO MIKAEL: ${o.ctx || "nenhuma"}\n${styleBlock()}\n${o.images ? `(${o.images} print(s) anexado(s), em ordem.)` : "(Sem imagem nesta análise: use a descrição acima.)"}\nResponda só com o JSON.`;
+  const audTxt = (o.auds || []).length ? `\nÁUDIOS ANEXADOS (vêm depois dos prints, nesta ordem): ${o.auds.map((q, i) => `${i + 1}. ${{ dela: "áudio DELA (mensagem de voz que ela mandou)", meu: "áudio do MIKAEL (mensagem de voz que ele mandou pra ela)", explicando: "o Mikael explicando a situação pra você (não faz parte da conversa)" }[q]}`).join("; ")}. Se tiver áudio dela, em respostas_individuais use "🎤 " + resumo curto do áudio em "mensagem_dela".` : "";
+  return `${head}\n${eachBlock(mode, o)}\n${personBlock(o.personId)}\n${meBlock()}\nDESCRIÇÃO ESCRITA PELO MIKAEL: ${o.ctx || "nenhuma"}\n${styleBlock()}\n${o.images ? `(${o.images} print(s) anexado(s), em ordem.)` : (o.auds || []).length ? "(Sem print: a conversa vem pelos áudios e pela descrição.)" : "(Sem imagem nesta análise: use a descrição acima.)"}${audTxt}\nResponda só com o JSON.`;
 }
 
 /* ---------------- Chamada à IA ---------------- */
@@ -651,12 +762,12 @@ function modelChain(prov) {
   return Array.from(new Set([good, s.models[prov], ...list.filter(n => !heavy.test(n)), ...list.filter(n => heavy.test(n))].filter(Boolean))).slice(0, 6);
 }
 // Uma tentativa num modelo. again = vale repetir no mesmo; fatal = problema da chave/conteúdo, não adianta trocar.
-async function callOnce(prov, model, key, userText, images, maxTok) {
+async function callOnce(prov, model, key, userText, images, maxTok, audios) {
   let r;
   if (prov === "gemini") {
     const body = {
       systemInstruction: { parts: [{ text: sysPrompt() }] },
-      contents: [{ role: "user", parts: [...images.map(b => ({ inlineData: { mimeType: "image/jpeg", data: b } })), { text: userText }] }],
+      contents: [{ role: "user", parts: [...images.map(b => ({ inlineData: { mimeType: "image/jpeg", data: b } })), ...(audios || []).map(a => ({ inlineData: { mimeType: a.mime, data: a.data } })), { text: userText }] }],
       generationConfig: { temperature: 0.95, responseMimeType: "application/json", maxOutputTokens: maxTok || 16384 }
     };
     r = await httpT("POST", `${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, { "Content-Type": "application/json", "x-goog-api-key": key }, JSON.stringify(body), 120000);
@@ -671,6 +782,8 @@ async function callOnce(prov, model, key, userText, images, maxTok) {
   if (st !== 200) {
     if (st === 401 || st === 403) return fail({ fatal: true });
     if (st === 400 && /api key|API_KEY|credit|billing/i.test(r.text || "")) return fail({ fatal: true });
+    if (st === 413 || (st === 400 && /payload|too large|exceeds|size/i.test(r.text || ""))) return { ok: false, fatal: true, status: st, msg: "Arquivos grandes demais pra IA. Mande menos áudios ou prints (ou áudios mais curtos)." };
+    if (st === 400 && /audio|mime|unsupported/i.test(r.text || "") && (audios || []).length) return { ok: false, fatal: true, status: st, msg: "A IA não conseguiu abrir esse formato de áudio. Tente compartilhar o áudio direto do WhatsApp ou gravar pelo app." };
     if (st === 404) db.settings.modelList[prov] = [];
     return fail({ again: st === -1 || st === -2 || st >= 500 });
   }
@@ -686,12 +799,18 @@ async function callOnce(prov, model, key, userText, images, maxTok) {
     return { ok: true, res: parseJSON(out) };
   } catch (e) { return { ok: false, msg: e.message }; }
 }
-async function callAI(userText, images, say) {
+async function callAI(userText, images, say, audios) {
   const s = db.settings, auto = s.auto !== false;
   say = say || (() => {});
   if (!(s.keys[s.provider] || "").trim()) throw new Error("Falta configurar a chave da IA. Vai em Ajustes (leva 1 minuto e é grátis com o Gemini).");
   images = images || [];
-  const provs = [s.provider, ...(auto ? ["gemini", "claude"].filter(p => p !== s.provider && (s.keys[p] || "").trim()) : [])];
+  audios = audios || [];
+  let provs = [s.provider, ...(auto ? ["gemini", "claude"].filter(p => p !== s.provider && (s.keys[p] || "").trim()) : [])];
+  if (audios.length) {
+    // Só o Gemini entende áudio; o Claude lê só texto e imagem.
+    provs = (s.keys.gemini || "").trim() ? ["gemini"] : [];
+    if (!provs.length) throw new Error("Áudio só funciona com o Google Gemini (o Claude não ouve áudio). Vai em Ajustes, escolha Gemini e cole a chave (é grátis).");
+  }
   let last = null, n = 0; const used = new Set();
   for (const prov of provs) {
     const key = s.keys[prov].trim();
@@ -701,10 +820,11 @@ async function callAI(userText, images, say) {
       for (let a = 0; a < 2; a++) {
         if (n) say(`Servidor lotado, tentando outro (${model})...`);
         n++; used.add(model);
-        const r = await callOnce(prov, model, key, userText, images);
+        const r = await callOnce(prov, model, key, userText, images, 0, audios);
         if (r.ok) {
           s.good = { prov, model, t: Date.now() }; save();
-          if (model !== s.models[s.provider]) toast("Usei " + model + " (o principal estava ocupado)");
+          if (prov !== s.provider) toast(audios.length ? "Usei o Gemini pra ouvir os áudios" : "Usei " + model + " (o principal estava ocupado)");
+          else if (model !== s.models[s.provider]) toast("Usei " + model + " (o principal estava ocupado)");
           return r.res;
         }
         last = r;
@@ -752,7 +872,7 @@ function refineEach(res) {
 }
 async function run(mode, refine) {
   const out = $("#out-" + mode), ld = $("#ld-" + mode), btn = $(`[data-run="${mode}"]`);
-  let o, prompt, images = [];
+  let o, prompt, images = [], audios = [];
   if (refine) {
     o = lastCtx[mode];
     if (!o) return;
@@ -761,7 +881,8 @@ async function run(mode, refine) {
     o = { mode, goal: chipVal("#goal-" + mode), personId: $("#person-" + mode).value, ctx: $("#ctx-" + mode).value.trim(), song: mode === "musica" ? $("#song").value.trim() : "" };
     if (mode === "conversa") { o.each = $("#each-conversa").checked; o.scope = chipVal("#scope-conversa") || "pendentes"; }
     images = imgs[mode].slice();
-    if (mode !== "musica" && !images.length && !o.ctx) return toast("Manda um print ou escreve a descrição");
+    if (mode === "conversa") { audios = auds.map(a => ({ mime: a.mime, data: a.data })); o.auds = auds.map(a => a.quem); }
+    if (mode !== "musica" && !images.length && !audios.length && !o.ctx) return toast("Manda um print, um áudio ou escreve a descrição");
     if (mode === "musica" && !images.length && !o.song && !o.ctx) return toast("Coloca a música, um print ou o contexto");
     o.images = images.length;
     prompt = buildPrompt(mode, o);
@@ -770,7 +891,8 @@ async function run(mode, refine) {
   else out.querySelectorAll(".refine .chip").forEach(c => c.style.opacity = .5);
   try {
     const ldt = ld.querySelector(".ldt"); if (ldt) ldt.textContent = ldt.dataset.t;
-    const res = await callAI(prompt, images, m => { if (ldt) ldt.textContent = m; });
+    if (audios.length && ldt) ldt.textContent = "Ouvindo os áudios e lendo a conversa...";
+    const res = await callAI(prompt, images, m => { if (ldt) ldt.textContent = m; }, audios);
     if (!refine && (mode === "conversa" ? $("#learn-conversa").checked : true)) learnStyle(res);
     if (!refine && res.nome_dela && !o.personId && !db.people.some(p => p.nome.toLowerCase() === String(res.nome_dela).toLowerCase())) o.sugerirNome = res.nome_dela;
     if (refine) { res.transcricao = res.transcricao || o.res.transcricao; }

@@ -32,6 +32,12 @@ const RELATIONS = {
 };
 const LIST_STATUS = { watching: 'Assistindo', planning: 'Quero ver', completed: 'Concluído', paused: 'Pausado', dropped: 'Abandonado' };
 
+// plataformas cujo site toca o vídeo dentro do app; as demais (Netflix, Prime Video…) abrem no app oficial
+const PLAY_INSIDE = new Set(['Crunchyroll', 'YouTube', 'Bilibili TV', 'HIDIVE', 'Tubi TV', 'RetroCrush', 'Pluto TV', 'iQ', 'iQIYI',
+  'WeTV', 'Viki', 'Hoopla', 'Midnight Pulp', 'AsianCrush', 'Crackle', 'Vimeo', 'Cineverse', 'Bilibili']);
+const FREE_SITES = new Set(['YouTube', 'Tubi TV', 'RetroCrush', 'Pluto TV', 'Crackle', 'Midnight Pulp', 'AsianCrush']);
+const EP_PREVIEW = 24;
+
 const CARD = `id idMal title { romaji english } coverImage { large color } format episodes seasonYear averageScore status`;
 
 /* ---------- utilidades ---------- */
@@ -156,6 +162,59 @@ const myList = {
   },
 };
 
+/* ---------- Progresso (episódios vistos) ---------- */
+const cardSnapshot = (m) => ({
+  id: m.id, idMal: m.idMal, title: { english: m.title.english, romaji: m.title.romaji },
+  coverImage: { large: m.coverImage?.large || m.coverImage?.extraLarge, color: m.coverImage?.color },
+  format: m.format, episodes: m.episodes, seasonYear: m.seasonYear, averageScore: m.averageScore,
+});
+const progress = {
+  all() { return store.get('aniverso:progress', {}); },
+  get(id) { return this.all()[id]; },
+  save(m, watched, last) {
+    const all = this.all();
+    if (!watched.length) delete all[m.id];
+    else all[m.id] = { ...cardSnapshot(m), watched: [...new Set(watched)].sort((a, b) => a - b), last, t: Date.now() };
+    store.set('aniverso:progress', all);
+  },
+  open(m, ep) {
+    const cur = this.get(m.id)?.watched || [];
+    this.save(m, [...cur, ep], ep);
+  },
+  toggle(m, ep) {
+    const p = this.get(m.id);
+    const cur = p?.watched || [];
+    const has = cur.includes(ep);
+    const next = has ? cur.filter((n) => n !== ep) : [...cur, ep];
+    this.save(m, next, Math.max(...next));
+    return !has;
+  },
+};
+
+/* ---------- Assistir dentro do app ---------- */
+function watchUrl(url) {
+  let u = String(url).replace(/^http:\/\//i, 'https://');
+  // páginas da Crunchyroll em português (o áudio dublado ou legendado é escolhido no player dela)
+  u = u.replace(/^https:\/\/(www\.)?crunchyroll\.com\/(?!pt-br\/)/i, 'https://www.crunchyroll.com/pt-br/');
+  return u;
+}
+async function openInside(url) {
+  const u = watchUrl(url);
+  if (isNativeApp) {
+    try {
+      await window.Capacitor.nativePromise('Browser', 'open', { url: u, toolbarColor: '#120f1c' });
+      return;
+    } catch { /* plugin indisponível: cai para o link normal */ }
+  }
+  window.open(u, '_blank', 'noopener');
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-inside]');
+  if (!a || e.defaultPrevented) return;
+  e.preventDefault();
+  openInside(a.href);
+});
+
 /* ---------- componentes ---------- */
 function cardHTML(m) {
   const meta = [m.seasonYear, FORMAT_SHORT[m.format], m.episodes ? `${m.episodes} ep` : ''].filter(Boolean).join(' · ');
@@ -193,10 +252,11 @@ async function renderHome() {
     { key: 'movies', title: 'Filmes', more: '#/explorar?format=MOVIE' },
   ];
   view.innerHTML = `<div class="hero" id="hero"><div class="wrap hero-in" style="min-height:240px"></div></div>
-    <div class="wrap">${rows.map((r) => `<div class="section" data-row="${r.key}">
+    <div class="wrap"><div id="continue-row"></div>${rows.map((r) => `<div class="section" data-row="${r.key}">
       <div class="section-head"><h2>${esc(r.title)}</h2><a href="${r.more}">Ver todos →</a></div>
       <div class="rail">${skeletons(8)}</div></div>`).join('')}</div>`;
 
+  renderContinueRow();
   await Promise.race([dubsReady, new Promise((r) => setTimeout(r, 5000))]);
   const useDub = dubs.ready && dubs.pt.size > 0;
   const query = `query($season: MediaSeason, $year: Int${useDub ? ', $dub: [Int]' : ''}) {
@@ -221,6 +281,14 @@ async function renderHome() {
     view.innerHTML = `<div class="wrap">${errorHTML(err.message, 'home-retry')}</div>`;
     $('#home-retry').onclick = () => renderHome();
   }
+}
+
+function renderContinueRow() {
+  const el = $('#continue-row');
+  if (!el) return;
+  const items = Object.values(progress.all()).sort((a, b) => b.t - a.t).slice(0, 20);
+  el.innerHTML = items.length ? `<div class="section"><div class="section-head"><h2>Continuar assistindo</h2></div>
+    <div class="rail">${items.map((i) => cardHTML(i).replace('<div class="card-t">', `<div class="card-m accent">Parou no ep. ${esc(i.last)}</div><div class="card-t">`)).join('')}</div></div>` : '';
 }
 
 function renderHero(m) {
@@ -410,11 +478,32 @@ const DETAIL = `query($id: Int) { Media(id: $id, type: ANIME) {
   nextAiringEpisode { episode airingAt timeUntilAiring }
   trailer { id site thumbnail }
   externalLinks { site url type language color icon }
+  streamingEpisodes { title url site thumbnail }
   relations { edges { relationType node { ${CARD} type } } }
   recommendations(perPage: 12, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD} } } }
 } }`;
 const SOURCES = { ORIGINAL: 'Original', MANGA: 'Mangá', LIGHT_NOVEL: 'Light novel', VISUAL_NOVEL: 'Visual novel', VIDEO_GAME: 'Videogame', NOVEL: 'Livro', WEB_NOVEL: 'Web novel', DOUJINSHI: 'Doujinshi', ANIME: 'Anime', WEB_MANGA: 'Mangá on-line', OTHER: 'Outro', LIVE_ACTION: 'Live action', GAME: 'Jogo', COMIC: 'Quadrinho', MULTIMEDIA_PROJECT: 'Projeto multimídia', PICTURE_BOOK: 'Livro ilustrado' };
 const LANG_PT = { Portuguese: 'Português', English: 'Inglês', Japanese: 'Japonês', Spanish: 'Espanhol', French: 'Francês', German: 'Alemão', Italian: 'Italiano', Korean: 'Coreano', Chinese: 'Chinês' };
+
+function parseEpisodes(list) {
+  const seen = new Set();
+  return (list || []).map((e) => {
+    const mm = /^Episode\s+(\d+(?:\.\d+)?)\s*[-–:]?\s*(.*)$/i.exec(e.title || '');
+    return { n: mm ? Number(mm[1]) : null, name: mm ? mm[2] : (e.title || ''), url: safeUrl(e.url), site: e.site, thumb: safeUrl(e.thumbnail) };
+  }).filter((e) => e.url && !seen.has(e.url) && seen.add(e.url))
+    .map((e, i) => ({ ...e, n: e.n ?? i + 1 }))
+    .sort((a, b) => a.n - b.n);
+}
+
+function episodeHTML(e, watched) {
+  return `<div class="ep${watched ? ' seen' : ''}" data-ep="${e.n}">
+    <a class="ep-play" href="${esc(e.url)}" data-inside data-epn="${e.n}">
+      <span class="ep-thumb">${e.thumb ? `<img src="${esc(e.thumb)}" alt="" loading="lazy">` : ''}<span class="ep-badge">▶</span></span>
+      <span class="ep-txt"><span class="ep-n">Episódio ${esc(String(e.n).replace('.', ','))}</span><span class="ep-t">${esc(e.name)}</span></span>
+    </a>
+    <button class="ep-check" type="button" data-check="${e.n}" aria-pressed="${watched}" aria-label="Marcar episódio ${e.n} como visto">✓</button>
+  </div>`;
+}
 
 const fmtDate = (d) => (d?.year ? [d.day, d.month, d.year].filter(Boolean).map((n) => String(n).padStart(2, '0')).join('/') : '');
 
@@ -476,21 +565,49 @@ function animeHTML(m) {
   </div><p class="note">A dublagem pode estar disponível só em algumas plataformas ou países. Confira na plataforma antes de assinar.</p></div>`;
 
   const streams = m.externalLinks.filter((l) => l.type === 'STREAMING' && safeUrl(l.url));
-  const linkHTML = (l, sub) => {
+  const linkHTML = (l, sub, inside = false) => {
     const lc = /^#[0-9a-f]{3,8}$/i.test(l.color || '') ? ` style="--lc:${l.color}"` : '';
-    return `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener"${lc}>
+    const free = FREE_SITES.has(l.site) ? '<span class="free">Grátis</span>' : '';
+    return `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener"${inside ? ' data-inside' : ''}${lc}>
       <span class="ico">${l.icon ? `<img src="${esc(l.icon)}" alt="" loading="lazy">` : ''}</span>
-      <span class="txt">${esc(l.site)}<small>${esc(sub)}</small></span></a>`;
+      <span class="txt">${esc(l.site)}${free}<small>${esc(sub)}</small></span></a>`;
+  };
+  const insideLabel = isNativeApp ? 'Assistir aqui no app' : 'Assistir no site oficial';
+  const streamSub = (l) => {
+    const lang = l.language ? ` · ${LANG_PT[l.language] || l.language}` : '';
+    return (PLAY_INSIDE.has(l.site) ? insideLabel : (isNativeApp ? 'Abre no app oficial' : 'Abrir na plataforma')) + lang;
   };
   const q = encodeURIComponent(m.title.english || m.title.romaji);
-  const where = `<div class="panel"><h3>Onde assistir legalmente</h3>
+  const where = `<div class="panel" id="onde-assistir"><h3>Onde assistir legalmente</h3>
     <div class="where">
-      ${streams.map((l) => linkHTML(l, l.language ? `Versão ${LANG_PT[l.language] || l.language}` : 'Abrir na plataforma')).join('')}
+      ${streams.map((l) => linkHTML(l, streamSub(l), PLAY_INSIDE.has(l.site))).join('')}
       ${linkHTML({ site: 'JustWatch Brasil', url: `https://www.justwatch.com/br/busca?q=${q}`, color: '#FBC500' }, 'Ver onde está no Brasil')}
-      ${streams.some((l) => l.site === 'Crunchyroll') ? '' : linkHTML({ site: 'Crunchyroll', url: `https://www.crunchyroll.com/pt-br/search?q=${q}`, color: '#F47521' }, 'Buscar no catálogo BR')}
+      ${streams.some((l) => l.site === 'Crunchyroll') ? '' : linkHTML({ site: 'Crunchyroll', url: `https://www.crunchyroll.com/pt-br/search?q=${q}`, color: '#F47521' }, 'Procurar no catálogo BR', true)}
     </div>
-    <p class="note">${streams.length ? 'Os links acima são das plataformas oficiais cadastradas no AniList.' : 'Nenhuma plataforma oficial cadastrada para este anime ainda.'}
+    <p class="note">${streams.length ? 'Plataformas oficiais cadastradas no AniList.' : 'Nenhuma plataforma oficial cadastrada para este anime ainda.'}
+      ${isNativeApp ? '"Assistir aqui no app" abre o player da plataforma sem sair do AniVerso; feche no X para voltar. ' : ''}Plataformas pagas pedem login na sua conta.
       O JustWatch mostra em quais serviços o anime está no Brasil e se tem áudio em português.</p></div>`;
+
+  const eps = parseEpisodes(m.streamingEpisodes);
+  const prog = progress.get(m.id);
+  const seen = new Set(prog?.watched || []);
+  const nextEp = eps.length ? (prog ? eps.find((e) => e.n > prog.last) || eps.find((e) => e.n === prog.last) : eps[0]) : null;
+  const insideStream = streams.find((l) => PLAY_INSIDE.has(l.site));
+  let cta = '';
+  if (nextEp) {
+    cta = `<a class="btn primary big" href="${esc(nextEp.url)}" data-inside data-epn="${nextEp.n}">▶ ${prog ? 'Continuar' : 'Assistir'}: episódio ${esc(String(nextEp.n).replace('.', ','))}</a>`;
+  } else if (insideStream) {
+    cta = `<a class="btn primary big" href="${esc(insideStream.url)}" data-inside>▶ Assistir na ${esc(insideStream.site)}</a>`;
+  } else if (streams.length) {
+    cta = `<a class="btn primary big" href="#onde-assistir" data-scroll>▶ Ver onde assistir</a>`;
+  }
+  const episodesHTML = eps.length ? `<div class="panel" id="episodios">
+    <div class="ep-head"><h3>Episódios <span class="muted">${eps.length}</span></h3>
+      <span class="note">${esc(eps[0].site || 'Crunchyroll')} · ${isNativeApp ? 'toque para assistir aqui no app' : 'abre no site oficial'}</span></div>
+    <div class="eps">${eps.map((e, i) => episodeHTML(e, seen.has(e.n)).replace('<div class="ep', i >= EP_PREVIEW ? '<div hidden class="ep' : '<div class="ep')).join('')}</div>
+    ${eps.length > EP_PREVIEW ? `<button class="btn small" type="button" id="eps-all">Mostrar todos os ${eps.length} episódios</button>` : ''}
+    <p class="note">O ✓ marca o episódio como visto. Ele também é marcado quando você toca para assistir.</p>
+  </div>` : '';
 
   const trailer = m.trailer && (m.trailer.site === 'youtube' || m.trailer.site === 'dailymotion')
     ? `<div class="panel"><h3>Trailer</h3><div class="trailer">
@@ -516,6 +633,7 @@ function animeHTML(m) {
         <h1>${esc(title)}</h1>
         ${alt ? `<p class="alt-titles">${esc(alt)}</p>` : ''}
         <div class="chips">${chips}</div>
+        ${cta ? `<div class="btns cta-row">${cta}</div>` : ''}
       </div>
       <aside class="detail-side">
         <label class="field"><span class="eyebrow" style="color:var(--muted)">Minha lista</span>
@@ -527,6 +645,7 @@ function animeHTML(m) {
       ${desc ? `<div><p class="synopsis clamped" id="synopsis">${esc(desc)}</p>
         <div class="btns"><button class="linkish" type="button" id="syn-more">Ler mais</button>
         <a class="linkish" href="${esc(translate)}" target="_blank" rel="noopener">Traduzir sinopse para português</a></div></div>` : ''}
+      ${episodesHTML}
       ${audio}
       ${trailer ? `<div class="two-col">${where}${trailer}</div>` : where}
       <div class="panel mobile-facts"><h3>Ficha técnica</h3>${factsHTML}</div>
@@ -544,6 +663,25 @@ function bindAnime(m) {
   });
   if (sel.value) sel.querySelector('option[value=""]').textContent = 'Remover da lista';
 
+  const view = $('#view-anime');
+  view.querySelectorAll('a[data-epn]').forEach((a) => a.addEventListener('click', () => {
+    const n = Number(a.dataset.epn);
+    progress.open(m, n);
+    const row = view.querySelector(`.ep[data-ep="${n}"]`);
+    if (row) { row.classList.add('seen'); row.querySelector('.ep-check').setAttribute('aria-pressed', 'true'); }
+  }));
+  view.querySelectorAll('[data-check]').forEach((b) => b.addEventListener('click', () => {
+    const n = Number(b.dataset.check);
+    const on = progress.toggle(m, n);
+    b.setAttribute('aria-pressed', String(on));
+    b.closest('.ep').classList.toggle('seen', on);
+    toast(on ? `Episódio ${n} marcado como visto` : `Episódio ${n} desmarcado`);
+  }));
+  const all = $('#eps-all');
+  if (all) all.onclick = () => { view.querySelectorAll('.ep[hidden]').forEach((e) => { e.hidden = false; }); all.remove(); };
+  const sc = view.querySelector('[data-scroll]');
+  if (sc) sc.onclick = (e) => { e.preventDefault(); $('#onde-assistir').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+
   const syn = $('#synopsis'), more = $('#syn-more');
   if (syn && more) {
     if (syn.scrollHeight <= syn.clientHeight + 4) more.hidden = true;
@@ -551,12 +689,12 @@ function bindAnime(m) {
   }
   const play = $('#trailer-play');
   if (play && isNativeApp) {
-    // no aplicativo Android o trailer abre no app do YouTube (o player embutido não funciona bem em WebView)
+    // no aplicativo Android o trailer abre no player do YouTube dentro do app (o embed não funciona bem em WebView)
     const url = m.trailer.site === 'youtube'
       ? `https://www.youtube.com/watch?v=${encodeURIComponent(m.trailer.id)}`
       : `https://www.dailymotion.com/video/${encodeURIComponent(m.trailer.id)}`;
     const a = document.createElement('a');
-    a.className = play.className; a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    a.className = play.className; a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.dataset.inside = '';
     a.setAttribute('aria-label', 'Assistir trailer'); a.style.cssText = play.style.cssText;
     play.replaceWith(a);
   } else if (play) play.onclick = () => {
@@ -588,6 +726,186 @@ function renderList() {
   view.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { listTab = b.dataset.tab; renderList(); }; });
 }
 
+/* ---------- Player (vídeos do aparelho ou link direto) ---------- */
+const player = { ready: false, queue: [], index: -1, key: '', objectUrl: '', subUrl: '' };
+const fmtTime = (t) => {
+  const s = Math.max(0, Math.floor(t || 0)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  return (h ? `${h}:${String(m).padStart(2, '0')}` : String(m)) + ':' + String(r).padStart(2, '0');
+};
+const resume = {
+  all() { return store.get('aniverso:resume', {}); },
+  get(k) { return this.all()[k]; },
+  set(k, v) {
+    const all = this.all();
+    all[k] = v;
+    // guarda só os 200 mais recentes
+    const keys = Object.keys(all).sort((a, b) => all[b].t - all[a].t);
+    for (const old of keys.slice(200)) delete all[old];
+    store.set('aniverso:resume', all);
+  },
+};
+
+function srtToVtt(text) {
+  return 'WEBVTT\n\n' + text.replace(/\r/g, '').replace(/^\d+\n(?=\d{2}:\d{2})/gm, '')
+    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+}
+
+function renderPlayer() {
+  const view = $('#view-player');
+  if (player.ready) return;
+  player.ready = true;
+  view.innerHTML = `<div class="wrap">
+    <div class="explore-head"><h1>Player</h1>
+      <p>Assista vídeos que estão no seu aparelho ou um link direto de vídeo. O app lembra onde você parou.</p></div>
+    <div class="player-layout">
+      <div class="player-main">
+        <div class="player-shell">
+          <video id="pv" controls playsinline preload="metadata"></video>
+          <div class="pv-empty" id="pv-empty"><strong>Nenhum vídeo aberto</strong>Escolha um vídeo do aparelho ou cole um link ao lado.</div>
+        </div>
+        <div class="pv-title" id="pv-title"></div>
+        <div class="btns pv-tools">
+          <button class="btn small" type="button" data-seek="-10">⟲ 10s</button>
+          <button class="btn small" type="button" data-seek="10">10s ⟳</button>
+          <button class="btn small" type="button" data-seek="85" title="A abertura de um anime dura cerca de 1min30">Pular abertura</button>
+          <label class="pv-speed"><span>Velocidade</span>
+            <select id="pv-speed">${['0.75', '1', '1.25', '1.5', '2'].map((v) => `<option value="${v}"${v === '1' ? ' selected' : ''}>${v.replace('.', ',')}×</option>`).join('')}</select></label>
+          <button class="btn small" type="button" id="pv-next" disabled>Próximo ▶▶</button>
+        </div>
+      </div>
+      <aside class="player-side">
+        <div class="panel">
+          <h3>Abrir vídeo</h3>
+          <div class="btns">
+            <label class="btn primary" for="pv-file">Escolher vídeos do aparelho</label>
+            <label class="btn" for="pv-sub">Adicionar legenda (.srt / .vtt)</label>
+          </div>
+          <input id="pv-file" type="file" accept="video/*,.mkv,.mp4,.webm,.m4v" multiple hidden>
+          <input id="pv-sub" type="file" accept=".srt,.vtt,text/vtt" hidden>
+          <form id="pv-url-form" class="pv-url">
+            <label class="field"><span class="eyebrow" style="color:var(--muted)">Ou cole um link direto</span>
+              <input id="pv-url" type="url" inputmode="url" placeholder="https://…/video.mp4 ou .m3u8" autocomplete="off"></label>
+            <button class="btn" type="submit">Tocar link</button>
+          </form>
+          <p class="note">Funciona com MP4, WebM, MKV (na maioria dos aparelhos) e M3U8. Os vídeos não são enviados para lugar nenhum; tocam direto do aparelho.</p>
+        </div>
+        <div class="panel" id="pv-queue-panel" hidden>
+          <h3>Fila</h3>
+          <ol class="queue" id="pv-queue"></ol>
+        </div>
+      </aside>
+    </div>
+  </div>`;
+
+  const video = $('#pv');
+  let lastSave = 0;
+  const savePos = (force) => {
+    if (!player.key || !video.duration) return;
+    const now = Date.now();
+    if (!force && now - lastSave < 4000) return;
+    lastSave = now;
+    resume.set(player.key, { pos: video.currentTime, dur: video.duration, name: player.queue[player.index]?.name || '', t: now });
+  };
+  video.addEventListener('timeupdate', () => savePos(false));
+  video.addEventListener('pause', () => savePos(true));
+  video.addEventListener('loadedmetadata', () => {
+    const r = resume.get(player.key);
+    if (r && r.pos > 10 && r.pos < video.duration - 30) {
+      video.currentTime = r.pos;
+      toast(`Continuando de ${fmtTime(r.pos)}`);
+    }
+    video.playbackRate = Number($('#pv-speed').value);
+  });
+  video.addEventListener('ended', () => {
+    resume.set(player.key, { pos: 0, dur: video.duration, name: player.queue[player.index]?.name || '', t: Date.now() });
+    if (player.index < player.queue.length - 1) playItem(player.index + 1);
+  });
+  video.addEventListener('error', () => {
+    if (video.getAttribute('src')) toast('Não foi possível tocar este vídeo. O formato pode não ser compatível com o aparelho.');
+  });
+  // em tela cheia, tenta virar para paisagem
+  document.addEventListener('fullscreenchange', () => {
+    try {
+      if (document.fullscreenElement) screen.orientation?.lock?.('landscape').catch(() => {});
+      else screen.orientation?.unlock?.();
+    } catch { /* aparelho não permite girar */ }
+  });
+
+  view.querySelectorAll('[data-seek]').forEach((b) => b.addEventListener('click', () => {
+    if (!video.duration) return;
+    video.currentTime = Math.min(video.duration - 1, Math.max(0, video.currentTime + Number(b.dataset.seek)));
+  }));
+  $('#pv-speed').addEventListener('change', (e) => { video.playbackRate = Number(e.target.value); });
+  $('#pv-next').addEventListener('click', () => playItem(player.index + 1));
+
+  $('#pv-file').addEventListener('change', (e) => {
+    const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+    if (!files.length) return;
+    const start = player.queue.length;
+    player.queue.push(...files.map((f) => ({ name: f.name, file: f, key: `file:${f.name}:${f.size}` })));
+    renderQueue();
+    playItem(start);
+    e.target.value = '';
+  });
+  $('#pv-sub').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    if (!video.getAttribute('src')) { toast('Abra um vídeo antes de adicionar a legenda.'); return; }
+    const text = await f.text();
+    const vtt = /^﻿?WEBVTT/.test(text) ? text : srtToVtt(text);
+    if (player.subUrl) URL.revokeObjectURL(player.subUrl);
+    player.subUrl = URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }));
+    video.querySelectorAll('track').forEach((t) => t.remove());
+    const track = document.createElement('track');
+    Object.assign(track, { kind: 'subtitles', label: 'Legenda', srclang: 'pt', src: player.subUrl, default: true });
+    video.appendChild(track);
+    track.track.mode = 'showing';
+    toast('Legenda adicionada');
+  });
+  $('#pv-url-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const url = $('#pv-url').value.trim();
+    if (!/^https?:\/\//i.test(url)) { toast('Cole um link que comece com http:// ou https://'); return; }
+    let name = url;
+    try { name = decodeURIComponent(new URL(url).pathname.split('/').pop()) || url; } catch { /* link sem nome */ }
+    player.queue.push({ name, url, key: `url:${url}` });
+    renderQueue();
+    playItem(player.queue.length - 1);
+    $('#pv-url').value = '';
+  });
+}
+
+function playItem(i) {
+  const item = player.queue[i];
+  if (!item) return;
+  const video = $('#pv');
+  if (player.objectUrl) { URL.revokeObjectURL(player.objectUrl); player.objectUrl = ''; }
+  video.querySelectorAll('track').forEach((t) => t.remove());
+  player.index = i;
+  player.key = item.key;
+  const src = item.file ? (player.objectUrl = URL.createObjectURL(item.file)) : item.url;
+  video.src = src;
+  $('#pv-empty').hidden = true;
+  $('#pv-title').textContent = item.name;
+  $('#pv-next').disabled = i >= player.queue.length - 1;
+  renderQueue();
+  video.play().catch(() => { /* o usuário aperta play */ });
+}
+
+function renderQueue() {
+  const panel = $('#pv-queue-panel');
+  panel.hidden = !player.queue.length;
+  $('#pv-queue').innerHTML = player.queue.map((q, i) => {
+    const r = resume.get(q.key);
+    const pct = r?.dur ? Math.round((r.pos / r.dur) * 100) : 0;
+    return `<li><button type="button" data-q="${i}" aria-current="${i === player.index}">
+      <span class="q-name">${esc(q.name)}</span>${pct ? `<span class="q-pct">${pct}% visto</span>` : ''}</button></li>`;
+  }).join('');
+  panel.querySelectorAll('[data-q]').forEach((b) => { b.onclick = () => playItem(Number(b.dataset.q)); });
+  $('#pv-next').disabled = player.index >= player.queue.length - 1;
+}
+
 /* ---------- rotas ---------- */
 const scrollPos = {};
 let currentView = null;
@@ -598,15 +916,18 @@ function route() {
   if (path.startsWith('/explorar')) name = 'explore';
   else if (path.startsWith('/lista')) name = 'list';
   else if (path.startsWith('/anime/')) name = 'anime';
+  else if (path.startsWith('/player')) name = 'player';
 
   if (currentView) scrollPos[currentView] = scrollY;
   const prev = currentView;
   currentView = name;
-  for (const v of ['home', 'explore', 'list', 'anime']) $(`#view-${v}`).hidden = v !== name;
+  for (const v of ['home', 'explore', 'list', 'anime', 'player']) $(`#view-${v}`).hidden = v !== name;
+  if (name !== 'player') $('#pv')?.pause();
   document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === name));
   if (name !== 'anime') document.title = 'AniVerso';
 
-  if (name === 'home') renderHome();
+  if (name === 'home') { renderHome(); renderContinueRow(); }
+  if (name === 'player') renderPlayer();
   if (name === 'explore') renderExplore(qs);
   if (name === 'list') renderList();
   if (name === 'anime') renderAnime(path.split('/')[2]);
@@ -626,6 +947,17 @@ $('#quicksearch').addEventListener('submit', (e) => {
 });
 
 window.addEventListener('hashchange', route);
+
+// botão "voltar" do Android: sai da tela cheia, volta uma tela ou fecha o app na tela inicial
+if (isNativeApp) {
+  try {
+    window.Capacitor.nativeCallback('App', 'addListener', { eventName: 'backButton' }, (data) => {
+      if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+      if (data?.canGoBack) history.back();
+      else window.Capacitor.nativePromise('App', 'exitApp').catch(() => {});
+    });
+  } catch { /* sem plugin App: o Android usa o comportamento padrão */ }
+}
 route();
 
 if (!isNativeApp && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {

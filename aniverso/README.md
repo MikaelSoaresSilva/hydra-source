@@ -11,11 +11,17 @@ Aplicativo (site instalável no celular e no PC) com o catálogo de animes do mu
 - **Página do anime**: sinopse (com botão para traduzir), se é dublado ou legendado, trailer,
   ficha técnica, contagem para o próximo episódio, temporadas/filmes relacionados, recomendações
   e botões para as plataformas oficiais (Crunchyroll, Netflix, Prime Video etc.) + JustWatch Brasil.
+- **Episódios**: lista de episódios com miniatura (quando a Crunchyroll tem o anime). Toque para assistir;
+  o app marca como visto e mostra **Continuar assistindo** no início.
+- **Assistir sem sair do app** (no APK): Crunchyroll, YouTube, Bilibili TV e outras abrem o player da
+  plataforma dentro do AniVerso. Netflix, Prime Video e parecidos abrem no app oficial deles.
+- **Player**: toca vídeos que estão no seu aparelho ou um link direto de vídeo (MP4, WebM, MKV, M3U8),
+  com legenda .srt/.vtt, "Pular abertura", velocidade, fila e retomada de onde parou.
 - **Minha lista**: marque como Assistindo, Quero ver, Concluído, Pausado ou Abandonado (fica salvo no aparelho).
 - Selo **DUB PT** / **DUB EN** em cada capa.
 
-O AniVerso **não hospeda nem transmite vídeos**. Ele mostra as informações e leva você ao serviço
-oficial onde o anime está disponível.
+O AniVerso **não hospeda nem transmite vídeos de anime**. Os episódios tocam no player das plataformas
+oficiais (algumas pedem assinatura), e o Player só toca arquivos e links que você mesmo abrir.
 
 ## De onde vêm os dados
 
@@ -46,3 +52,4 @@ celular e escolha **"Adicionar à tela inicial"** (Chrome: menu ⋮ → Instalar
 - `styles.css`: visual (tema escuro e claro automáticos)
 - `app.js`: toda a lógica (buscas, filtros, telas, lista)
 - `sw.js` + `manifest.webmanifest` + `icons/`: permitem instalar como aplicativo
+- APK para Android: veja a pasta `../aniverso-apk`

@@ -6,7 +6,7 @@ dados na internet (AniList e MyDubList), igual ao site.
 
 ## Instalar o APK no celular
 
-1. Copie o arquivo `AniVerso-1.0.apk` para o celular (ou baixe direto nele).
+1. Copie o arquivo `AniVerso-1.1.apk` (ou a versão mais nova) para o celular (ou baixe direto nele).
 2. Toque no arquivo. Se aparecer "Instalação bloqueada", toque em **Configurações** e ative
    **Permitir desta fonte** para o app que você usou para abrir o arquivo (Arquivos, Chrome, Drive…).
 3. Toque em **Instalar** e depois em **Abrir**.
@@ -41,6 +41,9 @@ Ao lançar uma versão nova, aumente `versionCode` e `versionName` em `android/a
 
 ## Diferenças do app para o site
 
-- O trailer abre no app do YouTube.
+- **Assistir aqui no app**: episódios e plataformas como Crunchyroll, YouTube e Bilibili TV abrem num
+  player por cima do AniVerso (Chrome Custom Tabs). Feche no **X** para voltar. Como usa o Chrome do
+  celular, o login que você já fez no Chrome vale aqui.
+- O trailer abre no player do YouTube dentro do app.
 - Links de plataformas (Crunchyroll, Netflix…) abrem no app oficial, se estiver instalado, ou no navegador.
-- O botão **voltar** do Android volta para a tela anterior.
+- O botão **voltar** do Android volta para a tela anterior e, no início, fecha o app.

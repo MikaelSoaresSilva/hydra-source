@@ -27,6 +27,7 @@
         <a href="#/" data-nav="home">Início</a>
         <a href="#/explorar" data-nav="explore">Explorar</a>
         <a href="#/lista" data-nav="list">Minha lista</a>
+        <a href="#/player" data-nav="player">Player</a>
       </nav>
       <form class="quicksearch" id="quicksearch" role="search">
         <input id="quicksearch-input" type="search" placeholder="Buscar anime…" aria-label="Buscar anime" autocomplete="off">
@@ -39,18 +40,20 @@
     <section id="view-explore" class="view" hidden></section>
     <section id="view-list" class="view" hidden></section>
     <section id="view-anime" class="view" hidden></section>
+    <section id="view-player" class="view" hidden></section>
   </main>
 
   <footer class="footer">
     <p>Dados de animes: <a href="https://anilist.co" target="_blank" rel="noopener">AniList</a>.
       Dados de dublagem: <a href="https://mydublist.com" target="_blank" rel="noopener">MyDubList</a> (CC BY 4.0).
-      O AniVerso não hospeda vídeos: os botões levam às plataformas oficiais.</p>
+      O AniVerso não hospeda vídeos: os episódios tocam nas plataformas oficiais, e o Player toca vídeos do seu aparelho.</p>
   </footer>
 
   <nav class="tabbar" aria-label="Seções">
     <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Início</a>
     <a href="#/explorar" data-nav="explore"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>Explorar</a>
     <a href="#/lista" data-nav="list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Minha lista</a>
+    <a href="#/player" data-nav="player"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>Player</a>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

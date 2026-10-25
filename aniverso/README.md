@@ -11,6 +11,9 @@ Aplicativo (site instalável no celular e no PC) com o catálogo de animes do mu
 - **Página do anime**: sinopse (com botão para traduzir), se é dublado ou legendado, trailer,
   ficha técnica, contagem para o próximo episódio, temporadas/filmes relacionados, recomendações
   e botões para as plataformas oficiais (Crunchyroll, Netflix, Prime Video etc.) + JustWatch Brasil.
+- **Grátis**: episódios completos publicados de graça pelos donos dos animes em canais oficiais do YouTube
+  (Crunchyroll Brasil, Yu-Gi-Oh! Brasil, Pokémon), com selo **GRÁTIS** nas capas, filtro "Grátis" no Explorar
+  e um guia de outros caminhos gratuitos e legais (Pluto TV, Bilibili, testes grátis).
 - **Episódios**: lista de episódios com miniatura (quando a Crunchyroll tem o anime). Toque para assistir;
   o app marca como visto e mostra **Continuar assistindo** no início.
 - **Assistir sem sair do app** (no APK): Crunchyroll, YouTube, Bilibili TV e outras abrem o player da
@@ -29,6 +32,17 @@ oficiais (algumas pedem assinatura), e o Player só toca arquivos e links que vo
 | --- | --- |
 | Catálogo, capas, sinopses, trailers, links de streaming | [AniList](https://anilist.co) (API pública GraphQL) |
 | Quais animes têm dublagem PT-BR / inglês | [MyDubList](https://github.com/Joelis57/MyDubList) (licença CC BY 4.0) |
+| Episódios grátis (`gratis.json`) | Canais oficiais do YouTube, lidos pelo robô `ferramentas/catalogo-gratis.mjs` |
+
+## Atualizar a lista de episódios grátis
+
+```bash
+node ferramentas/catalogo-gratis.mjs   # leva uns 5 minutos
+```
+
+O GitHub também roda isso sozinho toda segunda-feira (`.github/workflows/atualizar-gratis.yml`), depois que
+estes arquivos estiverem no branch principal. O app sempre tenta baixar a lista mais nova de lá e, se não
+conseguir, usa a cópia que vem junto.
 
 ## Como usar
 

@@ -100,7 +100,7 @@ body::before {
   .brand-name { font-size: 17px; }
   .quicksearch { max-width: none; }
   .tabbar {
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(5, 1fr);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
     height: calc(var(--tabbar-h) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
@@ -399,3 +399,27 @@ label.btn { user-select: none; }
 .queue button[aria-current="true"] { border-color: var(--accent); color: var(--accent); font-weight: 700; }
 .q-name { min-width: 0; overflow-wrap: anywhere; }
 .q-pct { flex: none; color: var(--muted); font-weight: 500; }
+
+/* ---------- Grátis ---------- */
+.badge.free { color: #5fd39a; }
+.free-panel { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.source {
+  display: flex; flex-direction: column; gap: 6px; text-decoration: none; padding: 14px 16px; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.source:hover { border-color: var(--good); }
+.source-name { font-weight: 800; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.source-name .free { margin-left: 0; }
+.source-text { font-size: 14px; color: var(--muted); }
+.panel.warn { margin-top: 18px; }
+.yt-modal {
+  position: fixed; inset: 0; z-index: 50; background: rgba(8, 5, 14, .82); display: grid; place-items: center;
+  padding: max(16px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) var(--gutter-r) 16px var(--gutter-l);
+}
+.yt-box { width: min(960px, 100%); display: flex; flex-direction: column; gap: 8px; }
+.yt-close {
+  align-self: flex-end; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--surface-2); color: var(--fg); font-size: 18px; font-weight: 800;
+}
+@media (max-width: 760px) { .tabbar a { font-size: 10px; } }

@@ -1,0 +1,34 @@
+# Atualiza toda semana a lista de episódios grátis (aniverso/gratis.json).
+# O app baixa essa lista do branch principal, então os usuários recebem os episódios novos sem reinstalar.
+name: Atualizar episódios grátis
+
+on:
+  schedule:
+    - cron: '17 9 * * 1' # toda segunda-feira, 06:17 no horário de Brasília
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Gerar lista
+        run: node ferramentas/catalogo-gratis.mjs
+      - name: Salvar se mudou
+        run: |
+          if git diff --quiet -- aniverso/gratis.json; then
+            echo "Nada mudou."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add aniverso/gratis.json
+          git commit -m "Atualiza lista de episódios grátis"
+          git push

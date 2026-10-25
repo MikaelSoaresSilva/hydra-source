@@ -24,7 +24,8 @@ const SORTS = {
   POPULARITY_DESC: 'Mais populares', TRENDING_DESC: 'Em alta agora', SCORE_DESC: 'Melhor avaliados',
   START_DATE_DESC: 'Mais recentes', START_DATE: 'Mais antigos', TITLE_ROMAJI: 'Ordem alfabética',
 };
-const AUDIO = { all: 'Todos', pt: 'Dublado PT-BR', en: 'Dublado em inglês', sub: 'Só legendado (sem dub PT-BR)' };
+const AUDIO = { all: 'Todos', free: 'Grátis no YouTube oficial', pt: 'Dublado PT-BR', en: 'Dublado em inglês', sub: 'Só legendado (sem dub PT-BR)' };
+const FREE_LANG = { dub: 'Dublado', leg: 'Legendado', 'dub-leg': 'Dublado e legendado', en: 'Em inglês', multi: 'Vários áudios' };
 const RELATIONS = {
   PREQUEL: 'Anterior', SEQUEL: 'Continuação', PARENT: 'História principal', SIDE_STORY: 'História paralela',
   SPIN_OFF: 'Spin-off', ALTERNATIVE: 'Versão alternativa', SUMMARY: 'Resumo', ADAPTATION: 'Adaptação',
@@ -143,6 +144,33 @@ async function loadDubs() {
     if (cached?.pt?.length) { dubs.pt = new Set(cached.pt); dubs.en = new Set(cached.en); dubs.ready = true; }
   }
 }
+/* ---------- episódios grátis em canais oficiais (gerado por ferramentas/catalogo-gratis.mjs) ---------- */
+const FREE_URLS = [
+  'https://raw.githubusercontent.com/MikaelSoaresSilva/hydra-source/main/aniverso/gratis.json', // versão mais nova
+  'gratis.json', // cópia que vem junto com o app
+];
+const free = { anime: {}, channels: [], updated: '', ready: false };
+const freeReady = (async () => {
+  const cached = store.get('aniverso:free', null);
+  if (cached && Date.now() - cached.t < 12 * 3600 * 1000) { Object.assign(free, cached.data, { ready: true }); return; }
+  let best = null;
+  for (const url of FREE_URLS) {
+    try {
+      const r = await fetch(url, { cache: 'no-cache' });
+      if (!r.ok) continue;
+      const data = await r.json();
+      if (!best || (data.updated || '') > (best.updated || '')) best = data;
+    } catch { /* tenta a próxima */ }
+  }
+  if (!best && cached) best = cached.data;
+  if (best) {
+    Object.assign(free, best, { ready: true });
+    store.set('aniverso:free', { t: Date.now(), data: best });
+  }
+})();
+const freeVideos = (m) => free.anime[m.id]?.videos || [];
+const freeIds = () => Object.keys(free.anime).map(Number);
+
 const hasDub = (lang, m) => Boolean(m.idMal && dubs[lang].has(m.idMal));
 
 /* ---------- Minha lista ---------- */
@@ -212,13 +240,29 @@ document.addEventListener('click', (e) => {
   const a = e.target.closest('a[data-inside]');
   if (!a || e.defaultPrevented) return;
   e.preventDefault();
-  openInside(a.href);
+  if (a.dataset.free && !isNativeApp) openYouTubeModal(a.dataset.free);
+  else openInside(a.href);
 });
+
+function openYouTubeModal(id) {
+  let modal = $('#yt-modal');
+  if (!modal) {
+    document.body.insertAdjacentHTML('beforeend', `<div class="yt-modal" id="yt-modal" role="dialog" aria-modal="true" aria-label="Vídeo">
+      <div class="yt-box"><button class="yt-close" type="button" aria-label="Fechar vídeo">✕</button><div class="trailer" id="yt-frame"></div></div></div>`);
+    modal = $('#yt-modal');
+    const close = () => { modal.hidden = true; $('#yt-frame').innerHTML = ''; };
+    modal.addEventListener('click', (ev) => { if (ev.target === modal || ev.target.closest('.yt-close')) close(); });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !modal.hidden) close(); });
+  }
+  $('#yt-frame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0" title="Vídeo" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+  modal.hidden = false;
+}
 
 /* ---------- componentes ---------- */
 function cardHTML(m) {
   const meta = [m.seasonYear, FORMAT_SHORT[m.format], m.episodes ? `${m.episodes} ep` : ''].filter(Boolean).join(' · ');
-  const badges = (hasDub('pt', m) ? '<span class="badge pt">DUB PT</span>' : '') + (hasDub('en', m) ? '<span class="badge en">DUB EN</span>' : '');
+  const badges = (free.anime[m.id] ? '<span class="badge free">GRÁTIS</span>' : '') +
+    (hasDub('pt', m) ? '<span class="badge pt">DUB PT</span>' : '') + (hasDub('en', m) ? '<span class="badge en">DUB EN</span>' : '');
   const color = /^#[0-9a-f]{3,8}$/i.test(m.coverImage?.color || '') ? ` style="--c:${m.coverImage.color}"` : '';
   return `<a class="card" href="#/anime/${m.id}">
     <div class="poster"${color}>
@@ -246,6 +290,7 @@ async function renderHome() {
   const rows = [
     { key: 'trending', title: 'Em alta agora', more: '#/explorar?sort=TRENDING_DESC' },
     { key: 'season', title: `Temporada de ${SEASONS[season].toLowerCase()} ${year}`, more: `#/explorar?year=${year}&sort=POPULARITY_DESC` },
+    { key: 'free', title: 'Grátis e oficial: assista agora', more: '#/gratis' },
     { key: 'dubbed', title: 'Dublados em português', more: '#/explorar?audio=pt' },
     { key: 'top', title: 'Mais bem avaliados de todos os tempos', more: '#/explorar?sort=SCORE_DESC' },
     { key: 'popular', title: 'Os mais populares', more: '#/explorar' },
@@ -257,18 +302,20 @@ async function renderHome() {
       <div class="rail">${skeletons(8)}</div></div>`).join('')}</div>`;
 
   renderContinueRow();
-  await Promise.race([dubsReady, new Promise((r) => setTimeout(r, 5000))]);
+  await Promise.race([Promise.all([dubsReady, freeReady]), new Promise((r) => setTimeout(r, 5000))]);
   const useDub = dubs.ready && dubs.pt.size > 0;
-  const query = `query($season: MediaSeason, $year: Int${useDub ? ', $dub: [Int]' : ''}) {
+  const useFree = free.ready && freeIds().length > 0;
+  const query = `query($season: MediaSeason, $year: Int${useDub ? ', $dub: [Int]' : ''}${useFree ? ', $free: [Int]' : ''}) {
     trending: Page(perPage: 20) { media(type: ANIME, sort: TRENDING_DESC, isAdult: false) { ${CARD} bannerImage description genres coverImage { extraLarge } } }
     season: Page(perPage: 20) { media(type: ANIME, season: $season, seasonYear: $year, sort: POPULARITY_DESC, isAdult: false) { ${CARD} } }
+    ${useFree ? `free: Page(perPage: 20) { media(type: ANIME, id_in: $free, sort: TRENDING_DESC, isAdult: false) { ${CARD} } }` : ''}
     ${useDub ? `dubbed: Page(perPage: 20) { media(type: ANIME, idMal_in: $dub, sort: TRENDING_DESC, isAdult: false) { ${CARD} } }` : ''}
     top: Page(perPage: 20) { media(type: ANIME, sort: SCORE_DESC, isAdult: false) { ${CARD} } }
     popular: Page(perPage: 20) { media(type: ANIME, sort: POPULARITY_DESC, isAdult: false) { ${CARD} } }
     movies: Page(perPage: 20) { media(type: ANIME, format: MOVIE, sort: TRENDING_DESC, isAdult: false) { ${CARD} } }
   }`;
   try {
-    const data = await gql(query, { season, year, ...(useDub ? { dub: [...dubs.pt] } : {}) });
+    const data = await gql(query, { season, year, ...(useDub ? { dub: [...dubs.pt] } : {}), ...(useFree ? { free: freeIds() } : {}) });
     for (const r of rows) {
       const sec = view.querySelector(`[data-row="${r.key}"]`);
       const list = data[r.key]?.media || [];
@@ -408,7 +455,8 @@ async function loadMoreExplore(first = false) {
   const myKey = explore.key;
   if (!first) $('#loading-more').hidden = false;
 
-  if (f.audio !== 'all') await dubsReady;
+  if (f.audio === 'free') await freeReady;
+  else if (f.audio !== 'all') await dubsReady;
   const vars = { page: explore.page + 1, perPage: PER_PAGE };
   const args = ['type: ANIME', 'isAdult: false'];
   const defs = ['$page: Int', '$perPage: Int'];
@@ -421,7 +469,16 @@ async function loadMoreExplore(first = false) {
   add('sort', '[MediaSort]', f.q ? ['SEARCH_MATCH', f.sort] : [f.sort, 'ID_DESC']);
 
   const resultsEl = $('#results');
-  if (f.audio !== 'all') {
+  if (f.audio === 'free') {
+    if (!freeIds().length) {
+      explore.loading = false;
+      resultsEl.innerHTML = errorHTML('A lista de episódios grátis não carregou. Verifique sua internet.', 'explore-retry');
+      $('#result-count').textContent = '';
+      $('#explore-retry').onclick = () => { location.reload(); };
+      return;
+    }
+    add('free', '[Int]', freeIds(), 'id_in: $free');
+  } else if (f.audio !== 'all') {
     if (!dubs.ready) {
       explore.loading = false;
       resultsEl.innerHTML = errorHTML('A lista de dublagens não carregou. Verifique sua internet.', 'explore-retry');
@@ -502,6 +559,19 @@ function episodeHTML(e, watched) {
       <span class="ep-txt"><span class="ep-n">Episódio ${esc(String(e.n).replace('.', ','))}</span><span class="ep-t">${esc(e.name)}</span></span>
     </a>
     <button class="ep-check" type="button" data-check="${e.n}" aria-pressed="${watched}" aria-label="Marcar episódio ${e.n} como visto">✓</button>
+  </div>`;
+}
+
+const ytWatch = (id) => `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+function freeLink(v, cls, inner) {
+  return `<a class="${cls}" href="${esc(ytWatch(v.id))}" data-inside data-free="${esc(v.id)}"${v.ep ? ` data-epn="${v.ep}"` : ''} target="_blank" rel="noopener">${inner}</a>`;
+}
+function freeVideoHTML(v) {
+  const label = v.movie ? 'Filme' : v.ep ? `Episódio ${v.ep}` : 'Vídeo completo';
+  return `<div class="ep free-ep">
+    ${freeLink(v, 'ep-play', `<span class="ep-thumb"><img src="https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg" alt="" loading="lazy"><span class="ep-badge">▶</span></span>
+      <span class="ep-txt"><span class="ep-n">${esc(label)} · ${esc(FREE_LANG[v.lang] || '')}</span>
+      <span class="ep-t">${esc(v.title)}</span><span class="ep-t">${Math.round(v.dur / 60)} min · ${esc(v.ch)}</span></span>`)}
   </div>`;
 }
 
@@ -588,13 +658,26 @@ function animeHTML(m) {
       ${isNativeApp ? '"Assistir aqui no app" abre o player da plataforma sem sair do AniVerso; feche no X para voltar. ' : ''}Plataformas pagas pedem login na sua conta.
       O JustWatch mostra em quais serviços o anime está no Brasil e se tem áudio em português.</p></div>`;
 
+  const fv = freeVideos(m);
+  const freeHTML = fv.length ? `<div class="panel free-panel" id="gratis">
+    <div class="ep-head"><h3>Assistir grátis <span class="free">Oficial</span></h3>
+      <span class="note">${fv.length} ${fv.length === 1 ? 'vídeo' : 'vídeos'} no YouTube · ${isNativeApp ? 'toque para assistir aqui no app' : 'toque para assistir'}</span></div>
+    <div class="eps">${fv.map((v) => freeVideoHTML(v)).join('')}</div>
+    <p class="note">Publicado de graça pelo próprio dono do anime (${esc([...new Set(fv.map((v) => v.ch))].join(', '))}).
+      ${fv.some((v) => v.lang === 'en') ? 'Nos vídeos em inglês, às vezes dá para trocar o áudio em ⚙ › Faixa de áudio. ' : ''}Vídeos podem sair do ar a qualquer momento.</p>
+  </div>` : '';
+  const firstFree = fv.find((v) => v.lang === 'dub' || v.lang === 'dub-leg') || fv[0];
+
   const eps = parseEpisodes(m.streamingEpisodes);
   const prog = progress.get(m.id);
   const seen = new Set(prog?.watched || []);
   const nextEp = eps.length ? (prog ? eps.find((e) => e.n > prog.last) || eps.find((e) => e.n === prog.last) : eps[0]) : null;
   const insideStream = streams.find((l) => PLAY_INSIDE.has(l.site));
   let cta = '';
-  if (nextEp) {
+  if (firstFree) {
+    cta = `${freeLink(firstFree, 'btn primary big', `▶ Assistir grátis${firstFree.ep ? `: episódio ${firstFree.ep}` : ''} (${FREE_LANG[firstFree.lang] || ''})`)}`;
+    if (nextEp) cta += `<a class="btn big" href="${esc(nextEp.url)}" data-inside data-epn="${nextEp.n}">Todos os episódios na ${esc(nextEp.site || 'Crunchyroll')}</a>`;
+  } else if (nextEp) {
     cta = `<a class="btn primary big" href="${esc(nextEp.url)}" data-inside data-epn="${nextEp.n}">▶ ${prog ? 'Continuar' : 'Assistir'}: episódio ${esc(String(nextEp.n).replace('.', ','))}</a>`;
   } else if (insideStream) {
     cta = `<a class="btn primary big" href="${esc(insideStream.url)}" data-inside>▶ Assistir na ${esc(insideStream.site)}</a>`;
@@ -645,6 +728,7 @@ function animeHTML(m) {
       ${desc ? `<div><p class="synopsis clamped" id="synopsis">${esc(desc)}</p>
         <div class="btns"><button class="linkish" type="button" id="syn-more">Ler mais</button>
         <a class="linkish" href="${esc(translate)}" target="_blank" rel="noopener">Traduzir sinopse para português</a></div></div>` : ''}
+      ${freeHTML}
       ${episodesHTML}
       ${audio}
       ${trailer ? `<div class="two-col">${where}${trailer}</div>` : where}
@@ -724,6 +808,103 @@ function renderList() {
         <a class="btn small primary" href="#/explorar">Explorar animes</a></div>`}
   </div>`;
   view.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { listTab = b.dataset.tab; renderList(); }; });
+}
+
+/* ---------- Grátis ---------- */
+const FREE_SOURCES = [
+  { name: 'Pluto TV', url: 'https://pluto.tv/br/live-tv', tag: 'Grátis · sem cadastro', inside: true,
+    text: 'TV on-line gratuita com canais de anime 24 horas, a maioria dublada: Pokémon, Yu-Gi-Oh!, Naruto e outros. A grade muda com o tempo; procure a categoria Anime & Geek.' },
+  { name: 'Crunchyroll Brasil no YouTube', url: 'https://www.youtube.com/@CrunchyrollBR', tag: 'Grátis · oficial', inside: true,
+    text: 'Canal oficial com o episódio 1 de muitos animes, dublado e legendado (Jujutsu Kaisen, Blue Lock, Tokyo Revengers, Gachiakuta…).' },
+  { name: 'Yu-Gi-Oh! Brasil no YouTube', url: 'https://www.youtube.com/@yugiohportuguesbrasileir', tag: 'Grátis · dublado', inside: true,
+    text: 'Canal oficial da Konami com episódios dublados em português de Duel Monsters, GX e 5D’s.' },
+  { name: 'Pokémon no YouTube', url: 'https://www.youtube.com/@pokemon', tag: 'Grátis · oficial', inside: true,
+    text: 'Canal oficial com episódios completos de várias temporadas. Os títulos são em inglês; em alguns vídeos dá para trocar o áudio em ⚙ › Faixa de áudio.' },
+  { name: 'Bilibili', url: 'https://www.bilibili.tv/', tag: 'App grátis · legendas PT', inside: true,
+    text: 'Chegou ao Brasil em agosto de 2026 com app em português. Tem animes com legenda em português, mas o catálogo liberado aqui varia. Evite vídeos de usuários sem licença.' },
+  { name: 'Tubi e Plex', url: 'https://tubitv.com/category/anime', tag: 'Grátis com anúncios · confira no Brasil', inside: true,
+    text: 'Serviços gratuitos com anúncios e alguns animes clássicos. O catálogo muda por país e pode não abrir no Brasil.' },
+];
+const FREE_TRIALS = [
+  { name: 'Crunchyroll', url: 'https://www.crunchyroll.com/pt-br/premium', text: '7 dias grátis no plano pago (pede cartão; cancele antes para não ser cobrado). O plano grátis com anúncios acabou em 31/12/2025.' },
+  { name: 'Prime Video', url: 'https://www.primevideo.com/', text: '30 dias grátis para quem nunca assinou. Tem animes dublados e legendados.' },
+];
+
+let freeTab = 'all';
+let freeLoaded = false;
+async function renderFree() {
+  const view = $('#view-free');
+  if (freeLoaded) return;
+  freeLoaded = true;
+  const srcCard = (x, tagged = true) => `<a class="source" href="${esc(x.url)}" target="_blank" rel="noopener"${x.inside ? ' data-inside' : ''}>
+      <span class="source-name">${esc(x.name)}${tagged && x.tag ? `<span class="free">${esc(x.tag)}</span>` : ''}</span>
+      <span class="source-text">${esc(x.text)}</span></a>`;
+  view.innerHTML = `<div class="wrap">
+    <div class="explore-head"><h1>Assistir de graça</h1>
+      <p>Só caminhos legais: vídeos publicados pelos próprios donos dos animes e serviços gratuitos oficiais.</p></div>
+    <div class="section">
+      <div class="section-head"><h2>Episódios grátis dentro do app</h2></div>
+      <p class="note" id="free-summary">Carregando a lista…</p>
+      <div class="tabs" role="tablist" id="free-tabs">
+        ${[['all', 'Todos'], ['dub', 'Dublados'], ['leg', 'Legendados']].map(([k, l]) => `<button type="button" role="tab" data-ftab="${k}" aria-selected="${k === freeTab}">${l}</button>`).join('')}
+      </div>
+      <div class="grid" id="free-grid">${skeletons(12)}</div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>Outros jeitos grátis e legais</h2></div>
+      <div class="sources">${FREE_SOURCES.map((x) => srcCard(x)).join('')}</div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>Testes grátis</h2></div>
+      <div class="sources">${FREE_TRIALS.map((x) => srcCard(x, false)).join('')}</div>
+    </div>
+    <div class="panel warn">
+      <h3>Por que o app não usa sites "piratas"</h3>
+      <p class="note">Sites que prometem todos os animes de graça não têm licença: são ilegais, saem do ar toda hora e costumam
+        espalhar vírus, golpes e anúncios enganosos. Os caminhos acima são seguros e pagam quem faz os animes.</p>
+    </div>
+  </div>`;
+  view.querySelectorAll('[data-ftab]').forEach((b) => { b.onclick = () => { freeTab = b.dataset.ftab; drawFreeGrid(); }; });
+
+  await freeReady;
+  const ids = freeIds();
+  if (!ids.length) {
+    $('#free-summary').textContent = 'A lista de episódios grátis não carregou. Verifique sua internet e abra esta página de novo.';
+    $('#free-grid').innerHTML = '';
+    freeLoaded = false;
+    return;
+  }
+  const total = Object.values(free.anime).reduce((n, a) => n + a.videos.length, 0);
+  const when = free.updated ? new Date(free.updated).toLocaleDateString('pt-BR') : '';
+  $('#free-summary').textContent = `${fmtNum(ids.length)} animes com ${fmtNum(total)} vídeos completos grátis${when ? ` · lista atualizada em ${when}` : ''}. Toque num anime e depois em "Assistir grátis".`;
+  try {
+    const cards = [];
+    for (let i = 0; i < ids.length; i += 50) {
+      const data = await gql(`query($ids: [Int], $p: Int) { Page(page: $p, perPage: 50) { media(id_in: $ids, type: ANIME, sort: POPULARITY_DESC) { ${CARD} } } }`, { ids, p: i / 50 + 1 });
+      cards.push(...data.Page.media);
+    }
+    free.cards = cards.sort((a, b) => (b.averageScore || 0) - (a.averageScore || 0) && 0);
+    drawFreeGrid();
+  } catch (err) {
+    $('#free-grid').innerHTML = `<div style="grid-column:1/-1">${errorHTML(err.message, 'free-retry')}</div>`;
+    $('#free-retry').onclick = () => { freeLoaded = false; renderFree(); };
+    freeLoaded = false;
+  }
+}
+
+function drawFreeGrid() {
+  document.querySelectorAll('[data-ftab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ftab === freeTab)));
+  if (!free.cards) return;
+  const want = (m) => {
+    if (freeTab === 'all') return true;
+    const langs = freeVideos(m).map((v) => v.lang);
+    return freeTab === 'dub' ? langs.some((l) => l === 'dub' || l === 'dub-leg') : langs.some((l) => l === 'leg' || l === 'dub-leg');
+  };
+  const list = free.cards.filter(want);
+  $('#free-grid').innerHTML = list.length ? list.map((m) => {
+    const n = freeVideos(m).length;
+    return cardHTML(m).replace('<div class="card-t">', `<div class="card-m accent">${n} ${n === 1 ? 'vídeo grátis' : 'vídeos grátis'}</div><div class="card-t">`);
+  }).join('') : '<div class="empty" style="grid-column:1/-1"><strong>Nada nesta aba</strong>Tente outra aba.</div>';
 }
 
 /* ---------- Player (vídeos do aparelho ou link direto) ---------- */
@@ -917,17 +1098,19 @@ function route() {
   else if (path.startsWith('/lista')) name = 'list';
   else if (path.startsWith('/anime/')) name = 'anime';
   else if (path.startsWith('/player')) name = 'player';
+  else if (path.startsWith('/gratis')) name = 'free';
 
   if (currentView) scrollPos[currentView] = scrollY;
   const prev = currentView;
   currentView = name;
-  for (const v of ['home', 'explore', 'list', 'anime', 'player']) $(`#view-${v}`).hidden = v !== name;
+  for (const v of ['home', 'explore', 'list', 'anime', 'player', 'free']) $(`#view-${v}`).hidden = v !== name;
   if (name !== 'player') $('#pv')?.pause();
   document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === name));
   if (name !== 'anime') document.title = 'AniVerso';
 
   if (name === 'home') { renderHome(); renderContinueRow(); }
   if (name === 'player') renderPlayer();
+  if (name === 'free') renderFree();
   if (name === 'explore') renderExplore(qs);
   if (name === 'list') renderList();
   if (name === 'anime') renderAnime(path.split('/')[2]);

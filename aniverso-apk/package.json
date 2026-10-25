@@ -1,0 +1,16 @@
+{
+  "name": "aniverso-apk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Empacota o AniVerso (pasta ../aniverso) como aplicativo Android.",
+  "scripts": {
+    "sync": "cap sync android",
+    "apk": "cap sync android && cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  }
+}

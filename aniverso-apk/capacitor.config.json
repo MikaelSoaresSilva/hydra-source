@@ -1,0 +1,8 @@
+{
+  "appId": "com.aniverso.app",
+  "appName": "AniVerso",
+  "webDir": "../aniverso",
+  "android": {
+    "backgroundColor": "#120f1c"
+  }
+}

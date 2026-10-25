@@ -36,6 +36,7 @@ const CARD = `id idMal title { romaji english } coverImage { large color } forma
 
 /* ---------- utilidades ---------- */
 const $ = (sel, root = document) => root.querySelector(sel);
+const isNativeApp = Boolean(window.Capacitor?.isNativePlatform?.());
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '');
 const titleOf = (m) => m.title.english || m.title.romaji || 'Sem título';
@@ -549,7 +550,16 @@ function bindAnime(m) {
     more.onclick = () => { const c = syn.classList.toggle('clamped'); more.textContent = c ? 'Ler mais' : 'Ler menos'; };
   }
   const play = $('#trailer-play');
-  if (play) play.onclick = () => {
+  if (play && isNativeApp) {
+    // no aplicativo Android o trailer abre no app do YouTube (o player embutido não funciona bem em WebView)
+    const url = m.trailer.site === 'youtube'
+      ? `https://www.youtube.com/watch?v=${encodeURIComponent(m.trailer.id)}`
+      : `https://www.dailymotion.com/video/${encodeURIComponent(m.trailer.id)}`;
+    const a = document.createElement('a');
+    a.className = play.className; a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    a.setAttribute('aria-label', 'Assistir trailer'); a.style.cssText = play.style.cssText;
+    play.replaceWith(a);
+  } else if (play) play.onclick = () => {
     const src = m.trailer.site === 'youtube'
       ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(m.trailer.id)}?autoplay=1&rel=0`
       : `https://www.dailymotion.com/embed/video/${encodeURIComponent(m.trailer.id)}?autoplay=1`;
@@ -618,6 +628,6 @@ $('#quicksearch').addEventListener('submit', (e) => {
 window.addEventListener('hashchange', route);
 route();
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+if (!isNativeApp && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

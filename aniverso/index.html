@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AniVerso</title>
+  <meta name="description" content="Catálogo de animes do mundo todo: veja quais têm dublagem em português, onde assistir legalmente, trailers e monte sua lista.">
+  <meta name="theme-color" content="#120f1c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://graphql.anilist.co">
+  <link rel="preconnect" href="https://s4.anilist.co">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+2:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="brand" href="#/" aria-label="AniVerso, início">
+        <img class="brand-mark" src="icons/icon.svg" alt="" aria-hidden="true">
+        <span class="brand-name">AniVerso</span>
+      </a>
+      <nav class="nav" aria-label="Seções">
+        <a href="#/" data-nav="home">Início</a>
+        <a href="#/explorar" data-nav="explore">Explorar</a>
+        <a href="#/lista" data-nav="list">Minha lista</a>
+      </nav>
+      <form class="quicksearch" id="quicksearch" role="search">
+        <input id="quicksearch-input" type="search" placeholder="Buscar anime…" aria-label="Buscar anime" autocomplete="off">
+      </form>
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="view-home" class="view" hidden></section>
+    <section id="view-explore" class="view" hidden></section>
+    <section id="view-list" class="view" hidden></section>
+    <section id="view-anime" class="view" hidden></section>
+  </main>
+
+  <footer class="footer">
+    <p>Dados de animes: <a href="https://anilist.co" target="_blank" rel="noopener">AniList</a>.
+      Dados de dublagem: <a href="https://mydublist.com" target="_blank" rel="noopener">MyDubList</a> (CC BY 4.0).
+      O AniVerso não hospeda vídeos: os botões levam às plataformas oficiais.</p>
+  </footer>
+
+  <nav class="tabbar" aria-label="Seções">
+    <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Início</a>
+    <a href="#/explorar" data-nav="explore"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>Explorar</a>
+    <a href="#/lista" data-nav="list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Minha lista</a>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

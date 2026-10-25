@@ -1,0 +1,1601 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Manual do Assassino</title>
+<style>
+:root{
+  --bg:#0e0e10; --bg2:#17171b; --card:#1d1d22; --line:#2c2c33;
+  --tx:#e9e6df; --tx2:#a9a59c; --acc:#c8243b; --acc2:#e0b65a;
+  --fs:17px;
+}
+:root[data-theme="light"]{
+  --bg:#f6f2ea; --bg2:#ece6da; --card:#fffdf8; --line:#d9d1c2;
+  --tx:#1d1b18; --tx2:#5f5a51; --acc:#a3162b; --acc2:#8a6418;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx)}
+body{font:var(--fs)/1.6 Georgia,"Noto Serif",serif;}
+a{color:var(--acc2)}
+/* Barra superior */
+.bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:6px;
+  padding:8px 10px;background:var(--bg2);border-bottom:1px solid var(--line);
+  font-family:system-ui,Roboto,sans-serif}
+.bar .name{flex:1;font-weight:700;font-size:15px;letter-spacing:.08em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);color:var(--tx);border-radius:10px;
+  min-width:40px;height:40px;font-size:15px;font-weight:600;padding:0 10px;font-family:inherit}
+.btn:active{background:var(--line)}
+/* Capa */
+#home{min-height:calc(100vh - 57px);display:flex;flex-direction:column;justify-content:center;
+  padding:32px 22px;text-align:center}
+.emblem{width:92px;height:92px;margin:0 auto 22px}
+#home h1{font-family:system-ui,Roboto,sans-serif;font-size:34px;line-height:1.1;margin:0 0 12px;
+  letter-spacing:.06em;text-transform:uppercase}
+#home h1 b{color:var(--acc)}
+#home .sub{color:var(--tx2);margin:0 auto 28px;max-width:420px}
+.cta{display:block;width:100%;max-width:360px;margin:0 auto 12px;padding:15px;border-radius:12px;
+  border:0;background:var(--acc);color:#fff;font:700 17px system-ui,Roboto,sans-serif}
+.cta.alt{background:transparent;border:1px solid var(--line);color:var(--tx)}
+.meter{max-width:360px;margin:22px auto 0;font:14px system-ui,Roboto,sans-serif;color:var(--tx2)}
+.meter .track{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:8px}
+.meter .fill{height:100%;width:0;background:var(--acc2);transition:width .3s}
+/* Capítulos */
+.chapter{display:none;max-width:760px;margin:0 auto;padding:18px 18px 90px}
+.chapter.on{display:block}
+h2{font-family:system-ui,Roboto,sans-serif;font-size:1.55em;line-height:1.2;margin:.4em 0 .8em;
+  padding-bottom:.4em;border-bottom:3px solid var(--acc)}
+h3{font-family:system-ui,Roboto,sans-serif;font-size:1.12em;margin:1.8em 0 .5em;color:var(--acc2)}
+p{margin:.7em 0}
+li{margin:.35em 0}
+strong{color:var(--tx)}
+blockquote{margin:1em 0;padding:.6em 1em;border-left:4px solid var(--acc2);background:var(--card);
+  border-radius:0 10px 10px 0;color:var(--tx2);font-style:italic}
+.tw{overflow-x:auto;margin:1em -18px;padding:0 18px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;font:14.5px/1.45 system-ui,Roboto,sans-serif;min-width:100%;width:max-content}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;max-width:250px}
+th{background:var(--bg2);color:var(--acc2);font-weight:700}
+tr:nth-child(even) td{background:var(--card)}
+td.done{text-align:center}
+table.missions{width:100%}
+.missions th,.missions td{max-width:none}
+ul li.task{list-style:none;margin-left:-1.4em}
+.task label{display:flex;gap:12px;align-items:flex-start;padding:8px 10px;margin:4px 0;border-radius:10px;
+  background:var(--card);border:1px solid var(--line)}
+input[type=checkbox]{width:22px;height:22px;flex:0 0 22px;margin:2px 0 0;accent-color:var(--acc)}
+.task input:checked+span{color:var(--tx2);text-decoration:line-through}
+.pager{display:flex;gap:10px;margin-top:36px}
+.pager a{flex:1;display:block;padding:14px 12px;border-radius:12px;border:1px solid var(--line);
+  text-decoration:none;color:var(--tx);font:600 14px system-ui,Roboto,sans-serif;background:var(--card)}
+.pager a small{display:block;color:var(--tx2);font-weight:400;margin-bottom:2px}
+.pager a.next{text-align:right}
+/* Sumário */
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:30;display:none}
+#toc{position:fixed;top:0;bottom:0;left:0;width:min(86vw,360px);z-index:31;background:var(--bg2);
+  transform:translateX(-102%);transition:transform .22s ease;overflow-y:auto;
+  font-family:system-ui,Roboto,sans-serif;border-right:1px solid var(--line)}
+body.toc-open #toc{transform:none}
+body.toc-open #scrim{display:block}
+#toc h4{margin:0;padding:18px 18px 10px;letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:var(--tx2)}
+#toc ul{list-style:none;margin:0;padding:0 8px 24px}
+#toc a{display:flex;align-items:center;gap:8px;padding:12px 10px;border-radius:10px;color:var(--tx);
+  text-decoration:none;font-size:15px}
+#toc a.cur{background:var(--card);box-shadow:inset 3px 0 0 var(--acc)}
+#toc .t{flex:1}
+#toc .p{font-size:12px;color:var(--tx2);white-space:nowrap}
+#toc .p.full{color:var(--acc2);font-weight:700}
+#totop{position:fixed;right:14px;bottom:18px;z-index:10;display:none;width:46px;height:46px;border-radius:50%;
+  border:1px solid var(--line);background:var(--bg2);color:var(--tx);font-size:20px}
+</style>
+</head>
+<body>
+<header class="bar">
+  <button class="btn" id="menu" aria-label="Sumário">&#9776;</button>
+  <span class="name" id="barname">Manual do Assassino</span>
+  <button class="btn" id="fminus" aria-label="Diminuir letra">A&minus;</button>
+  <button class="btn" id="fplus" aria-label="Aumentar letra">A+</button>
+  <button class="btn" id="theme" aria-label="Trocar tema"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
+</header>
+
+<div id="scrim"></div>
+<aside id="toc" aria-label="Sumário">
+  <h4>Sumário</h4>
+  <ul><li><a href="#inicio" data-i="-1"><span class="t">Capa</span></a></li><li><a href="#c0" data-i="0"><span class="t">Como usar este manual</span><span class="p" data-p="0"></span></a></li><li><a href="#c1" data-i="1"><span class="t">A Biblioteca do Assassino</span><span class="p" data-p="1"></span></a></li><li><a href="#c2" data-i="2"><span class="t">Capítulo 1 — Ler a Mente</span><span class="p" data-p="2"></span></a></li><li><a href="#c3" data-i="3"><span class="t">Capítulo 2 — As 7 Armas da Influência</span><span class="p" data-p="3"></span></a></li><li><a href="#c4" data-i="4"><span class="t">Capítulo 3 — Negociação de Refém</span><span class="p" data-p="4"></span></a></li><li><a href="#c5" data-i="5"><span class="t">Capítulo 4 — Palavras que Entram na Cabeça</span><span class="p" data-p="5"></span></a></li><li><a href="#c6" data-i="6"><span class="t">Capítulo 5 — Presença e Poder</span><span class="p" data-p="6"></span></a></li><li><a href="#c7" data-i="7"><span class="t">Capítulo 6 — O Lado Sombrio</span><span class="p" data-p="7"></span></a></li><li><a href="#c8" data-i="8"><span class="t">Capítulo 7 — O Motor das Emoções</span><span class="p" data-p="8"></span></a></li><li><a href="#c9" data-i="9"><span class="t">Capítulo 8 — Ler o Corpo</span><span class="p" data-p="9"></span></a></li><li><a href="#c10" data-i="10"><span class="t">Capítulo 9 — Impor Respeito</span><span class="p" data-p="10"></span></a></li><li><a href="#c11" data-i="11"><span class="t">Capítulo 10 — Conquistar Pessoas</span><span class="p" data-p="11"></span></a></li><li><a href="#c12" data-i="12"><span class="t">O Desafio de 30 Dias</span><span class="p" data-p="12"></span></a></li><li><a href="#c13" data-i="13"><span class="t">Fontes</span><span class="p" data-p="13"></span></a></li></ul>
+</aside>
+
+<main>
+  <section id="home">
+    <svg class="emblem" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="47" fill="none" stroke="var(--acc)" stroke-width="3"/>
+      <path d="M50 14 L57 58 L50 66 L43 58 Z" fill="var(--tx)"/>
+      <rect x="33" y="60" width="34" height="6" rx="3" fill="var(--acc2)"/>
+      <rect x="46" y="66" width="8" height="16" rx="2" fill="var(--acc)"/>
+      <circle cx="50" cy="85" r="4" fill="var(--acc2)"/>
+    </svg>
+    <h1>Manual do <b>Assassino</b></h1>
+    <p class="sub">Persuasão, negociação e influência do mais alto nível — e como nunca ser manipulado</p>
+    <button class="cta" id="go">Começar a ler</button>
+    <button class="cta alt" id="open-toc">Ver sumário</button>
+    <div class="meter"><span id="meter-txt">Treino concluído: 0%</span>
+      <div class="track"><div class="fill" id="meter-fill"></div></div></div>
+  </section>
+  <section class="chapter" id="c0" data-i="0"><h2>Como usar este manual</h2>
+<p>"Assassino" aqui é no sentido de quem é letal com as palavras: fecha negócios, ganha discussões, lidera pessoas e <strong>ninguém consegue enganar</strong>. Este manual reúne o que os melhores livros do mundo sobre persuasão, negociação e poder ensinam, com exercícios para você treinar na vida real.</p>
+<h3>Persuasão x manipulação: a diferença que importa</h3>
+<p>As técnicas são quase as mesmas. O que muda é a intenção e a verdade.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Persuasão</th>
+<th>Manipulação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Informação</td>
+<td>Verdadeira, completa</td>
+<td>Escondida ou falsa</td>
+</tr>
+<tr>
+<td>Quem ganha</td>
+<td>Os dois lados</td>
+<td>Só quem manipula</td>
+</tr>
+<tr>
+<td>Se a pessoa descobrir tudo</td>
+<td>Continua concordando</td>
+<td>Se sente usada e se vira contra você</td>
+</tr>
+<tr>
+<td>Resultado a longo prazo</td>
+<td>Confiança, reputação, indicações</td>
+<td>Inimigos, fama ruim, processos</td>
+</tr>
+</tbody>
+</table></div>
+<p>Por isso o Assassino de verdade usa persuasão para atacar e conhece a manipulação para se defender. O Capítulo 6 mostra cada tática suja e como desarmá-la. Manipular é jogo de amador: funciona uma vez e queima a reputação para sempre.</p>
+<h3>As 5 regras do treino</h3>
+<ol>
+<li><strong>Um capítulo por semana.</strong> Leia no domingo, treine de segunda a sábado.</li>
+<li><strong>Caderno de campo.</strong> Anote cada exercício: situação, o que você fez, o que aconteceu.</li>
+<li><strong>Treine em situações pequenas primeiro.</strong> Padaria, loja, atendimento ao cliente. Depois trabalho e negócios grandes.</li>
+<li><strong>Teste do jornal.</strong> Antes de usar uma técnica, pergunte: "Eu ficaria tranquilo se a pessoa soubesse exatamente o que estou fazendo?" Se a resposta for não, não faça.</li>
+<li><strong>Leia os livros originais.</strong> Este manual é o mapa. Os livros da Biblioteca são o território.</li>
+</ol>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c1" data-i="1"><h2>A Biblioteca do Assassino</h2>
+<p>Os 12 livros abaixo são a base deste manual, na ordem em que vale a pena ler. Comece pelos 3 primeiros: eles sozinhos já mudam a forma como você conversa, vende e negocia.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Ordem</th>
+<th>Livro (título em português)</th>
+<th>Autor</th>
+<th>O que você aprende</th>
+<th>Capítulo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><em>As Armas da Persuasão</em> (Influence)</td>
+<td>Robert Cialdini</td>
+<td>Os gatilhos que fazem as pessoas dizerem sim</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td><em>Negocie como se sua vida dependesse disso</em> (Never Split the Difference)</td>
+<td>Chris Voss e Tahl Raz</td>
+<td>Negociação do ex-negociador de sequestros do FBI</td>
+<td>3</td>
+</tr>
+<tr>
+<td>3</td>
+<td><em>Como Fazer Amigos e Influenciar Pessoas</em></td>
+<td>Dale Carnegie</td>
+<td>A base: fazer as pessoas gostarem de você</td>
+<td>1, 5</td>
+</tr>
+<tr>
+<td>4</td>
+<td><em>Rápido e Devagar</em> (Thinking, Fast and Slow)</td>
+<td>Daniel Kahneman</td>
+<td>Como o cérebro decide e onde ele erra</td>
+<td>1</td>
+</tr>
+<tr>
+<td>5</td>
+<td><em>Pré-Suasão</em></td>
+<td>Robert Cialdini</td>
+<td>O que dizer <strong>antes</strong> do pedido</td>
+<td>2, 4</td>
+</tr>
+<tr>
+<td>6</td>
+<td><em>Ideias que Colam</em> (Made to Stick)</td>
+<td>Chip Heath e Dan Heath</td>
+<td>Mensagens que ninguém esquece</td>
+<td>4</td>
+</tr>
+<tr>
+<td>7</td>
+<td><em>Retórica</em></td>
+<td>Aristóteles</td>
+<td>Os 3 pilares da persuasão, há mais de 2.300 anos</td>
+<td>4</td>
+</tr>
+<tr>
+<td>8</td>
+<td><em>Como Chegar ao Sim</em> (Getting to Yes)</td>
+<td>Roger Fisher, William Ury e Bruce Patton</td>
+<td>Negociar pelos interesses, não pelas posições</td>
+<td>3</td>
+</tr>
+<tr>
+<td>9</td>
+<td><em>As 48 Leis do Poder</em></td>
+<td>Robert Greene</td>
+<td>Como o poder funciona (leia com senso crítico)</td>
+<td>5</td>
+</tr>
+<tr>
+<td>10</td>
+<td><em>As Leis da Natureza Humana</em></td>
+<td>Robert Greene</td>
+<td>Ler motivações e padrões das pessoas</td>
+<td>1, 5</td>
+</tr>
+<tr>
+<td>11</td>
+<td><em>In Sheep's Clothing</em> (sem edição brasileira conhecida)</td>
+<td>George K. Simon</td>
+<td>Como manipuladores agem e como se defender</td>
+<td>6</td>
+</tr>
+<tr>
+<td>12</td>
+<td><em>O Efeito Gaslighting</em> (The Gaslight Effect)</td>
+<td>Robin Stern</td>
+<td>Reconhecer e sair da manipulação emocional</td>
+<td>6</td>
+</tr>
+</tbody>
+</table></div>
+<p>Verifique a edição brasileira antes de comprar: alguns títulos mudam de nome entre editoras.</p>
+<p>Para os capítulos 7 a 10, acrescente:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Ordem</th>
+<th>Livro (título em português)</th>
+<th>Autor</th>
+<th>O que você aprende</th>
+<th>Capítulo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>13</td>
+<td><em>O que Todo Corpo Fala</em></td>
+<td>Joe Navarro e Marvin Karlins</td>
+<td>Linguagem corporal por um ex-agente do FBI</td>
+<td>8</td>
+</tr>
+<tr>
+<td>14</td>
+<td><em>A Linguagem das Emoções</em> (Emotions Revealed)</td>
+<td>Paul Ekman</td>
+<td>Como as emoções aparecem no rosto</td>
+<td>7, 8</td>
+</tr>
+<tr>
+<td>15</td>
+<td><em>O Mito do Carisma</em></td>
+<td>Olivia Fox Cabane</td>
+<td>Carisma como habilidade treinável</td>
+<td>9, 10</td>
+</tr>
+</tbody>
+</table></div>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c2" data-i="2"><h2>Capítulo 1 — Ler a Mente</h2>
+<p>Antes de influenciar alguém, você precisa entender como essa pessoa decide. E a resposta surpreende: quase nunca pela lógica.</p>
+<h3>Os dois pilotos do cérebro</h3>
+<p>O psicólogo Daniel Kahneman, Nobel de Economia em 2002, explica que pensamos com dois sistemas:</p>
+<ul>
+<li><strong>Sistema 1:</strong> rápido, automático, emocional. Decide em segundos. É ele que manda na maior parte do dia.</li>
+<li><strong>Sistema 2:</strong> lento, lógico, cansativo. Só entra em ação quando precisa, e cansa rápido.</li>
+</ul>
+<p>Quem persuade bem fala primeiro com o Sistema 1 (emoção, imagem, confiança) e depois dá ao Sistema 2 os motivos lógicos para justificar a decisão.</p>
+<h3>3 atalhos mentais que todo mundo tem</h3>
+<ol>
+<li><strong>Ancoragem:</strong> o primeiro número que aparece numa conversa puxa todos os outros. Quem fala o preço primeiro muitas vezes define o jogo.</li>
+<li><strong>Aversão à perda:</strong> perder dói mais do que ganhar dá prazer. "Você vai perder R$ 500 por mês" pesa mais que "você vai economizar R$ 500 por mês".</li>
+<li><strong>Enquadramento:</strong> a mesma informação muda conforme a moldura. "90% de chance de sucesso" convence mais que "10% de chance de fracasso".</li>
+</ol>
+<h3>Um mito que precisa morrer</h3>
+<p>Não existe "detector de mentira" pelo corpo. Uma grande revisão de estudos (Bond e DePaulo, 2006) mostrou que as pessoas acertam se alguém mente em cerca de 54% das vezes: pouco melhor que cara ou coroa. Olhar para o lado ou coçar o nariz não prova nada. O que funciona é observar <strong>mudanças</strong> no comportamento normal da pessoa e fazer boas perguntas.</p>
+<h3>Exercício 1.1 — Caçador de Atalhos (15 min por dia, 5 dias)</h3>
+<p>Todo dia, encontre 3 exemplos de ancoragem, aversão à perda ou enquadramento em anúncios, lojas, apps ou conversas. Anote:</p>
+<ul>
+<li>Onde estava</li>
+<li>Qual atalho usou</li>
+<li>O que fez você sentir vontade de agir</li>
+</ul>
+<p>Exemplos comuns: "de R$ 299 por R$ 149" (âncora), "últimas unidades" (perda), "plano mais escolhido" (enquadramento).</p>
+<h3>Exercício 1.2 — O Mapa de Motivação (10 min por pessoa)</h3>
+<p>Escolha 3 pessoas importantes (chefe, cliente, parceiro). Para cada uma, responda:</p>
+<ol>
+<li>O que ela mais quer? (dinheiro, reconhecimento, segurança, liberdade, pertencer a um grupo, tranquilidade)</li>
+<li>Do que ela mais tem medo?</li>
+<li>Que palavras ela usa muito? (elas mostram o que importa para ela)</li>
+<li>Como eu posso apresentar minhas ideias como um caminho para o que ela quer?</li>
+</ol>
+<h3>Exercício 1.3 — O Normal da Pessoa (3 conversas)</h3>
+<ol>
+<li>Nos primeiros 2 minutos de conversa, fale de assuntos leves e observe: velocidade da fala, postura, contato visual, gestos.</li>
+<li>Isso é o "normal" dela.</li>
+<li>Durante a conversa, note quando algo <strong>muda</strong> (fica mais rápido, trava, cruza os braços, desvia o assunto).</li>
+<li>Não conclua "está mentindo". Conclua "esse assunto mexe com ela" e faça uma pergunta aberta sobre ele.</li>
+</ol>
+<h3>Exercício 1.4 — A Regra do Nome e do Interesse (diário)</h3>
+<p>Dale Carnegie escreveu que o nome de uma pessoa é o som mais doce para ela. Durante uma semana:</p>
+<ul>
+<li>Guarde e use o nome de cada pessoa nova que conhecer.</li>
+<li>Faça pelo menos 2 perguntas sobre a vida dela antes de falar de você.</li>
+</ul>
+<h3>Checklist da semana 1</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c2-1"><span>Encontrei 15 atalhos mentais no mundo real</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-2"><span>Fiz o Mapa de Motivação de 3 pessoas</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-3"><span>Observei o "normal" em 3 conversas</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c2-4"><span>Usei o nome e fiz 2 perguntas a cada pessoa nova</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c3" data-i="3"><h2>Capítulo 2 — As 7 Armas da Influência</h2>
+<p>Robert Cialdini passou anos estudando vendedores, recrutadores e publicitários por dentro, às vezes trabalhando disfarçado com eles. Ele descobriu que quase toda influência usa poucos gatilhos. No livro original eram 6; no <em>Pré-Suasão</em> ele acrescentou o 7º, a unidade.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Arma</th>
+<th>Como funciona</th>
+<th>Uso de mestre (honesto)</th>
+<th>Como é usada contra você</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reciprocidade</td>
+<td>Quem recebe sente que deve devolver</td>
+<td>Dê algo útil primeiro, sem cobrar</td>
+<td>"Brinde" que cria dívida para uma venda cara</td>
+</tr>
+<tr>
+<td>Compromisso e coerência</td>
+<td>Depois de dizer sim a algo pequeno, queremos ser coerentes</td>
+<td>Peça um primeiro passo pequeno e real</td>
+<td>Pequenos sins que levam a um sim que você não queria</td>
+</tr>
+<tr>
+<td>Prova social</td>
+<td>Seguimos o que os outros fazem</td>
+<td>Mostre depoimentos e números verdadeiros</td>
+<td>Avaliações falsas, fila inventada</td>
+</tr>
+<tr>
+<td>Afeição</td>
+<td>Dizemos sim a quem gostamos</td>
+<td>Encontre pontos em comum reais, elogie com sinceridade</td>
+<td>Simpatia falsa para baixar sua guarda</td>
+</tr>
+<tr>
+<td>Autoridade</td>
+<td>Confiamos em especialistas</td>
+<td>Mostre sua experiência antes de dar o conselho</td>
+<td>Jaleco, título ou "especialista" de mentira</td>
+</tr>
+<tr>
+<td>Escassez</td>
+<td>O que é raro parece mais valioso</td>
+<td>Avise de prazos e limites que existem de verdade</td>
+<td>"Só hoje!" que se repete todo dia</td>
+</tr>
+<tr>
+<td>Unidade</td>
+<td>Confiamos em quem é "um de nós"</td>
+<td>Destaque uma identidade que você realmente compartilha</td>
+<td>"Nós contra eles" para impedir você de pensar</td>
+</tr>
+</tbody>
+</table></div>
+<h3>Exercício 2.1 — Reciprocidade de Verdade (toda semana)</h3>
+<p>Antes de pedir algo a alguém, dê primeiro. Escolha uma pessoa que você vai precisar no futuro e ofereça algo útil e personalizado: uma indicação, uma informação, uma ajuda. Cialdini mostra que o presente funciona melhor quando é <strong>significativo, inesperado e personalizado</strong>.</p>
+<h3>Exercício 2.2 — A Escada do Sim (3 situações)</h3>
+<p>Quer algo grande de alguém? Comece com um pedido pequeno, fácil e ligado ao objetivo.</p>
+<ul>
+<li>Grande: "Você me contrata?" → Pequeno: "Posso te mandar uma ideia de 1 página para o seu problema?"</li>
+<li>Grande: "Você me dá um aumento?" → Pequeno: "Podemos combinar quais resultados você gostaria de ver de mim nos próximos 3 meses?"</li>
+</ul>
+<p>Escreva 3 escadas suas e use pelo menos uma esta semana.</p>
+<h3>Exercício 2.3 — O Dossiê de Prova (1 hora, uma vez)</h3>
+<p>Monte seu "arsenal" de prova social e autoridade:</p>
+<ol>
+<li>3 resultados concretos que você já entregou, com números.</li>
+<li>3 pessoas que podem falar bem de você. Peça um depoimento curto a cada uma.</li>
+<li>Uma frase de apresentação de 15 segundos que mostra sua experiência sem parecer arrogante. Exemplo: "Nos últimos 3 anos ajudei 40 lojas a vender pela internet."</li>
+</ol>
+<h3>Exercício 2.4 — Auditoria de Ataques (7 dias)</h3>
+<p>Toda vez que você sentir vontade de comprar ou concordar rápido, pare e pergunte: "Qual das 7 armas está sendo usada em mim agora?" Anote no caderno. Depois de 7 dias você vai ver os gatilhos em tudo, e eles vão perder o poder sobre você.</p>
+<h3>Exercício 2.5 — Pontos em Comum (3 conversas)</h3>
+<p>Em cada conversa nova, encontre 3 coisas reais em comum com a pessoa (cidade, time, profissão, um problema parecido) antes de fazer qualquer pedido.</p>
+<h3>Checklist da semana 2</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c3-1"><span>Dei algo útil e personalizado antes de pedir</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-2"><span>Escrevi 3 Escadas do Sim e usei uma</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-3"><span>Montei meu Dossiê de Prova</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-4"><span>Fiz a Auditoria de Ataques por 7 dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c3-5"><span>Achei 3 pontos em comum em 3 conversas</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c4" data-i="4"><h2>Capítulo 3 — Negociação de Refém</h2>
+<p>Chris Voss foi o principal negociador internacional de sequestros do FBI. A ideia central dele: <strong>as pessoas não decidem pela lógica, decidem pela emoção</strong>. Por isso a arma mais forte não é o argumento, é a "empatia tática": mostrar que você entende o que o outro sente, sem necessariamente concordar.</p>
+<h3>O arsenal de Voss</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Técnica</th>
+<th>O que fazer</th>
+<th>Exemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Espelhamento</td>
+<td>Repita as últimas 1 a 3 palavras da pessoa, em tom de pergunta, e fique em silêncio</td>
+<td>"...o prazo está apertado?"</td>
+</tr>
+<tr>
+<td>Rotulagem</td>
+<td>Dê nome à emoção que você percebe</td>
+<td>"Parece que você está preocupado com o custo."</td>
+</tr>
+<tr>
+<td>Auditoria de acusações</td>
+<td>Diga você mesmo as críticas que o outro pensa de você, antes dele</td>
+<td>"Você vai achar que estou pedindo demais..."</td>
+</tr>
+<tr>
+<td>Perguntas calibradas</td>
+<td>Perguntas com "Como" e "O que" que fazem o outro resolver seu problema</td>
+<td>"Como eu consigo fazer isso com esse orçamento?"</td>
+</tr>
+<tr>
+<td>Buscar o "não"</td>
+<td>Faça perguntas em que "não" significa avançar; o "não" deixa a pessoa segura</td>
+<td>"Seria uma ideia ruim a gente conversar 10 minutos?"</td>
+</tr>
+<tr>
+<td>"É isso mesmo"</td>
+<td>Resuma o ponto de vista do outro até ele dizer "é isso mesmo"</td>
+<td>"Então o que você quer é segurança, não preço. É isso?"</td>
+</tr>
+<tr>
+<td>Voz de rádio da madrugada</td>
+<td>Fale devagar, grave e calmo nos momentos tensos</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<h3>A arma secreta de Getting to Yes: a sua alternativa</h3>
+<p>No clássico de Harvard <em>Como Chegar ao Sim</em>, a regra de ouro é saber sua <strong>MAPAN</strong>: Melhor Alternativa à Negociação de um Acordo. Quem tem uma boa alternativa não precisa aceitar um acordo ruim. Antes de qualquer negociação, escreva: "Se eu não fechar isso, o que eu faço?" Quanto melhor essa resposta, mais forte você está.</p>
+<h3>Exercício 3.1 — Espelho e Silêncio (5 conversas)</h3>
+<ol>
+<li>Em 5 conversas do dia a dia, espelhe 2 vezes cada: repita as últimas palavras da pessoa com tom de curiosidade.</li>
+<li>Depois do espelho, fique <strong>4 segundos em silêncio</strong>. A pessoa vai continuar falando e revelar mais.</li>
+<li>Anote o que ela revelou que não teria dito sem o espelho.</li>
+</ol>
+<h3>Exercício 3.2 — Rotular a Tempestade (3 vezes na semana)</h3>
+<p>Quando alguém estiver irritado, frustrado ou desconfiado, não argumente. Rotule: "Parece que...", "Soa como se...", "Dá a impressão de que...". Nunca use "eu" ("eu entendo que você..."), porque coloca o foco em você. Depois do rótulo, silêncio. Anote como a emoção da pessoa mudou.</p>
+<h3>Exercício 3.3 — Auditoria de Acusações (antes de toda conversa difícil)</h3>
+<ol>
+<li>Liste tudo de negativo que a outra pessoa pode estar pensando de você ou da sua proposta.</li>
+<li>Abra a conversa dizendo esses pontos você mesmo. Exemplo: "Você provavelmente vai achar que estou sendo ingrato por pedir um aumento agora, ainda mais com a empresa apertando os custos."</li>
+<li>Isso desarma as defesas antes da luta começar.</li>
+</ol>
+<h3>Exercício 3.4 — Treino na Loja (uma vez por semana)</h3>
+<p>Treine em negociações pequenas e sem risco: feira, loja de móveis, renovação de plano de internet ou celular.</p>
+<ol>
+<li>Antes, escreva sua MAPAN ("se não der desconto, compro em outro lugar ou cancelo").</li>
+<li>Use pelo menos uma pergunta calibrada: "Como posso conseguir um preço melhor?" ou "O que você pode fazer por mim para eu continuar cliente?"</li>
+<li>Anote o resultado: valor inicial, valor final, técnica usada.</li>
+</ol>
+<h3>Exercício 3.5 — Ensaio da Grande Negociação (1 hora, antes de uma negociação importante)</h3>
+<p>Escreva numa folha:</p>
+<ol>
+<li>Meu objetivo ideal e meu mínimo aceitável.</li>
+<li>Minha MAPAN e a provável MAPAN do outro lado.</li>
+<li>O que o outro lado mais quer e mais teme (Mapa de Motivação, Capítulo 1).</li>
+<li>Minha auditoria de acusações.</li>
+<li>3 perguntas calibradas.</li>
+<li>Ensaie em voz alta com um amigo fazendo o papel do outro lado.</li>
+</ol>
+<h3>Checklist da semana 3</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c4-1"><span>Espelhei em 5 conversas e usei o silêncio</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-2"><span>Rotulei emoções 3 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-3"><span>Fiz uma Auditoria de Acusações antes de uma conversa difícil</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-4"><span>Negociei algo pequeno e anotei o resultado</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c4-5"><span>Preparei a folha de Ensaio para uma negociação real</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c5" data-i="5"><h2>Capítulo 4 — Palavras que Entram na Cabeça</h2>
+<p>Quem domina as palavras domina a sala. Há mais de 2.300 anos, Aristóteles já tinha descoberto os 3 pilares que ainda hoje sustentam todo discurso que convence.</p>
+<h3>Os 3 pilares de Aristóteles</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Pilar</th>
+<th>Pergunta que a pessoa faz</th>
+<th>Como construir</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ethos (credibilidade)</td>
+<td>"Por que devo confiar em você?"</td>
+<td>Experiência, resultados, coerência entre o que fala e o que faz</td>
+</tr>
+<tr>
+<td>Pathos (emoção)</td>
+<td>"Por que isso me importa?"</td>
+<td>Histórias, imagens, falar do medo e do desejo da pessoa</td>
+</tr>
+<tr>
+<td>Logos (lógica)</td>
+<td>"Isso faz sentido?"</td>
+<td>Números, exemplos, passo a passo claro</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ordem que funciona: primeiro ethos (confiança), depois pathos (vontade), por último logos (justificativa).</p>
+<h3>A palavra mágica: "porque"</h3>
+<p>Num experimento clássico de Ellen Langer (1978), citado por Cialdini, uma pessoa pedia para furar a fila da máquina de xerox. Sem motivo, cerca de 60% deixaram. Com "porque preciso tirar cópias" (um motivo que não diz nada!), cerca de 93% deixaram. Para pedidos pequenos, o cérebro ouve "porque" e relaxa. Mas atenção: quando o pedido era grande (20 páginas), o motivo vazio não funcionou (24%, igual a sem motivo), e só um motivo real subiu para 42%. Por isso: <strong>sempre dê um motivo real quando pedir algo</strong>. E desconfie quando alguém te der um motivo vazio.</p>
+<h3>As 6 regras das ideias que colam</h3>
+<p>Os irmãos Chip e Dan Heath estudaram por que algumas mensagens são lembradas e outras somem. As que ficam são:</p>
+<ol>
+<li><strong>Simples:</strong> uma ideia central, não dez.</li>
+<li><strong>Inesperadas:</strong> quebram a expectativa e geram curiosidade.</li>
+<li><strong>Concretas:</strong> coisas que dá para ver e tocar, não conceitos abstratos.</li>
+<li><strong>Críveis:</strong> têm prova, detalhe ou alguém confiável por trás.</li>
+<li><strong>Emocionais:</strong> fazem a pessoa sentir algo.</li>
+<li><strong>Histórias:</strong> colocam a ideia dentro de uma narrativa.</li>
+</ol>
+<h3>Exercício 4.1 — O Discurso de 60 Segundos (diário por 7 dias)</h3>
+<p>Escolha algo que você quer vender ou defender (você mesmo numa entrevista, um produto, uma ideia no trabalho). Escreva e grave um discurso de 60 segundos com esta estrutura:</p>
+<ol>
+<li><strong>Ethos (10 s):</strong> quem é você e por que vale ouvir.</li>
+<li><strong>Pathos (20 s):</strong> o problema que dói na pessoa, com uma imagem concreta.</li>
+<li><strong>Logos (20 s):</strong> sua solução com 1 número ou prova.</li>
+<li><strong>Pedido (10 s):</strong> o próximo passo claro, com um "porque".</li>
+</ol>
+<p>Ouça a gravação, corte palavras inúteis, grave de novo. Todo dia uma versão melhor.</p>
+<h3>Exercício 4.2 — A História de Combate (30 min, uma vez)</h3>
+<p>Todo líder tem uma história pessoal que explica quem ele é. Escreva a sua com esta estrutura:</p>
+<ol>
+<li><strong>Antes:</strong> como era sua vida ou o problema.</li>
+<li><strong>O golpe:</strong> o momento difícil ou a virada.</li>
+<li><strong>A luta:</strong> o que você fez.</li>
+<li><strong>Depois:</strong> o resultado e a lição.</li>
+</ol>
+<p>Máximo 2 minutos falada. Conte para 3 pessoas esta semana e ajuste conforme a reação delas.</p>
+<h3>Exercício 4.3 — Reenquadrar (10 frases)</h3>
+<p>Pegue 10 frases negativas comuns e reescreva com outro enquadramento, sem mentir:</p>
+<ul>
+<li>"É caro" → "Custa R$ 3 por dia, menos que um café."</li>
+<li>"Nunca fiz isso" → "Vou chegar sem vícios e com vontade de aprender rápido."</li>
+<li>"Deu errado" → "Descobrimos um caminho que não funciona antes de gastar mais."</li>
+</ul>
+<h3>Exercício 4.4 — Pré-Suasão: preparar o terreno (3 vezes)</h3>
+<p>Cialdini mostra que o que você diz <strong>antes</strong> do pedido muda a resposta. Antes de um pedido importante, abra com uma pergunta que coloque a pessoa no estado certo. Exemplo: antes de propor um projeto novo, pergunte "Você se considera alguém que gosta de testar coisas novas?". Quem responde "sim" tende a ser coerente com isso.</p>
+<h3>Checklist da semana 4</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c5-1"><span>Gravei 7 versões do Discurso de 60 Segundos</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-2"><span>Escrevi e contei minha História de Combate 3 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-3"><span>Reenquadrei 10 frases</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-4"><span>Usei "porque" em todos os pedidos da semana</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c5-5"><span>Preparei o terreno antes de 3 pedidos</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c6" data-i="6"><h2>Capítulo 5 — Presença e Poder</h2>
+<p>Antes de você abrir a boca, as pessoas já decidiram se vão te levar a sério. Presença é calma, clareza e controle de si mesmo. Quem precisa provar demais transmite fraqueza; quem fala pouco e com segurança transmite poder.</p>
+<h3>Robert Greene: o que usar e o que jogar fora</h3>
+<p><em>As 48 Leis do Poder</em> é um dos livros mais lidos sobre poder, e um dos mais perigosos se lido sem filtro. Ele descreve como pessoas poderosas agiram ao longo da história, não como você deve viver. Algumas leis são sabedoria pura; outras destroem reputações.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Lei</th>
+<th>Use assim</th>
+<th>Veredito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4 — Diga sempre menos que o necessário</td>
+<td>Fale menos, com mais precisão; quem fala demais se entrega</td>
+<td>Use</td>
+</tr>
+<tr>
+<td>1 — Nunca ofusque o mestre</td>
+<td>Faça seu chefe brilhar com seu trabalho; cresça junto, não contra</td>
+<td>Use</td>
+</tr>
+<tr>
+<td>25 — Recrie-se</td>
+<td>Escolha conscientemente quem você quer ser e construa essa imagem com ações</td>
+<td>Use</td>
+</tr>
+<tr>
+<td>28 — Aja com ousadia</td>
+<td>Hesitação transmite fraqueza; quando decidir, vá com tudo</td>
+<td>Use</td>
+</tr>
+<tr>
+<td>29 — Planeje até o fim</td>
+<td>Pense nas consequências de cada passo antes de começar</td>
+<td>Use</td>
+</tr>
+<tr>
+<td>35 — Domine a arte do momento certo</td>
+<td>Saiba quando falar, pedir e esperar</td>
+<td>Use</td>
+</tr>
+<tr>
+<td>16 — Use a ausência para aumentar o respeito</td>
+<td>Não esteja sempre disponível; valorize seu tempo</td>
+<td>Use com cuidado: em excesso vira desinteresse</td>
+</tr>
+<tr>
+<td>7 — Deixe outros trabalharem e fique com o crédito</td>
+<td>—</td>
+<td>Jogue fora: destrói a lealdade da equipe</td>
+</tr>
+<tr>
+<td>15 — Esmague o inimigo totalmente</td>
+<td>—</td>
+<td>Jogue fora: cria inimigos para a vida toda</td>
+</tr>
+</tbody>
+</table></div>
+<h3>Os 4 sinais de presença</h3>
+<ol>
+<li><strong>Velocidade:</strong> fale mais devagar do que você acha necessário. Pressa parece nervosismo.</li>
+<li><strong>Silêncio:</strong> pausas antes de responder mostram que você pensa, não reage.</li>
+<li><strong>Final firme:</strong> termine as frases com o tom descendo, não subindo como pergunta.</li>
+<li><strong>Sem pedir desculpas à toa:</strong> troque "desculpa incomodar, mas..." por "tenho uma pergunta rápida".</li>
+</ol>
+<h3>Exercício 5.1 — A Regra dos 3 Segundos (diário)</h3>
+<p>Antes de responder qualquer pergunta importante, conte mentalmente até 3. Isso elimina respostas impulsivas e dá peso ao que você diz. Anote uma situação por dia em que a pausa fez diferença.</p>
+<h3>Exercício 5.2 — 70/30 (5 conversas)</h3>
+<p>Em 5 conversas, ouça 70% do tempo e fale 30%. Quem ouve mais coleta mais informação, e informação é poder. No fim, anote 3 coisas que você descobriu sobre a pessoa.</p>
+<h3>Exercício 5.3 — O "Não" Limpo (3 vezes na semana)</h3>
+<p>Diga não a pedidos que você não quer aceitar, sem mentir e sem justificar demais. Modelo: "Obrigado por pensar em mim, mas não vou conseguir." Ponto final. Quem não sabe dizer não está nas mãos de qualquer um.</p>
+<h3>Exercício 5.4 — A Câmera Não Mente (uma vez por semana)</h3>
+<p>Grave um vídeo de 2 minutos falando sobre um assunto que você domina. Assista sem som (só o corpo) e depois só com som (só a voz). Anote:</p>
+<ul>
+<li>Quantos "é...", "tipo", "né"</li>
+<li>Se as mãos ficam inquietas</li>
+<li>Se a voz sobe no fim das frases</li>
+</ul>
+<p>Corrija uma coisa por semana.</p>
+<h3>Exercício 5.5 — Lei do Planejamento até o Fim (antes de uma decisão grande)</h3>
+<p>Para uma decisão importante, escreva 3 cenários: melhor caso, caso provável e pior caso. Para cada um, escreva sua próxima jogada. Quem pensa 3 passos à frente nunca é pego de surpresa.</p>
+<h3>Checklist da semana 5</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c6-1"><span>Usei a Regra dos 3 Segundos todos os dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-2"><span>Fiz 5 conversas no 70/30</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-3"><span>Disse 3 "nãos" limpos</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-4"><span>Gravei e analisei meu vídeo</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c6-5"><span>Planejei 3 cenários para uma decisão real</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c7" data-i="7"><h2>Capítulo 6 — O Lado Sombrio</h2>
+<p>O Assassino de verdade enxerga a manipulação de longe e desarma na hora. Este capítulo é o seu escudo: as táticas mais usadas por manipuladores, como reconhecer cada uma e o que fazer.</p>
+<p>O psicólogo George K. Simon, em <em>In Sheep's Clothing</em>, explica que manipuladores raramente atacam de frente. Eles usam táticas "encobertas": a pessoa sente que algo está errado, mas não consegue explicar o quê. Dar nome à tática é metade da defesa.</p>
+<h3>O catálogo das táticas sujas</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tática</th>
+<th>Como aparece</th>
+<th>Frase típica</th>
+<th>Sua defesa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gaslighting</td>
+<td>Faz você duvidar da sua memória e percepção</td>
+<td>"Isso nunca aconteceu, você está imaginando coisas."</td>
+<td>Anote fatos com data; confie no registro, não na discussão</td>
+</tr>
+<tr>
+<td>Bombardeio de amor</td>
+<td>Elogios e atenção exagerados no início, para criar dependência</td>
+<td>"Nunca conheci alguém como você" (na primeira semana)</td>
+<td>Desconfie de intensidade rápida demais; observe as ações ao longo de meses</td>
+</tr>
+<tr>
+<td>Chantagem de culpa</td>
+<td>Usa sua culpa para conseguir o que quer</td>
+<td>"Depois de tudo que eu fiz por você..."</td>
+<td>"Agradeço o que você fez, e mesmo assim minha resposta é não."</td>
+</tr>
+<tr>
+<td>Falsa urgência</td>
+<td>Pressa para impedir você de pensar</td>
+<td>"A oferta acaba em 10 minutos!"</td>
+<td>Regra das 24 horas: decisão importante nunca na hora</td>
+</tr>
+<tr>
+<td>Mudar as regras do jogo</td>
+<td>Cada vez que você cumpre o pedido, aparece outra exigência</td>
+<td>"Ok, mas agora também precisa..."</td>
+<td>Combine por escrito o que é "pronto" antes de começar</td>
+</tr>
+<tr>
+<td>Inversão de culpa</td>
+<td>Você reclama e, no fim, é você quem pede desculpa</td>
+<td>"Você está me atacando! Eu que sou a vítima aqui."</td>
+<td>Volte ao assunto original: "Podemos falar disso depois. Agora estamos falando de X."</td>
+</tr>
+<tr>
+<td>Triangulação</td>
+<td>Coloca uma terceira pessoa para gerar ciúme ou competição</td>
+<td>"Fulano faria isso por mim sem reclamar."</td>
+<td>Não entre na comparação; fale direto com quem está na sua frente</td>
+</tr>
+<tr>
+<td>Isolamento</td>
+<td>Afasta você de amigos e família</td>
+<td>"Eles não gostam de você como eu."</td>
+<td>Mantenha sua rede; isolamento é um dos sinais mais graves</td>
+</tr>
+<tr>
+<td>Tratamento de silêncio</td>
+<td>Some ou para de falar como punição</td>
+<td>—</td>
+<td>Não corra atrás; diga uma vez que está disponível para conversar</td>
+</tr>
+<tr>
+<td>Preço baixo enganoso</td>
+<td>Fecha o acordo com uma condição ótima e depois muda</td>
+<td>"O gerente não aprovou aquele preço, mas..."</td>
+<td>Se as condições mudaram, a decisão também pode mudar: levante e saia</td>
+</tr>
+</tbody>
+</table></div>
+<h3>O Protocolo do Escudo (4 passos)</h3>
+<ol>
+<li><strong>Perceba o sinal:</strong> confusão, culpa, pressa ou medo repentino numa conversa são alarmes.</li>
+<li><strong>Ganhe tempo:</strong> "Vou pensar e te respondo amanhã." Ninguém honesto se ofende com isso.</li>
+<li><strong>Dê nome à tática (só para você):</strong> "Isso é falsa urgência", "isso é chantagem de culpa".</li>
+<li><strong>Responda pelos fatos e pelos seus valores</strong>, não pela emoção que tentaram criar.</li>
+</ol>
+<h3>Exercício 6.1 — O Diário de Fatos (contínuo, se precisar)</h3>
+<p>Se você sente que alguém faz você duvidar de si mesmo, anote logo depois de cada conversa importante: data, o que foi dito, o que você sentiu. Em poucas semanas o padrão aparece no papel, e ninguém consegue apagar isso.</p>
+<h3>Exercício 6.2 — O Disco Arranhado (treino em dupla)</h3>
+<p>Com um amigo, simule uma pressão (vendedor insistente, cobrança injusta). Sua única tarefa é repetir a mesma frase calma, sem se justificar: "Entendo, e minha resposta continua sendo não." Repita 5 vezes. Treine até sair natural.</p>
+<h3>Exercício 6.3 — Caça às Táticas (7 dias)</h3>
+<p>Assista a um filme, série ou reality show (ou observe propagandas e política) e identifique cada tática do catálogo acima. Meta: encontrar pelo menos 6 das 10. Quanto mais você vê na tela, mais rápido reconhece na vida real.</p>
+<h3>Exercício 6.4 — Raio-X do seu Círculo (20 min, uma vez)</h3>
+<p>Para as 5 pessoas que mais influenciam suas decisões, responda: depois de conversar com ela, eu costumo me sentir mais forte e claro, ou mais confuso, culpado e pequeno? Se a resposta for sempre a segunda, observe essa relação com atenção.</p>
+<h3>Quando é sério</h3>
+<p>Se você está numa relação com isolamento, ameaças ou medo constante, isso não é jogo de persuasão: é abuso. Converse com alguém de confiança e procure ajuda profissional. No Brasil, o CVV atende 24 horas pelo telefone 188, de graça.</p>
+<h3>Checklist da semana 6</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c7-1"><span>Decorei as 10 táticas do catálogo</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-2"><span>Usei a Regra das 24 horas numa decisão real</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-3"><span>Treinei o Disco Arranhado 5 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-4"><span>Encontrei 6 táticas na Caça às Táticas</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c7-5"><span>Fiz o Raio-X do meu Círculo</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c8" data-i="8"><h2>Capítulo 7 — O Motor das Emoções</h2>
+<p>Quem não controla as próprias emoções é controlado por quem sabe provocá-las. Raiva, medo e vergonha são os botões que vendedores, manipuladores e adversários apertam. Este capítulo ensina como esse motor funciona e como colocar a mão no volante.</p>
+<h3>O que é uma emoção</h3>
+<p>Uma emoção é um alarme do cérebro que prepara o corpo para agir <strong>antes</strong> de você pensar. Ela acontece em 3 camadas ao mesmo tempo:</p>
+<ol>
+<li><strong>Corpo:</strong> coração acelera, músculos tensionam, respiração muda.</li>
+<li><strong>Mente:</strong> pensamentos automáticos ("ele me desrespeitou", "vou passar vergonha").</li>
+<li><strong>Impulso:</strong> vontade de fazer algo agora (atacar, fugir, se esconder, se aproximar).</li>
+</ol>
+<p>Você não escolhe sentir. Mas pode escolher o que fazer com o impulso. Esse espaço entre sentir e agir é onde mora o seu poder.</p>
+<h3>As 6 emoções básicas</h3>
+<p>O psicólogo Paul Ekman estudou expressões faciais em várias culturas e propôs 6 emoções básicas reconhecidas no mundo todo.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Emoção</th>
+<th>O que ela quer te dizer</th>
+<th>Impulso</th>
+<th>Sinais comuns no rosto</th>
+<th>Como dominar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Raiva</td>
+<td>"Algo está me bloqueando ou é injusto"</td>
+<td>Atacar</td>
+<td>Sobrancelhas baixas e juntas, lábios apertados</td>
+<td>Pausa de 10 minutos antes de responder; fale sobre o fato, não sobre a pessoa</td>
+</tr>
+<tr>
+<td>Medo</td>
+<td>"Perigo à frente"</td>
+<td>Fugir ou travar</td>
+<td>Olhos bem abertos, sobrancelhas levantadas e juntas</td>
+<td>Pergunte "qual é o pior caso real e o que eu faria?"</td>
+</tr>
+<tr>
+<td>Tristeza</td>
+<td>"Perdi algo importante"</td>
+<td>Recolher-se</td>
+<td>Cantos da boca para baixo, sobrancelhas internas levantadas</td>
+<td>Aceite, fale com alguém de confiança, mexa o corpo</td>
+</tr>
+<tr>
+<td>Nojo</td>
+<td>"Isso é tóxico, afaste"</td>
+<td>Rejeitar</td>
+<td>Nariz franzido, lábio superior levantado</td>
+<td>Pergunte se é o fato ou a pessoa que te causa rejeição</td>
+</tr>
+<tr>
+<td>Surpresa</td>
+<td>"Algo inesperado, preste atenção"</td>
+<td>Parar e observar</td>
+<td>Sobrancelhas altas, boca aberta</td>
+<td>Use o momento para coletar informação antes de reagir</td>
+</tr>
+<tr>
+<td>Alegria</td>
+<td>"Isso é bom, repita"</td>
+<td>Aproximar-se</td>
+<td>Sorriso que também enruga os cantos dos olhos</td>
+<td>Cuidado com decisões grandes na euforia</td>
+</tr>
+</tbody>
+</table></div>
+<h3>O sequestro emocional</h3>
+<p>Quando a emoção é muito forte, a parte do cérebro que planeja e pondera perde força, e o alarme assume o controle. É nesse estado que as pessoas falam o que não devem, compram o que não precisam e assinam o que não leram. <strong>Manipuladores tentam te colocar nesse estado de propósito.</strong> Regra de ouro: emoção alta, decisão adiada.</p>
+<h3>3 ferramentas com prova científica</h3>
+<ol>
+<li><strong>Dê nome ao que sente.</strong> Num estudo de 2007 com ressonância magnética, Matthew Lieberman e colegas mostraram que colocar a emoção em palavras ("estou com raiva") diminuiu a atividade da amígdala, a região do alarme.</li>
+<li><strong>Reinterprete em vez de engolir.</strong> Pesquisas de James Gross e Oliver John (2003) associaram a reinterpretação (mudar o significado da situação) a mais emoções positivas e melhores relacionamentos. Já engolir a emoção e fingir que nada aconteceu foi associado ao contrário.</li>
+<li><strong>Respire com o suspiro cíclico.</strong> Um estudo de Stanford publicado em 2023 comparou exercícios de respiração com meditação: 5 minutos por dia de "suspiro cíclico" melhoraram mais o humor do que a meditação. Como fazer: inspire pelo nariz, dê uma segunda inspiração curta para encher o pulmão, e solte o ar bem devagar pela boca.</li>
+</ol>
+<h3>Controlar a emoção dos outros</h3>
+<p>Emoção é contagiosa. Quem está mais calmo na sala acaba definindo o clima. Para baixar a temperatura de alguém:</p>
+<ul>
+<li>Fale mais devagar e mais baixo que a pessoa.</li>
+<li>Rotule a emoção dela (Capítulo 3): "Parece que isso te deixou muito frustrado."</li>
+<li>Não argumente enquanto ela estiver no pico. Primeiro a emoção desce, depois a lógica entra.</li>
+</ul>
+<h3>Exercício 7.1 — O Diário das Emoções (5 min por noite, 7 dias)</h3>
+<p>Toda noite, anote a emoção mais forte do dia:</p>
+<ol>
+<li>O que aconteceu (só o fato)</li>
+<li>O que senti, com a palavra mais precisa possível (não "mal", mas "humilhado", "ansioso", "frustrado")</li>
+<li>Onde senti no corpo</li>
+<li>O que fiz</li>
+<li>O que a melhor versão de mim teria feito</li>
+</ol>
+<h3>Exercício 7.2 — Nomear para Domar (sempre que a emoção subir)</h3>
+<p>No momento em que sentir raiva, medo ou vergonha, diga mentalmente: "Estou sentindo ___." Só isso. Depois decida o que fazer. Anote quantas vezes conseguiu na semana.</p>
+<h3>Exercício 7.3 — Três Outras Histórias (3 vezes na semana)</h3>
+<p>Quando algo te irritar, escreva 3 explicações diferentes para o que aconteceu. Exemplo: alguém não respondeu sua mensagem.</p>
+<ul>
+<li>Está me ignorando.</li>
+<li>Está num dia caótico.</li>
+<li>Viu, mas esqueceu de responder.</li>
+</ul>
+<p>Escolha a explicação mais provável, não a que mais dói.</p>
+<h3>Exercício 7.4 — Suspiro Cíclico (5 min por dia, 4 semanas)</h3>
+<p>Todo dia, 5 minutos de suspiro cíclico, de preferência no mesmo horário. Antes e depois, dê uma nota de 0 a 10 para sua tensão. Anote os números.</p>
+<h3>Exercício 7.5 — Checagem do Corpo (antes de conversas importantes)</h3>
+<p>Antes de uma reunião, discussão ou decisão, pergunte: estou com fome, cansado, sem dormir ou já irritado com outra coisa? Se sim, resolva isso primeiro ou adie. Um corpo esgotado transforma pequenos problemas em guerras.</p>
+<h3>Checklist da semana 7</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c8-1"><span>Fiz o Diário das Emoções por 7 noites</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c8-2"><span>Nomeei a emoção no momento pelo menos 5 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c8-3"><span>Escrevi Três Outras Histórias 3 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c8-4"><span>Fiz o Suspiro Cíclico 6 dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c8-5"><span>Fiz a Checagem do Corpo antes de uma conversa importante</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c9" data-i="9"><h2>Capítulo 8 — Ler o Corpo</h2>
+<p>O corpo fala o tempo todo, mas não fala em código secreto. Ele mostra <strong>conforto ou desconforto, interesse ou desinteresse, confiança ou insegurança</strong>. Quem lê esses sinais sabe quando insistir, quando recuar e qual assunto mexeu com a pessoa.</p>
+<p>Joe Navarro, ex-agente de contrainteligência do FBI e autor de <em>O que Todo Corpo Fala</em>, resume assim: o corpo reage primeiro ao conforto e ao desconforto, e essas reações são mais difíceis de fingir do que as palavras.</p>
+<h3>As 4 leis da leitura corporal</h3>
+<ol>
+<li><strong>Conheça o normal.</strong> Cada pessoa tem seu jeito. Alguém que sempre cruza os braços não está "fechado": está sendo ele mesmo. Observe os primeiros minutos de conversa leve (Exercício 1.3).</li>
+<li><strong>Procure mudanças.</strong> O sinal importante é o que <strong>muda</strong> quando um assunto aparece.</li>
+<li><strong>Exija um conjunto.</strong> Um sinal sozinho não diz nada. Três sinais na mesma direção, ao mesmo tempo, começam a dizer algo.</li>
+<li><strong>Considere o contexto.</strong> Braços cruzados numa sala gelada é frio, não defesa.</li>
+</ol>
+<p>E nunca esqueça: o corpo mostra <strong>emoção</strong>, não <strong>mentira</strong>. Desconforto pode ser medo de não acreditarem, vergonha ou só cansaço. Lembre do estudo do Capítulo 1: mesmo prestando atenção, as pessoas acertam só cerca de 54% das mentiras.</p>
+<h3>Mapa dos sinais mais comuns</h3>
+<p>Sinais que <strong>costumam</strong> indicar algo, segundo pesquisas e a experiência de especialistas como Navarro. São pistas para fazer perguntas, nunca provas.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Parte do corpo</th>
+<th>Sinal</th>
+<th>O que costuma indicar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rosto</td>
+<td>Sorriso que enruga os cantos dos olhos</td>
+<td>Alegria verdadeira (o falso costuma mexer só a boca)</td>
+</tr>
+<tr>
+<td>Rosto</td>
+<td>Lábios apertados até "sumirem"</td>
+<td>Tensão, algo incomodou ou está sendo segurado</td>
+</tr>
+<tr>
+<td>Rosto</td>
+<td>Sobrancelhas sobem rápido ao te ver</td>
+<td>Reconhecimento e simpatia</td>
+</tr>
+<tr>
+<td>Olhos</td>
+<td>Esfregar ou cobrir os olhos, piscar muito de repente</td>
+<td>Algo que a pessoa não quer "ver" ou ouvir</td>
+</tr>
+<tr>
+<td>Olhos</td>
+<td>Pupilas e olhar atentos, contato visual mantido</td>
+<td>Interesse</td>
+</tr>
+<tr>
+<td>Pescoço</td>
+<td>Tocar o pescoço, a nuca ou a gravata</td>
+<td>Autoacalmar-se diante de estresse</td>
+</tr>
+<tr>
+<td>Mãos</td>
+<td>Pontas dos dedos unidas formando um "campanário"</td>
+<td>Confiança no que está dizendo</td>
+</tr>
+<tr>
+<td>Mãos</td>
+<td>Esconder as mãos, esfregar as palmas nas pernas</td>
+<td>Insegurança ou nervosismo</td>
+</tr>
+<tr>
+<td>Tronco</td>
+<td>Inclinar o corpo na sua direção</td>
+<td>Interesse e conforto</td>
+</tr>
+<tr>
+<td>Tronco</td>
+<td>Virar o tronco para longe, colocar objetos entre vocês (bolsa, copo)</td>
+<td>Desconforto, criar barreira</td>
+</tr>
+<tr>
+<td>Pés</td>
+<td>Pés apontando para você</td>
+<td>Engajamento</td>
+</tr>
+<tr>
+<td>Pés</td>
+<td>Pés virando para a porta</td>
+<td>Quer ir embora</td>
+</tr>
+<tr>
+<td>Voz</td>
+<td>Fica mais aguda, rápida ou com mais pausas no meio de um assunto</td>
+<td>Esse assunto gera tensão</td>
+</tr>
+<tr>
+<td>Geral</td>
+<td>Palavras dizem "sim" e a cabeça balança "não"</td>
+<td>Incongruência: pergunte mais</td>
+</tr>
+</tbody>
+</table></div>
+<h3>O que fazer quando perceber um sinal</h3>
+<p>Não acuse ("você está mentindo"). Use o sinal para conduzir:</p>
+<ul>
+<li>Desconforto num assunto → rotule e pergunte: "Parece que esse ponto te preocupa. O que te incomoda nele?"</li>
+<li>Interesse → aprofunde esse assunto, é ali que está o "sim".</li>
+<li>Vontade de ir embora → encurte e marque uma próxima conversa. Insistir agora queima o terreno.</li>
+</ul>
+<h3>Exercício 8.1 — TV sem Som (15 min, 5 dias)</h3>
+<p>Assista a uma entrevista, debate ou reality show sem som. Anote os sinais de conforto e desconforto de cada pessoa e tente adivinhar o assunto ou a emoção. Depois volte com som e confira. Anote a sua taxa de acerto no começo e no fim da semana.</p>
+<h3>Exercício 8.2 — O Observador do Café (20 min, 2 vezes)</h3>
+<p>Em uma praça de alimentação ou café, observe casais e grupos de longe, sem encarar ninguém. Para cada grupo, responda: quem lidera a conversa? Quem quer ir embora? Quem está interessado em quem? Quais sinais te levaram a essa conclusão?</p>
+<h3>Exercício 8.3 — Caça ao Conjunto (3 conversas)</h3>
+<p>Em 3 conversas reais, só tire uma conclusão quando encontrar <strong>3 sinais na mesma direção</strong>. Anote os 3 sinais e o que você fez com a informação.</p>
+<h3>Exercício 8.4 — Seu Próprio Corpo (uma vez)</h3>
+<p>Peça a alguém para te filmar escondido de longe numa conversa normal (com sua permissão, só você não sabe o momento). Assista e anote quais sinais de desconforto você mostra sem perceber. É isso que os outros estão lendo em você.</p>
+<h3>Checklist da semana 8</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c9-1"><span>Fiz a TV sem Som 5 dias e anotei minha taxa de acerto</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c9-2"><span>Fiz o Observador do Café 2 vezes</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c9-3"><span>Só concluí algo com 3 sinais em 3 conversas</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c9-4"><span>Vi meu próprio corpo num vídeo e anotei meus sinais</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c10" data-i="10"><h2>Capítulo 9 — Impor Respeito</h2>
+<p>Intimidar de verdade não é gritar, ameaçar ou humilhar. Isso é sinal de descontrole, e as pessoas sentem o cheiro do descontrole de longe. O que intimida de verdade é alguém <strong>calmo, firme e inabalável para quem tenta pressioná-lo</strong>: alguém que não precisa de aprovação, não se abala e cumpre o que diz.</p>
+<p>Regra simples: <strong>a pessoa mais calma da sala é a mais perigosa da sala.</strong></p>
+<h3>Os dois eixos de como os outros te veem</h3>
+<p>As pesquisas de Susan Fiske, Amy Cuddy e Peter Glick (2007) mostram que julgamos qualquer pessoa em dois eixos: <strong>calor humano</strong> ("ela é do bem comigo?") e <strong>competência</strong> ("ela é capaz de agir?"). Quem é visto como muito competente e pouco caloroso desperta respeito misturado com receio. Quem combina os dois desperta admiração. O Assassino controla os dois botões: sobe a competência quando precisa impor respeito, sobe o calor quando precisa conquistar (Capítulo 10).</p>
+<h3>O que intimida e o que te enfraquece</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Transmite poder</th>
+<th>Transmite fraqueza</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Voz calma, grave e devagar</td>
+<td>Gritar, falar rápido, voz aguda</td>
+</tr>
+<tr>
+<td>Silêncio depois de uma provocação</td>
+<td>Responder na hora, se justificar</td>
+</tr>
+<tr>
+<td>Olhar firme e tranquilo</td>
+<td>Desviar o olhar o tempo todo, ou encarar com raiva</td>
+</tr>
+<tr>
+<td>Movimentos lentos, ocupar seu espaço</td>
+<td>Gestos nervosos, se encolher</td>
+</tr>
+<tr>
+<td>Frases curtas e afirmativas</td>
+<td>Explicações longas e pedidos de desculpa</td>
+</tr>
+<tr>
+<td>Limite claro com consequência cumprida</td>
+<td>Ameaça que nunca se cumpre</td>
+</tr>
+<tr>
+<td>Não precisar que gostem de você</td>
+<td>Buscar aprovação o tempo todo</td>
+</tr>
+<tr>
+<td>Competência e resultados visíveis</td>
+<td>Contar vantagem sem prova</td>
+</tr>
+</tbody>
+</table></div>
+<h3>A linha que você nunca cruza</h3>
+<p>Ameaçar alguém de mal grave é crime no Brasil (artigo 147 do Código Penal). Humilhar em público cria inimigos que esperam sua hora. Intimidação pelo medo funciona só enquanto você está olhando. Respeito funciona mesmo quando você não está.</p>
+<h3>Exercício 9.1 — A Pausa do Predador (toda provocação)</h3>
+<p>Quando alguém te provocar, criticar ou interromper:</p>
+<ol>
+<li>Fique em silêncio por 3 segundos, olhando tranquilamente para a pessoa.</li>
+<li>Responda devagar, com voz mais baixa do que a dela.</li>
+<li>Use poucas palavras: "Entendi. Discordo." ou "Repete, por favor?" (muitas provocações perdem força quando precisam ser repetidas).</li>
+</ol>
+<h3>Exercício 9.2 — Olhar Firme (diário, 7 dias)</h3>
+<p>Em cada conversa, mantenha contato visual enquanto <strong>você fala</strong>, até terminar a frase. Enquanto ouve, olhe nos olhos a maior parte do tempo, com expressão tranquila (não é encarar com raiva). Anote em quais situações você ainda desvia.</p>
+<h3>Exercício 9.3 — O Limite com Consequência (3 situações)</h3>
+<p>Identifique 3 situações em que alguém passa dos limites com você. Para cada uma, escreva e depois diga, com calma:</p>
+<ol>
+<li><strong>O fato:</strong> "Pela terceira vez você chegou 40 minutos atrasado."</li>
+<li><strong>O limite:</strong> "Eu não vou mais esperar."</li>
+<li><strong>A consequência:</strong> "Da próxima vez, depois de 15 minutos eu vou embora."</li>
+<li><strong>Cumpra.</strong> Na primeira vez que a consequência acontecer, você nunca mais vai precisar repetir.</li>
+</ol>
+<p>Nunca anuncie uma consequência que você não vai cumprir.</p>
+<h3>Exercício 9.4 — Fim das Justificativas (7 dias)</h3>
+<p>Por 7 dias, não se justifique quando não precisar. Troque "Desculpa, não vou poder ir porque estou muito cansado, e também..." por "Não vou poder ir." Anote quantas vezes se pegou explicando demais.</p>
+<h3>Exercício 9.5 — A Postura do Rei (antes de entrar em qualquer sala)</h3>
+<p>Antes de entrar numa reunião ou lugar importante: ombros para trás, queixo paralelo ao chão, respiração lenta. Entre devagar, escolha onde sentar sem pressa, cumprimente olhando nos olhos. Sem celular na mão nos primeiros minutos.</p>
+<h3>Exercício 9.6 — Construir Reputação (contínuo)</h3>
+<p>O que mais intimida é a fama de quem cumpre o que diz. Durante 30 dias, cumpra <strong>100%</strong> dos prazos e promessas que fizer, mesmo pequenos. Se não tiver certeza, não prometa.</p>
+<h3>Checklist da semana 9</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c10-1"><span>Usei a Pausa do Predador numa provocação real</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c10-2"><span>Mantive o Olhar Firme por 7 dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c10-3"><span>Coloquei um Limite com Consequência e cumpri</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c10-4"><span>Passei 7 dias sem justificativas desnecessárias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c10-5"><span>Usei a Postura do Rei antes de 3 situações importantes</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c11" data-i="11"><h2>Capítulo 10 — Conquistar Pessoas</h2>
+<p>Vamos ser honestos: ninguém conquista 100% das pessoas, nem a mais bonita do mundo. Aparência pesa nos primeiros segundos. Mas a ciência mostra que, depois disso, o que mais conta está sob seu controle: como você faz a pessoa se sentir.</p>
+<p>Num estudo famoso com mais de 10 mil pessoas em 37 culturas, o psicólogo David Buss (1989) descobriu que homens e mulheres colocaram <strong>bondade e inteligência</strong> entre as qualidades mais importantes num parceiro. Beleza importa, mas não está sozinha no topo.</p>
+<h3>O que a ciência diz que faz as pessoas gostarem de você</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Descoberta</th>
+<th>O que mostra</th>
+<th>Como usar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fazer perguntas (Huang e colegas, 2017)</td>
+<td>Quem faz mais perguntas, principalmente de continuação, é mais querido. Em encontros rápidos, conseguiu mais segundos encontros</td>
+<td>Pergunte e depois pergunte de novo sobre a resposta: "E como foi isso?"</td>
+</tr>
+<tr>
+<td>As 36 perguntas (Aron e colegas, 1997)</td>
+<td>Abrir-se aos poucos, de forma recíproca, criou proximidade entre desconhecidos em cerca de 45 minutos</td>
+<td>Conte algo pessoal depois que a pessoa contar; aprofunde em etapas</td>
+</tr>
+<tr>
+<td>O efeito do tropeço (Aronson, 1966)</td>
+<td>Uma pessoa competente que comete um pequeno erro fica <strong>mais</strong> simpática</td>
+<td>Mostre competência e depois admita uma falha pequena com bom humor</td>
+</tr>
+<tr>
+<td>Calor e competência (Fiske e colegas, 2007)</td>
+<td>Julgamos todo mundo por "é do bem?" e "é capaz?"</td>
+<td>Mostre que você é do bem <strong>antes</strong> de mostrar sua força</td>
+</tr>
+<tr>
+<td>O "gap" da simpatia (Boothby e colegas, 2018)</td>
+<td>Depois de conversar, as pessoas gostam mais de nós do que imaginamos</td>
+<td>Pare de se julgar após a conversa; você foi melhor do que acha</td>
+</tr>
+</tbody>
+</table></div>
+<h3>Os 3 pilares do carisma</h3>
+<p>No livro <em>O Mito do Carisma</em>, Olivia Fox Cabane defende que carisma se aprende e se apoia em 3 pilares:</p>
+<ol>
+<li><strong>Presença:</strong> estar 100% ali. Celular guardado, atenção total. As pessoas percebem quando você está com a cabeça longe.</li>
+<li><strong>Poder:</strong> passar a sensação de que você é capaz de influenciar o mundo à sua volta (Capítulos 5 e 9).</li>
+<li><strong>Calor humano:</strong> passar a sensação de que você quer bem à pessoa.</li>
+</ol>
+<h3>O que você controla na aparência (sem mudar o rosto)</h3>
+<ul>
+<li>Higiene impecável: cabelo, barba ou pele cuidados, unhas, dentes, hálito, perfume leve.</li>
+<li>Roupa do tamanho certo. Roupa simples que veste bem vence roupa cara que não veste.</li>
+<li>Postura ereta e movimentos calmos.</li>
+<li>Sorriso verdadeiro, que chega aos olhos.</li>
+<li>Corpo cuidado: treino e sono mudam pele, energia e postura em poucas semanas.</li>
+</ul>
+<h3>Conquista amorosa: as regras do jogo limpo</h3>
+<ul>
+<li><strong>Confiança atrai, carência afasta.</strong> Tenha uma vida interessante que não depende da resposta da pessoa.</li>
+<li><strong>Humor e leveza</strong> valem mais do que frases prontas.</li>
+<li><strong>Mostre interesse com clareza.</strong> Ambiguidade demais parece medo.</li>
+<li><strong>"Não" é não.</strong> Insistir depois de um não claro não é persistência, é desrespeito, e destrói sua reputação. O Assassino aceita com elegância e segue em frente. Isso, por si só, já transmite poder.</li>
+</ul>
+<h3>Exercício 10.1 — Três Desconhecidos por Dia (14 dias)</h3>
+<p>Puxe uma conversa curta com 3 desconhecidos por dia: caixa do mercado, alguém na fila, colega novo. Um comentário sobre a situação e uma pergunta. O objetivo não é conquistar ninguém, é tirar o medo do corpo. Em 14 dias, são 42 conversas.</p>
+<h3>Exercício 10.2 — A Regra das 2 Perguntas (5 conversas)</h3>
+<p>Para cada coisa que a pessoa contar, faça 2 perguntas de continuação antes de falar de você. Exemplo: "Fui viajar no fim de semana." → "Pra onde?" → "E o que foi o melhor de lá?". Anote como a conversa mudou.</p>
+<h3>Exercício 10.3 — As 36 Perguntas (uma vez, com alguém de confiança)</h3>
+<p>Faça as 36 perguntas de Arthur Aron (estão no link da seção Fontes) com um amigo, parceiro ou alguém que você está conhecendo. Os dois respondem cada pergunta, alternando. Leva uns 45 minutos. Anote o que você sentiu de diferente sobre a pessoa no final.</p>
+<h3>Exercício 10.4 — Fazer a Pessoa se Sentir Importante (diário)</h3>
+<p>Todo dia, faça uma pessoa se sentir importante de verdade:</p>
+<ul>
+<li>Lembre de algo que ela contou há dias e pergunte sobre isso.</li>
+<li>Elogie uma escolha ou esforço dela (não só a aparência): "Gostei de como você resolveu aquilo."</li>
+<li>Apresente-a para alguém destacando algo bom sobre ela.</li>
+</ul>
+<h3>Exercício 10.5 — Plano de Aparência Controlável (30 dias)</h3>
+<ol>
+<li>Faça uma lista de tudo da lista "O que você controla na aparência" que você ainda não cuida.</li>
+<li>Escolha 3 itens para resolver este mês (exemplo: corte de cabelo novo, 2 roupas que vestem bem, rotina de cuidados da pele).</li>
+<li>Tire uma foto no dia 1 e no dia 30 com a mesma luz e roupa parecida.</li>
+</ol>
+<h3>Checklist da semana 10</h3>
+<ul>
+<li class="task"><label><input type="checkbox" data-k="c11-1"><span>Conversei com 3 desconhecidos por dia</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c11-2"><span>Usei a Regra das 2 Perguntas em 5 conversas</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c11-3"><span>Fiz as 36 Perguntas com alguém</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c11-4"><span>Fiz uma pessoa se sentir importante todos os dias</span></label></li>
+<li class="task"><label><input type="checkbox" data-k="c11-5"><span>Comecei meu Plano de Aparência Controlável</span></label></li>
+</ul>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c12" data-i="12"><h2>O Desafio de 30 Dias</h2>
+<p>Depois das 10 semanas, junte tudo em 30 dias de treino real. Todo dia tem uma rotina fixa de 10 minutos e uma missão de campo.</p>
+<h3>Rotina fixa (todos os dias)</h3>
+<ul>
+<li><strong>Manhã (5 min):</strong> ler o catálogo de táticas sujas ou a tabela das 7 Armas.</li>
+<li><strong>Noite (5 min):</strong> no caderno de campo, anotar a missão do dia: situação, técnica, resultado, o que faria diferente.</li>
+</ul>
+<h3>Missões de campo</h3>
+<div class="tw"><table class="missions">
+<thead>
+<tr>
+<th>Dia</th>
+<th>Missão</th>
+<th>Capítulo</th>
+<th>Feito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Gravar seu Discurso de 60 Segundos (versão "antes")</td>
+<td>4</td>
+<td class="done"><input type="checkbox" data-k="d12-1" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Espelhar 3 vezes em conversas do dia</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d12-2" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Diário das Emoções + 5 min de Suspiro Cíclico</td>
+<td>7</td>
+<td class="done"><input type="checkbox" data-k="d12-3" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Dar algo útil a alguém sem pedir nada</td>
+<td>2</td>
+<td class="done"><input type="checkbox" data-k="d12-4" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>5</td>
+<td>TV sem Som por 15 minutos</td>
+<td>8</td>
+<td class="done"><input type="checkbox" data-k="d12-5" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Conversar com 3 desconhecidos</td>
+<td>10</td>
+<td class="done"><input type="checkbox" data-k="d12-6" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Revisão da semana: reler o caderno e escolher 1 ponto para melhorar</td>
+<td>—</td>
+<td class="done"><input type="checkbox" data-k="d12-7" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Negociar algo pequeno (feira, loja, plano de celular)</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d12-8" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Nomear cada emoção forte no momento em que surgir</td>
+<td>7</td>
+<td class="done"><input type="checkbox" data-k="d12-9" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>10</td>
+<td>Dizer um "não" limpo, sem justificar</td>
+<td>5, 9</td>
+<td class="done"><input type="checkbox" data-k="d12-10" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>11</td>
+<td>Contar sua História de Combate para alguém</td>
+<td>4</td>
+<td class="done"><input type="checkbox" data-k="d12-11" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>12</td>
+<td>Regra das 2 Perguntas em todas as conversas</td>
+<td>10</td>
+<td class="done"><input type="checkbox" data-k="d12-12" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>13</td>
+<td>Observador do Café por 20 minutos</td>
+<td>8</td>
+<td class="done"><input type="checkbox" data-k="d12-13" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>14</td>
+<td>Revisão da semana</td>
+<td>—</td>
+<td class="done"><input type="checkbox" data-k="d12-14" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>15</td>
+<td>Usar uma pergunta calibrada ("Como...?") num problema real</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d12-15" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>16</td>
+<td>Pausa do Predador em qualquer provocação</td>
+<td>9</td>
+<td class="done"><input type="checkbox" data-k="d12-16" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>17</td>
+<td>Identificar uma tática de manipulação usada em você</td>
+<td>6</td>
+<td class="done"><input type="checkbox" data-k="d12-17" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>18</td>
+<td>Três Outras Histórias sobre algo que te irritou</td>
+<td>7</td>
+<td class="done"><input type="checkbox" data-k="d12-18" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>19</td>
+<td>Fazer a Auditoria de Acusações antes de uma conversa difícil</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d12-19" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>20</td>
+<td>Colocar um Limite com Consequência</td>
+<td>9</td>
+<td class="done"><input type="checkbox" data-k="d12-20" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>21</td>
+<td>Revisão da semana</td>
+<td>—</td>
+<td class="done"><input type="checkbox" data-k="d12-21" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>22</td>
+<td>Só tirar conclusões com 3 sinais corporais na mesma direção</td>
+<td>8</td>
+<td class="done"><input type="checkbox" data-k="d12-22" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>23</td>
+<td>Fazer uma pessoa se sentir importante</td>
+<td>10</td>
+<td class="done"><input type="checkbox" data-k="d12-23" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>24</td>
+<td>Regra das 24 horas numa decisão ou compra</td>
+<td>6</td>
+<td class="done"><input type="checkbox" data-k="d12-24" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>25</td>
+<td>Preparar o terreno (Pré-Suasão) antes de um pedido</td>
+<td>4</td>
+<td class="done"><input type="checkbox" data-k="d12-25" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>26</td>
+<td>As 36 Perguntas com alguém de confiança</td>
+<td>10</td>
+<td class="done"><input type="checkbox" data-k="d12-26" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>27</td>
+<td>Preparar a folha de Ensaio para uma negociação real</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d12-27" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>28</td>
+<td>Executar a negociação real da folha de Ensaio</td>
+<td>3</td>
+<td class="done"><input type="checkbox" data-k="d12-28" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>29</td>
+<td>Gravar o Discurso de 60 Segundos (versão "depois") e comparar com o dia 1</td>
+<td>4</td>
+<td class="done"><input type="checkbox" data-k="d12-29" aria-label="Feito"></td>
+</tr>
+<tr>
+<td>30</td>
+<td>Escrever as 3 técnicas que mais funcionaram para você e o plano dos próximos 90 dias</td>
+<td>—</td>
+<td class="done"><input type="checkbox" data-k="d12-30" aria-label="Feito"></td>
+</tr>
+</tbody>
+</table></div>
+<p>Regra: perdeu um dia, continue no seguinte. A comparação entre o vídeo do dia 1 e o do dia 29 é a sua prova de evolução.</p>
+<nav class="pager"></nav></section>
+<section class="chapter" id="c13" data-i="13"><h2>Fontes</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tema no livro</th>
+<th>Fonte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sistema 1 e Sistema 2, ancoragem, aversão à perda, enquadramento</td>
+<td><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Thinking,_Fast_and_Slow">Wikipedia: Thinking, Fast and Slow</a></td>
+</tr>
+<tr>
+<td>Kahneman, Nobel de Economia em 2002</td>
+<td><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Daniel_Kahneman">Wikipedia: Daniel Kahneman</a></td>
+</tr>
+<tr>
+<td>Detecção de mentira: cerca de 54% de acerto</td>
+<td><a target="_blank" rel="noopener" href="https://pubmed.ncbi.nlm.nih.gov/16859438/">Bond e DePaulo (2006), Accuracy of deception judgments, PubMed</a></td>
+</tr>
+<tr>
+<td>As 7 armas da influência, incluindo a unidade</td>
+<td><a target="_blank" rel="noopener" href="https://www.influenceatwork.com/7-principles-of-persuasion/">Influence at Work: 7 Principles of Persuasion</a></td>
+</tr>
+<tr>
+<td>Experimento da máquina de xerox (60%, 93%, 94%; 24% e 42% no pedido grande)</td>
+<td><a target="_blank" rel="noopener" href="https://www.martinkaessler.com/ellen-langers-kopierer-studie-und-sein-vermaechtnis-im-digitalen-zeitalter/">Martin Kaessler: o estudo da copiadora de Ellen Langer</a></td>
+</tr>
+<tr>
+<td>Chris Voss, negociador-chefe internacional de sequestros do FBI</td>
+<td><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Chris_Voss">Wikipedia: Chris Voss</a></td>
+</tr>
+<tr>
+<td>Ideias que colam: 6 características</td>
+<td><a target="_blank" rel="noopener" href="https://heathbrothers.com/books/made-to-stick/">Heath Brothers: Made to Stick</a></td>
+</tr>
+<tr>
+<td>Títulos das 48 Leis do Poder</td>
+<td><a target="_blank" rel="noopener" href="https://www.101planners.com/the-48-laws-of-power/">101 Planners: lista das 48 leis</a></td>
+</tr>
+<tr>
+<td>Dar nome à emoção reduz a atividade da amígdala</td>
+<td><a target="_blank" rel="noopener" href="https://pubmed.ncbi.nlm.nih.gov/17576282/">Lieberman e colegas (2007), Putting feelings into words, PubMed</a></td>
+</tr>
+<tr>
+<td>Reinterpretar x engolir a emoção</td>
+<td><a target="_blank" rel="noopener" href="https://pubmed.ncbi.nlm.nih.gov/12916575/">Gross e John (2003), PubMed</a></td>
+</tr>
+<tr>
+<td>Suspiro cíclico melhora o humor mais que meditação</td>
+<td><a target="_blank" rel="noopener" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9873947">Balban e colegas (2023), Cell Reports Medicine, via PubMed Central</a></td>
+</tr>
+<tr>
+<td>Sorriso verdadeiro (músculo ao redor dos olhos)</td>
+<td><a target="_blank" rel="noopener" href="https://www.paulekman.com/blog/fake-smile-or-genuine-smile/">Paul Ekman: sorriso falso ou verdadeiro</a></td>
+</tr>
+<tr>
+<td>Calor humano e competência</td>
+<td><a target="_blank" rel="noopener" href="https://collaborate.princeton.edu/en/publications/universal-dimensions-of-social-cognition-warmth-and-competence/">Fiske, Cuddy e Glick (2007), Princeton</a></td>
+</tr>
+<tr>
+<td>Fazer perguntas aumenta a simpatia</td>
+<td><a target="_blank" rel="noopener" href="https://psychologicalscience.org/news/minds-business/asking-questions-increases-likability.html">APS: Asking Questions Increases Likability</a></td>
+</tr>
+<tr>
+<td>As 36 perguntas de Arthur Aron</td>
+<td><a target="_blank" rel="noopener" href="https://ggia.berkeley.edu/practice/practice_as_pdf/36_questions_for_increasing_closeness">Greater Good in Action: 36 Questions</a></td>
+</tr>
+<tr>
+<td>As pessoas gostam mais de nós do que imaginamos</td>
+<td><a target="_blank" rel="noopener" href="https://www.psychologicalscience.org/news/releases/you-probably-made-a-better-first-impression-than-you-think.html">APS: You Probably Made a Better First Impression Than You Think</a></td>
+</tr>
+<tr>
+<td>Efeito do tropeço</td>
+<td><a target="_blank" rel="noopener" href="https://paperity.org/p/59814503/the-effect-of-a-pratfall-on-increasing-interpersonal-attractiveness">Aronson, Willerman e Floyd (1966)</a></td>
+</tr>
+<tr>
+<td>Preferências em 37 culturas</td>
+<td><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/David_Buss">Wikipedia: David Buss</a></td>
+</tr>
+<tr>
+<td>CVV: 188, 24 horas, grátis</td>
+<td><a target="_blank" rel="noopener" href="https://cvv.org.br/">CVV</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>Notas sem link aberto: <em>Retórica</em> (Aristóteles), <em>Como Fazer Amigos e Influenciar Pessoas</em> (Dale Carnegie, 1936), <em>Como Chegar ao Sim</em> (Fisher, Ury e Patton), <em>In Sheep's Clothing</em> (George K. Simon), <em>O Efeito Gaslighting</em> (Robin Stern), <em>O que Todo Corpo Fala</em> (Joe Navarro) e <em>O Mito do Carisma</em> (Olivia Fox Cabane) foram resumidos a partir do conhecimento geral sobre essas obras. Leia os originais antes de aplicar em situações de alto risco.</p><nav class="pager"></nav></section>
+</main>
+<button id="totop" aria-label="Voltar ao topo">&#8593;</button>
+
+<script>
+(function(){
+  var KEY='manual-assassino.v1';
+  var st={};
+  try{st=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){st={};}
+  st.checks=st.checks||{}; st.scroll=st.scroll||{};
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+
+  var root=document.documentElement;
+  var chapters=[].slice.call(document.querySelectorAll('.chapter'));
+  var titles=chapters.map(function(c){return c.querySelector('h2').textContent;});
+  var boxes=[].slice.call(document.querySelectorAll('input[type=checkbox][data-k]'));
+  var cur=-1;
+
+  // Tema e tamanho da letra
+  function applyLook(){
+    root.setAttribute('data-theme',st.theme||'dark');
+    root.style.setProperty('--fs',(st.fs||17)+'px');
+  }
+  applyLook();
+  document.getElementById('theme').onclick=function(){st.theme=(st.theme==='light')?'dark':'light';applyLook();save();};
+  document.getElementById('fplus').onclick=function(){st.fs=Math.min(26,(st.fs||17)+1);applyLook();save();};
+  document.getElementById('fminus').onclick=function(){st.fs=Math.max(13,(st.fs||17)-1);applyLook();save();};
+
+  // Caixas de marcar salvas
+  boxes.forEach(function(b){
+    b.checked=!!st.checks[b.dataset.k];
+    b.addEventListener('change',function(){
+      if(b.checked)st.checks[b.dataset.k]=1; else delete st.checks[b.dataset.k];
+      save(); progress();
+    });
+  });
+  function progress(){
+    var total=0,done=0;
+    chapters.forEach(function(c,i){
+      var bs=c.querySelectorAll('input[type=checkbox][data-k]'),d=0;
+      for(var j=0;j<bs.length;j++){if(bs[j].checked)d++;}
+      total+=bs.length;done+=d;
+      var el=document.querySelector('#toc .p[data-p="'+i+'"]');
+      if(el){el.textContent=bs.length?d+'/'+bs.length:'';el.classList.toggle('full',bs.length>0&&d===bs.length);}
+    });
+    var pct=total?Math.round(done*100/total):0;
+    document.getElementById('meter-txt').textContent='Treino concluído: '+pct+'% ('+done+' de '+total+' tarefas)';
+    document.getElementById('meter-fill').style.width=pct+'%';
+  }
+
+  // Botões anterior / próximo
+  chapters.forEach(function(c,i){
+    var nav=c.querySelector('.pager'),h='';
+    if(i>0)h+='<a class="prev" href="#c'+(i-1)+'"><small>&larr; Anterior</small>'+titles[i-1]+'</a>';
+    else h+='<a class="prev" href="#inicio"><small>&larr; Voltar</small>Capa</a>';
+    if(i<chapters.length-1)h+='<a class="next" href="#c'+(i+1)+'"><small>Próximo &rarr;</small>'+titles[i+1]+'</a>';
+    nav.innerHTML=h;
+  });
+
+  // Navegação por endereço (#c3) para o botão voltar do Android funcionar
+  function show(){
+    var m=/^#c(\d+)$/.exec(location.hash),i=m?+m[1]:-1;
+    if(i>=chapters.length)i=-1;
+    if(cur>=0)st.scroll[cur]=window.scrollY;
+    cur=i;
+    document.getElementById('home').style.display=i<0?'':'none';
+    chapters.forEach(function(c,j){c.classList.toggle('on',j===i);});
+    [].forEach.call(document.querySelectorAll('#toc a'),function(a){a.classList.toggle('cur',+a.dataset.i===i);});
+    document.getElementById('barname').textContent=i<0?'Manual do Assassino':titles[i];
+    if(i>=0)st.last=i;
+    save(); closeToc();
+    window.scrollTo(0,i>=0&&st.scroll[i]?st.scroll[i]:0);
+    updateHome();
+  }
+  function updateHome(){
+    var go=document.getElementById('go');
+    go.textContent=(st.last!=null)?'Continuar: '+titles[st.last]:'Começar a ler';
+  }
+  document.getElementById('go').onclick=function(){location.hash='#c'+(st.last!=null?st.last:0);};
+  window.addEventListener('hashchange',show);
+
+  // Sumário lateral
+  function openToc(){document.body.classList.add('toc-open');}
+  function closeToc(){document.body.classList.remove('toc-open');}
+  document.getElementById('menu').onclick=function(){document.body.classList.contains('toc-open')?closeToc():openToc();};
+  document.getElementById('open-toc').onclick=openToc;
+  document.getElementById('scrim').onclick=closeToc;
+  [].forEach.call(document.querySelectorAll('#toc a'),function(a){a.addEventListener('click',closeToc);});
+  window.closeTocIfOpen=function(){if(document.body.classList.contains('toc-open')){closeToc();return true;}return false;};
+
+  // Voltar ao topo e memória da posição de leitura
+  var totop=document.getElementById('totop'),t=null;
+  window.addEventListener('scroll',function(){
+    totop.style.display=window.scrollY>900?'block':'none';
+    clearTimeout(t);t=setTimeout(function(){if(cur>=0){st.scroll[cur]=window.scrollY;save();}},300);
+  },{passive:true});
+  totop.onclick=function(){window.scrollTo({top:0,behavior:'smooth'});};
+
+  progress(); show();
+})();
+</script>
+</body>
+</html>

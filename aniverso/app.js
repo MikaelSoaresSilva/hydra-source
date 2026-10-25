@@ -174,7 +174,7 @@ const freeReady = (async () => {
   }
 })();
 /* ---------- Pluto TV: grátis, com o catálogo do país de quem está usando ---------- */
-const pluto = { token: '', region: 'br', exp: 0 };
+const pluto = { token: '', region: 'br', exp: 0, stitcher: '', stitcherParams: '' };
 const newId = () => (crypto.randomUUID ? crypto.randomUUID()
   : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16)));
 async function plutoSession() {
@@ -188,6 +188,8 @@ async function plutoSession() {
   const j = await r.json();
   pluto.token = j.sessionToken;
   pluto.region = String(j.session?.activeRegion || 'br').toLowerCase();
+  pluto.stitcher = j.servers?.stitcher || 'https://cfd-v4-service-channel-stitcher-use1-1.prd.pluto.tv';
+  pluto.stitcherParams = j.stitcherParams || '';
   pluto.exp = Date.now() + Math.min(Number(j.refreshInSec) || 3600, 4 * 3600) * 1000 - 60000;
   return pluto;
 }
@@ -280,20 +282,194 @@ const plutoShowsCached = plutoMemo(plutoAnimeShows);
 function plutoShowCard(it) {
   const img = cover(it.covers, '347:500') || it.featuredImage?.path || '';
   const url = it.type === 'movie' ? plutoLink.movie(it.slug) : plutoLink.series(it.slug);
-  return `<a class="card" href="${esc(url)}" data-inside data-resolve="${esc(it.name)}" data-kind="${it.type === 'movie' ? 'MOVIE' : ''}" target="_blank" rel="noopener">
+  return `<a class="card v-checking" href="${esc(url)}" data-inside data-resolve="${esc(it.name)}" data-kind="${it.type === 'movie' ? 'MOVIE' : ''}"
+    data-vk="ps:${esc(it._id)}" data-vkind="pshow" data-vtype="${esc(it.type)}" data-vpath="${esc(it.stitched?.path || '')}" target="_blank" rel="noopener">
     <div class="poster">${img ? `<img loading="lazy" src="${esc(img)}" alt="">` : ''}<div class="badges"><span class="badge free">GRÁTIS</span><span class="badge pluto">PLUTO TV</span></div></div>
     <div class="card-t">${esc(it.name)}</div>
     <div class="card-m">${it.type === 'movie' ? 'Filme' : 'Série'}${it.seasonsNumbers?.length ? ` · ${it.seasonsNumbers.length} temp.` : ''}</div></a>`;
 }
 function plutoChannelCard(c) {
   const logo = (c.images || []).find((i) => i.type === 'colorLogoPNG')?.url || (c.images || []).find((i) => i.type === 'logo')?.url || '';
-  return `<a class="live-card" href="${esc(plutoLink.live(c.slug))}" data-inside target="_blank" rel="noopener">
+  return `<a class="live-card v-checking" href="${esc(plutoLink.live(c.slug))}" data-inside data-vk="pc:${esc(c.id)}" data-vkind="pch" data-vpath="${esc(c.stitched?.path || '')}" target="_blank" rel="noopener">
     <span class="live-logo">${logo ? `<img src="${esc(logo)}" alt="">` : esc(c.name)}</span>
     <span class="live-txt"><span class="live-dot">AO VIVO</span><strong>${esc(c.name)}</strong>${c.now ? `<small>Agora: ${esc(c.now)}</small>` : ''}</span></a>`;
 }
 
-const freeVideos = (m) => free.anime[m.id]?.videos || [];
-const freeIds = () => Object.keys(free.anime).map(Number);
+/* ---------- Verificação: só mostra o que realmente toca ---------- */
+// No app Android a conferência é feita pelo próprio celular (no país de quem usa). No navegador,
+// o YouTube é conferido pelo oEmbed (existe e é público) e a Pluto TV pela lista dela (só traz o que está no ar).
+const VERIFY_TTL = 6 * 3600 * 1000;
+const verified = {
+  all() { return store.get('aniverso:verify', {}); },
+  get(k) {
+    const x = this.all()[k];
+    return x && Date.now() - x.t < (x.s === 'ok' ? VERIFY_TTL : VERIFY_TTL * 4) ? x : null;
+  },
+  set(k, st, info) {
+    const all = this.all();
+    all[k] = { s: st, t: Date.now(), ...(info ? { i: info } : {}) };
+    const keys = Object.keys(all);
+    if (keys.length > 2500) keys.sort((a, b) => all[a].t - all[b].t).slice(0, keys.length - 2000).forEach((x) => delete all[x]);
+    store.set('aniverso:verify', all);
+  },
+};
+const isBad = (k) => verified.get(k)?.s === 'bad';
+const nativeHttp = (opts) => window.Capacitor.nativePromise('CapacitorHttp', 'request', opts);
+const asJson = (d) => { if (typeof d !== 'string') return d || {}; try { return JSON.parse(d); } catch { return {}; } };
+
+// no máximo 4 conferências ao mesmo tempo, para não pesar na internet
+const vq = { running: 0, list: [] };
+const enqueue = (fn) => new Promise((resolve) => { vq.list.push([fn, resolve]); pumpQueue(); });
+function pumpQueue() {
+  while (vq.running < 4 && vq.list.length) {
+    const [fn, resolve] = vq.list.shift();
+    vq.running++;
+    fn().catch(() => ({ s: 'unknown' })).then((r) => { vq.running--; resolve(r); pumpQueue(); });
+  }
+}
+const inflight = new Map();
+function verifyKey(key, fn) {
+  const c = verified.get(key);
+  if (c) return Promise.resolve(c);
+  if (inflight.has(key)) return inflight.get(key);
+  const p = enqueue(fn).then((r) => {
+    if (r.s !== 'unknown') verified.set(key, r.s, r.i);
+    inflight.delete(key);
+    return r;
+  });
+  inflight.set(key, p);
+  return p;
+}
+
+const YT_CLIENTS = [
+  { ua: 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X)',
+    client: { clientName: 'IOS', clientVersion: '20.10.4', deviceMake: 'Apple', deviceModel: 'iPhone16,2', osName: 'iPhone', osVersion: '18.3.2.22D82' } },
+  { ua: 'com.google.android.apps.youtube.vr.oculus/1.62.27 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip',
+    client: { clientName: 'ANDROID_VR', clientVersion: '1.62.27', deviceMake: 'Oculus', deviceModel: 'Quest 3', androidSdkVersion: 32, osName: 'Android', osVersion: '12L' } },
+];
+const REGION_RX = /pa[ií]s|country|region/i;
+async function checkYouTube(id) {
+  if (isNativeApp) {
+    for (const c of YT_CLIENTS) {
+      const r = await nativeHttp({
+        url: 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': c.ua },
+        data: { context: { client: { ...c.client, hl: 'pt', gl: 'BR' } }, videoId: id },
+      });
+      const ps = asJson(r.data).playabilityStatus || {};
+      if (ps.status === 'OK') return { s: 'ok' };
+      if (ps.status === 'ERROR') return { s: 'bad', i: ps.reason || 'Vídeo indisponível' };
+      if (ps.status === 'UNPLAYABLE' && REGION_RX.test(ps.reason || '')) return { s: 'bad', i: 'Bloqueado no seu país' };
+      if (ps.status === 'LOGIN_REQUIRED' && /idade|age/i.test(ps.reason || '')) return { s: 'bad', i: 'Pede login (restrição de idade)' };
+      // "confirme que não é um robô" ou recusa de um tipo de aparelho: tenta o próximo
+    }
+    // resposta duvidosa: o oEmbed diz com certeza se o vídeo foi apagado ou ficou privado
+    const o = await nativeHttp({ url: `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`, method: 'GET' });
+    if ([400, 403, 404].includes(o.status)) return { s: 'bad', i: 'Vídeo removido ou privado' };
+    return { s: 'unknown' };
+  }
+  const r = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`);
+  if (r.ok) return { s: 'ok' };
+  if ([400, 403, 404].includes(r.status)) return { s: 'bad', i: 'Vídeo removido ou privado' };
+  return { s: 'unknown' };
+}
+const LANG_NAME = { pt: 'Português', 'pt-br': 'Português', por: 'Português', ja: 'Japonês', jpn: 'Japonês', en: 'Inglês', eng: 'Inglês', es: 'Espanhol', spa: 'Espanhol' };
+function m3u8Langs(text, type) {
+  const out = new Set();
+  for (const line of String(text).split('\n')) {
+    if (!line.startsWith('#EXT-X-MEDIA') || !line.includes(`TYPE=${type}`)) continue;
+    const lang = (line.match(/LANGUAGE="([^"]+)"/) || [])[1];
+    if (lang) out.add(LANG_NAME[lang.toLowerCase()] || lang);
+  }
+  return [...out];
+}
+async function checkPlutoPath(path) {
+  if (!isNativeApp) return { s: 'unknown' };
+  if (!path) return { s: 'bad', i: 'Sem vídeo' };
+  const sess = await plutoSession();
+  const url = `${sess.stitcher}/v2${path}?${sess.stitcherParams}&jwt=${encodeURIComponent(sess.token)}&masterJWTPassthrough=true`;
+  const r = await nativeHttp({ url, method: 'GET', responseType: 'text' });
+  const body = typeof r.data === 'string' ? r.data : '';
+  if (r.status === 200 && body.startsWith('#EXTM3U')) return { s: 'ok', i: { a: m3u8Langs(body, 'AUDIO'), l: m3u8Langs(body, 'SUBTITLES') } };
+  if ([403, 404, 410].includes(r.status)) return { s: 'bad', i: 'Episódio fora do ar' };
+  return { s: 'unknown' };
+}
+const verifyVideo = (id) => verifyKey(`yt:${id}`, () => checkYouTube(id));
+const verifyPlutoEp = (id, path) => verifyKey(`pe:${id}`, () => checkPlutoPath(path));
+const verifyPlutoChannel = (id, path) => verifyKey(`pc:${id}`, () => checkPlutoPath(path));
+async function verifyPlutoShow(id, type, path) {
+  return verifyKey(`ps:${id}`, async () => {
+    if (type === 'movie') return checkPlutoPath(path);
+    const data = await plutoSeasons(id);
+    const eps = (data.seasons || []).flatMap((x) => x.episodes || []);
+    if (!eps.length) return { s: 'bad', i: 'Sem episódios' };
+    for (const e of eps.slice(0, 3)) {
+      const r = await checkPlutoPath(e.stitched?.path);
+      if (r.s !== 'bad') return r;
+    }
+    return { s: 'bad', i: 'Episódios fora do ar' };
+  });
+}
+// um anime "grátis no YouTube" vale se pelo menos um vídeo dele tocar (dublado primeiro)
+async function verifyFreeAnime(id) {
+  const vids = (free.anime[id]?.videos || []).slice().sort((a, b) => (a.lang.startsWith('dub') ? 0 : 1) - (b.lang.startsWith('dub') ? 0 : 1));
+  let unknown = false;
+  for (const v of vids.slice(0, 4)) {
+    const r = await verifyVideo(v.id);
+    if (r.s === 'ok') return { s: 'ok' };
+    if (r.s === 'unknown') unknown = true;
+  }
+  if (!vids.length) return { s: 'bad' };
+  return { s: unknown ? 'unknown' : 'bad' };
+}
+
+// confere os cartões quando aparecem na tela; os que não tocam somem
+let verifyObserver = null;
+function observeVerify(root) {
+  if (!root) return;
+  if (!verifyObserver) {
+    verifyObserver = new IntersectionObserver((entries) => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        verifyObserver.unobserve(en.target);
+        runCardCheck(en.target);
+      }
+    }, { rootMargin: '300px' });
+  }
+  root.querySelectorAll('[data-vk]').forEach((el) => {
+    const c = verified.get(el.dataset.vk);
+    if (c) applyCheck(el, c);
+    else verifyObserver.observe(el);
+  });
+}
+async function runCardCheck(el) {
+  const d = el.dataset;
+  let r = { s: 'unknown' };
+  try {
+    if (d.vkind === 'anime') r = await verifyFreeAnime(Number(d.vk.slice(3)));
+    else if (d.vkind === 'pshow') r = await verifyPlutoShow(d.vk.slice(3), d.vtype, d.vpath);
+    else if (d.vkind === 'pch') r = await verifyPlutoChannel(d.vk.slice(3), d.vpath);
+    else if (d.vkind === 'yt') r = await verifyVideo(d.vk.slice(3));
+  } catch { r = { s: 'unknown' }; }
+  if (d.vkind === 'anime' && r.s !== 'unknown') verified.set(d.vk, r.s);
+  applyCheck(el, r);
+}
+function applyCheck(el, r) {
+  if (r.s === 'bad') {
+    const parent = el.parentElement;
+    el.remove();
+    if (parent && !parent.querySelector('.card, .live-card')) parent.closest('.section')?.setAttribute('hidden', '');
+    return;
+  }
+  el.classList.remove('v-checking');
+  if (r.s === 'ok') el.classList.add('v-ok');
+}
+
+const freeVideos = (m) => (free.anime[m.id]?.videos || []).filter((v) => !isBad(`yt:${v.id}`));
+const freeIds = () => Object.keys(free.anime).map(Number).filter((id) => !isBad(`fa:${id}`));
+// cartão de anime com vídeo grátis, que só fica clicável depois de conferido
+const freeCardHTML = (m, extra = '') => cardHTML(m).replace('<a class="card"', `<a class="card v-checking" data-vk="fa:${m.id}" data-vkind="anime"`)
+  .replace('<div class="card-t">', `${extra}<div class="card-t">`);
 
 const hasDub = (lang, m) => Boolean(m.idMal && dubs[lang].has(m.idMal));
 
@@ -398,7 +574,7 @@ function openYouTubeModal(id) {
 /* ---------- componentes ---------- */
 function cardHTML(m) {
   const meta = [m.seasonYear, FORMAT_SHORT[m.format], m.episodes ? `${m.episodes} ep` : ''].filter(Boolean).join(' · ');
-  const badges = (free.anime[m.id] ? '<span class="badge free">GRÁTIS</span>' : '') +
+  const badges = (free.anime[m.id] && !isBad(`fa:${m.id}`) ? '<span class="badge free">GRÁTIS</span>' : '') +
     (hasDub('pt', m) ? '<span class="badge pt">DUB PT</span>' : '') + (hasDub('en', m) ? '<span class="badge en">DUB EN</span>' : '');
   const color = /^#[0-9a-f]{3,8}$/i.test(m.coverImage?.color || '') ? ` style="--c:${m.coverImage.color}"` : '';
   return `<a class="card" href="#/anime/${m.id}">
@@ -458,7 +634,8 @@ async function renderHome() {
       const sec = view.querySelector(`[data-row="${r.key}"]`);
       const list = data[r.key]?.media || [];
       if (!list.length) { sec.remove(); continue; }
-      sec.querySelector('.rail').innerHTML = list.map(cardHTML).join('');
+      sec.querySelector('.rail').innerHTML = list.map((m) => (r.key === 'free' ? freeCardHTML(m) : cardHTML(m))).join('');
+      if (r.key === 'free') observeVerify(sec);
     }
     renderHero(data.trending.media.find((m) => m.bannerImage) || data.trending.media[0]);
     homeLoaded = true;
@@ -476,6 +653,7 @@ async function renderPlutoRows() {
       <div class="live-rail">${chans.map(plutoChannelCard).join('')}</div></div>`;
     if (shows && items.length) shows.innerHTML = `<div class="section"><div class="section-head"><h2>Grátis na Pluto TV</h2><a href="#/gratis">Ver todos →</a></div>
       <div class="rail">${items.slice(0, 30).map(plutoShowCard).join('')}</div></div>`;
+    observeVerify(live); observeVerify(shows);
   } catch { /* Pluto TV fora do ar: as outras seções continuam */ }
 }
 
@@ -648,8 +826,9 @@ async function loadMoreExplore(first = false) {
     const { media, pageInfo } = data.Page;
     explore.page += 1;
     explore.hasNext = pageInfo.hasNextPage;
-    const html = media.map(cardHTML).join('');
+    const html = media.map((m) => (f.audio === 'free' ? freeCardHTML(m) : cardHTML(m))).join('');
     if (first) resultsEl.innerHTML = html; else resultsEl.insertAdjacentHTML('beforeend', html);
+    if (f.audio === 'free') observeVerify(resultsEl);
     // o AniList limita o total informado a 5.000, então mostramos quantos já estão na tela
     const shown = resultsEl.querySelectorAll('.card').length;
     $('#result-count').textContent = shown
@@ -713,11 +892,12 @@ function episodeHTML(e, watched) {
 
 const ytWatch = (id) => `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
 function freeLink(v, cls, inner) {
+  if (v.noEmbed && !isNativeApp) return `<a class="${cls}" href="${esc(ytWatch(v.id))}" target="_blank" rel="noopener"${v.ep ? ` data-epn="${v.ep}"` : ''}>${inner}</a>`;
   return `<a class="${cls}" href="${esc(ytWatch(v.id))}" data-inside data-free="${esc(v.id)}"${v.ep ? ` data-epn="${v.ep}"` : ''} target="_blank" rel="noopener">${inner}</a>`;
 }
 function freeVideoHTML(v) {
   const label = v.movie ? 'Filme' : v.ep ? `Episódio ${v.ep}` : 'Vídeo completo';
-  return `<div class="ep free-ep">
+  return `<div class="ep free-ep v-checking" data-vk="yt:${esc(v.id)}" data-vid="${esc(v.id)}">
     ${freeLink(v, 'ep-play', `<span class="ep-thumb"><img src="https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg" alt="" loading="lazy"><span class="ep-badge">▶</span></span>
       <span class="ep-txt"><span class="ep-n">${esc(label)} · ${esc(FREE_LANG[v.lang] || '')}</span>
       <span class="ep-t">${esc(v.title)}</span><span class="ep-t">${Math.round(v.dur / 60)} min · ${esc(v.ch)}</span></span>`)}
@@ -739,6 +919,7 @@ async function renderAnime(id) {
     document.title = `${titleOf(m)} · AniVerso`;
     view.innerHTML = animeHTML(m);
     bindAnime(m);
+    verifyDetailVideos(m);
     loadPlutoPanel(m);
   } catch (err) {
     view.innerHTML = `<div class="wrap">${errorHTML(err.message, 'anime-retry')}</div>`;
@@ -813,7 +994,7 @@ function animeHTML(m) {
   const fv = freeVideos(m);
   const freeHTML = fv.length ? `<div class="panel free-panel" id="gratis">
     <div class="ep-head"><h3>Assistir grátis <span class="free">Oficial</span></h3>
-      <span class="note">${fv.length} ${fv.length === 1 ? 'vídeo' : 'vídeos'} no YouTube · ${isNativeApp ? 'toque para assistir aqui no app' : 'toque para assistir'}</span></div>
+      <span class="note" id="free-count">Conferindo ${fv.length} ${fv.length === 1 ? 'vídeo' : 'vídeos'}…</span></div>
     <div class="eps">${fv.map((v) => freeVideoHTML(v)).join('')}</div>
     <p class="note">Publicado de graça pelo próprio dono do anime (${esc([...new Set(fv.map((v) => v.ch))].join(', '))}).
       ${fv.some((v) => v.lang === 'en') ? 'Nos vídeos em inglês, às vezes dá para trocar o áudio em ⚙ › Faixa de áudio. ' : ''}Vídeos podem sair do ar a qualquer momento.</p>
@@ -826,16 +1007,15 @@ function animeHTML(m) {
   const nextEp = eps.length ? (prog ? eps.find((e) => e.n > prog.last) || eps.find((e) => e.n === prog.last) : eps[0]) : null;
   const insideStream = streams.find((l) => PLAY_INSIDE.has(l.site));
   let cta = '';
+  detailCta = { id: m.id, yt: fv.length ? undefined : null, pluto: undefined, paid: '', fallback: '' };
+  if (nextEp) detailCta.paid = `<a class="btn big" href="${esc(nextEp.url)}" data-inside data-epn="${nextEp.n}">Pago: todos os episódios na ${esc(nextEp.site || 'Crunchyroll')}</a>`;
   if (firstFree) {
-    cta = `${freeLink(firstFree, 'btn primary big', `▶ Assistir grátis${firstFree.ep ? `: episódio ${firstFree.ep}` : ''} (${FREE_LANG[firstFree.lang] || ''})`)}`;
-    if (nextEp) cta += `<a class="btn big" href="${esc(nextEp.url)}" data-inside data-epn="${nextEp.n}">Todos os episódios na ${esc(nextEp.site || 'Crunchyroll')}</a>`;
+    cta = '<span class="btn primary big v-wait">Conferindo episódio grátis…</span>';
   } else if (nextEp) {
     cta = `<a class="btn primary big" href="${esc(nextEp.url)}" data-inside data-epn="${nextEp.n}">▶ ${prog ? 'Continuar' : 'Assistir'}: episódio ${esc(String(nextEp.n).replace('.', ','))}</a>`;
-  } else if (insideStream) {
-    cta = `<a class="btn primary big" href="${esc(insideStream.url)}" data-inside>▶ Assistir ${FREE_SITES.has(insideStream.site) ? 'grátis ' : ''}na ${esc(insideStream.site)}</a>`;
-  } else if (streams.length) {
-    cta = `<a class="btn primary big" href="#onde-assistir" data-scroll>▶ Ver onde assistir</a>`;
   }
+  if (insideStream) detailCta.fallback = `<a class="btn big" href="${esc(insideStream.url)}" data-inside>Abrir na ${esc(insideStream.site)}${/bilibili/i.test(insideStream.site) ? ' (alguns só VIP)' : ''}</a>`;
+  if (!cta) cta = '<span class="btn primary big v-wait">Procurando onde assistir grátis…</span>';
   const ctaRow = `<div class="btns cta-row" id="cta-row"${cta ? '' : ' hidden'}>${cta}</div>`;
   const episodesHTML = eps.length ? `<div class="panel" id="episodios">
     <div class="ep-head"><h3>Episódios <span class="muted">${eps.length}</span></h3>
@@ -892,6 +1072,57 @@ function animeHTML(m) {
   </div>`;
 }
 
+// botão principal: só aponta para algo que já foi conferido
+let detailCta = null;
+function renderCta() {
+  const row = $('#cta-row');
+  const c = detailCta;
+  if (!row || !c || location.hash !== `#/anime/${c.id}`) return;
+  let main = '';
+  if (c.yt) main = c.yt;
+  else if (c.yt === undefined) main = '<span class="btn primary big v-wait">Conferindo episódio grátis…</span>';
+  else if (c.pluto) main = c.pluto;
+  else if (c.pluto === undefined) main = '<span class="btn primary big v-wait">Procurando na Pluto TV…</span>';
+  else main = '<a class="btn primary big" href="#/gratis">▶ Ver animes grátis parecidos</a>';
+  row.innerHTML = main + (c.paid || '');
+  row.hidden = false;
+}
+
+async function verifyDetailVideos(m) {
+  const rows = [...document.querySelectorAll('#gratis .free-ep')];
+  if (!rows.length) return;
+  const fv = free.anime[m.id]?.videos || [];
+  const results = await Promise.all(rows.map(async (row) => {
+    const r = await verifyVideo(row.dataset.vid);
+    applyCheck(row, r);
+    return [row.dataset.vid, r];
+  }));
+  if (location.hash !== `#/anime/${m.id}`) return;
+  const okIds = new Set(results.filter(([, r]) => r.s !== 'bad').map(([id]) => id));
+  const verifiedIds = new Set(results.filter(([, r]) => r.s === 'ok').map(([id]) => id));
+  const left = fv.filter((v) => okIds.has(v.id));
+  const panel = $('#gratis');
+  if (!left.length) {
+    verified.set(`fa:${m.id}`, 'bad');
+    if (panel) panel.innerHTML = '<div class="ep-head"><h3>Assistir grátis</h3><span class="note">Os vídeos grátis deste anime saíram do ar ou não abrem no seu país.</span></div>';
+    detailCta.yt = null;
+  } else {
+    verified.set(`fa:${m.id}`, 'ok');
+    const n = verifiedIds.size;
+    $('#free-count').textContent = `${left.length} ${left.length === 1 ? 'vídeo' : 'vídeos'}${n ? ` · ${n === left.length ? 'todos conferidos agora' : `${n} ${n === 1 ? 'conferido' : 'conferidos'} agora`}` : ''} · ${isNativeApp ? 'toque para assistir aqui no app' : 'toque para assistir'}`;
+    const best = left.find((v) => verifiedIds.has(v.id) && v.lang.startsWith('dub')) || left.find((v) => verifiedIds.has(v.id)) || left[0];
+    detailCta.yt = freeLink(best, 'btn primary big', `▶ Assistir grátis${best.ep ? `: episódio ${best.ep}` : ''} (${FREE_LANG[best.lang] || ''})`);
+  }
+  renderCta();
+}
+
+async function verifyPlutoRows(panel, rows) {
+  await Promise.all(rows.map(async (row) => {
+    const r = await verifyPlutoEp(row.dataset.peid, row.dataset.ppath);
+    applyCheck(row, r);
+  }));
+}
+
 async function loadPlutoPanel(m) {
   const panel = $('#pluto-panel');
   if (!panel) return;
@@ -899,13 +1130,14 @@ async function loadPlutoPanel(m) {
   let matches;
   try { matches = await plutoFind(m); } catch {
     if (stillHere()) panel.innerHTML = '<div class="ep-head"><h3>Grátis na Pluto TV</h3><span class="note">Não foi possível consultar a Pluto TV agora.</span></div>';
+    if (detailCta) { detailCta.pluto = null; renderCta(); }
     return;
   }
   if (!stillHere()) return;
   if (!matches.length) {
     panel.innerHTML = `<div class="ep-head"><h3>Grátis na Pluto TV</h3><span class="note">Este anime não está na Pluto TV do seu país agora.</span></div>
       <p class="note">A Pluto TV troca o catálogo todo mês. Veja os animes que estão lá na aba <a class="linkish" href="#/gratis">Grátis</a>.</p>`;
-    if (!freeVideos(m).length) suggestFree(m);
+    detailCta.pluto = null; renderCta();
     return;
   }
   const best = matches[0];
@@ -919,8 +1151,9 @@ async function loadPlutoPanel(m) {
       const seasons = (data.seasons || []).filter((s) => s.episodes?.length);
       const all = seasons.flatMap((s) => s.episodes.map((e) => ({ ...e, season: s.number })));
       first = all[0];
+      best.eps = all;
       body = seasons.map((s, si) => `<details class="season"${si === 0 ? ' open' : ''}><summary>Temporada ${s.number} <span class="muted">${s.episodes.length} episódios</span></summary>
-        <div class="eps">${s.episodes.map((e, ei) => `<div class="ep"${ei >= 12 ? ' hidden' : ''}>
+        <div class="eps">${s.episodes.map((e, ei) => `<div class="ep v-checking" data-peid="${esc(e._id)}" data-ppath="${esc(e.stitched?.path || '')}"${ei >= 12 ? ' hidden' : ''}>
           <a class="ep-play" href="${esc(plutoLink.episode(best.slug, s.number, e.slug))}" data-inside${s.number === 1 && e.number ? ` data-epn="${e.number}"` : ''} target="_blank" rel="noopener">
             <span class="ep-thumb"><img src="${esc(cover(e.covers, '16:9'))}" alt="" loading="lazy"><span class="ep-badge">▶</span></span>
             <span class="ep-txt"><span class="ep-n">Episódio ${esc(e.number ?? '')}</span><span class="ep-t">${esc(e.name || '')}</span>
@@ -931,31 +1164,70 @@ async function loadPlutoPanel(m) {
   if (!stillHere()) return;
   const mainUrl = best.type === 'movie' ? plutoLink.movie(best.slug) : plutoLink.series(best.slug);
   panel.innerHTML = `<div class="ep-head"><h3>Grátis na Pluto TV <span class="free">Grátis</span></h3>
-      <span class="note">${esc(best.name)}${lang ? ` · áudio ${esc(lang)}` : ''} · sem cadastro, com anúncios</span></div>
-    <div class="btns" style="margin-bottom:12px"><a class="btn primary" href="${esc(first ? plutoLink.episode(best.slug, first.season, first.slug) : mainUrl)}" data-inside target="_blank" rel="noopener">▶ Assistir ${first ? 'episódio 1' : best.type === 'movie' ? 'o filme' : ''} grátis</a>${others}</div>
+      <span class="note" id="pluto-info">${esc(best.name)}${lang ? ` · ${esc(lang)}` : ''} · conferindo episódios…</span></div>
+    <div class="btns" style="margin-bottom:12px" id="pluto-main"><span class="btn primary v-wait">Conferindo…</span>${others}</div>
     ${body}
     <p class="note">${isNativeApp ? 'Abre o player da Pluto TV dentro do app; feche no X para voltar. ' : ''}O catálogo da Pluto TV muda com o tempo.</p>`;
-  panel.querySelectorAll('a[data-epn]').forEach((a) => a.addEventListener('click', () => progress.open(m, Number(a.dataset.epn))));
   panel.querySelectorAll('[data-more-eps]').forEach((b) => b.addEventListener('click', () => {
     b.closest('details').querySelectorAll('.ep[hidden]').forEach((e) => { e.hidden = false; });
     b.remove();
   }));
-  // sem vídeo grátis no YouTube: o botão principal vira "Assistir grátis na Pluto TV"
-  const cta = $('#cta-row');
-  if (cta && !freeVideos(m).length) {
-    cta.innerHTML = `<a class="btn primary big" href="${esc(first ? plutoLink.episode(best.slug, first.season, first.slug) : mainUrl)}" data-inside target="_blank" rel="noopener">▶ Assistir grátis na Pluto TV</a>`;
-    cta.hidden = false;
+  // confere: filme inteiro, ou episódios da temporada aberta (as outras quando forem abertas)
+  let okEp = null, info = null;
+  if (best.type === 'movie') {
+    const r = await verifyKey(`pm:${best.id}`, async () => {
+      const it = await plutoGet(`https://service-vod.clusters.pluto.tv/v4/vod/items?ids=${encodeURIComponent(best.id)}`);
+      return checkPlutoPath((Array.isArray(it) ? it[0] : it?.items?.[0] || it?.[0])?.stitched?.path);
+    });
+    if (r.s !== 'bad') { okEp = { url: mainUrl, label: 'o filme' }; info = r.i; }
+  } else if (best.eps?.length) {
+    const openRows = [...panel.querySelectorAll('details[open] .ep')];
+    await verifyPlutoRows(panel, openRows);
+    for (const d of panel.querySelectorAll('details.season')) {
+      d.addEventListener('toggle', () => { if (d.open) verifyPlutoRows(panel, [...d.querySelectorAll('.ep.v-checking')]); }, { once: true });
+      if (d.open) d.dataset.checked = '1';
+    }
+    // primeiro episódio que tocou; se a 1ª temporada inteira falhar, testa o começo das outras
+    let firstRow = panel.querySelector('details[open] .ep:not(.v-checking)');
+    if (!firstRow) {
+      for (const e of best.eps.slice(0, 40)) {
+        const r = await verifyPlutoEp(e._id, e.stitched?.path);
+        if (r.s !== 'bad') { firstRow = { dataset: { peid: e._id } }; break; }
+      }
+    }
+    if (firstRow) {
+      const e = best.eps.find((x) => x._id === firstRow.dataset.peid);
+      okEp = { url: plutoLink.episode(best.slug, e.season, e.slug), label: `episódio ${e.number ?? ''}`.trim(), ep: e };
+      info = verified.get(`pe:${e._id}`)?.i;
+    }
+  } else {
+    okEp = { url: mainUrl, label: '' };
   }
+  if (!stillHere()) return;
+  panel.querySelectorAll('details.season').forEach((d) => { if (!d.querySelector('.ep')) d.remove(); });
+  if (!okEp) {
+    panel.innerHTML = '<div class="ep-head"><h3>Grátis na Pluto TV</h3><span class="note">Os episódios deste anime estão fora do ar na Pluto TV agora.</span></div>';
+    detailCta.pluto = null; renderCta();
+    return;
+  }
+  const langs = info ? [info.a?.length ? `Áudio: ${info.a.join(', ')}` : '', info.l?.length ? `Legendas: ${info.l.join(', ')}` : ''].filter(Boolean).join(' · ') : '';
+  $('#pluto-info').textContent = `${best.name}${langs ? ` · ${langs}` : lang ? ` · ${lang}` : ''} · ${isNativeApp ? 'conferido agora' : 'sem cadastro, com anúncios'}`;
+  $('#pluto-main').innerHTML = `<a class="btn primary" href="${esc(okEp.url)}" data-inside target="_blank" rel="noopener">▶ Assistir ${esc(okEp.label)} grátis</a>${others}`;
+  detailCta.pluto = `<a class="btn primary big" href="${esc(okEp.url)}" data-inside target="_blank" rel="noopener">▶ Assistir grátis na Pluto TV</a>`;
+  renderCta();
 }
 
-// quando não há nada grátis, sugere animes parecidos que estão grátis
-async function suggestFree(m) {
-  const cta = $('#cta-row');
-  if (cta && cta.hidden) {
-    cta.innerHTML = '<a class="btn primary big" href="#/gratis">▶ Ver animes parecidos grátis</a>';
-    cta.hidden = false;
-  }
-}
+
+// marca o episódio como visto ao tocar para assistir (vale também para botões criados depois)
+let currentAnime = null;
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('#view-anime a[data-epn]');
+  if (!a || !currentAnime) return;
+  const n = Number(a.dataset.epn);
+  progress.open(currentAnime, n);
+  const row = document.querySelector(`#view-anime .ep[data-ep="${n}"]`);
+  if (row) { row.classList.add('seen'); row.querySelector('.ep-check')?.setAttribute('aria-pressed', 'true'); }
+}, true);
 
 function bindAnime(m) {
   const sel = $('#mylist-status');
@@ -967,12 +1239,7 @@ function bindAnime(m) {
   if (sel.value) sel.querySelector('option[value=""]').textContent = 'Remover da lista';
 
   const view = $('#view-anime');
-  view.querySelectorAll('a[data-epn]').forEach((a) => a.addEventListener('click', () => {
-    const n = Number(a.dataset.epn);
-    progress.open(m, n);
-    const row = view.querySelector(`.ep[data-ep="${n}"]`);
-    if (row) { row.classList.add('seen'); row.querySelector('.ep-check').setAttribute('aria-pressed', 'true'); }
-  }));
+  currentAnime = m;
   view.querySelectorAll('[data-check]').forEach((b) => b.addEventListener('click', () => {
     const n = Number(b.dataset.check);
     const on = progress.toggle(m, n);
@@ -1128,6 +1395,7 @@ async function loadFreePluto() {
     $('#free-pluto').innerHTML = `<div class="section-head"><h2>Animes grátis na Pluto TV</h2></div>
       <p class="note">${fmtNum(items.length)} animes e filmes sob demanda, sem cadastro. Toque para ver episódios.</p>
       <div class="grid">${items.map(plutoShowCard).join('')}</div>`;
+    observeVerify($('#free-live')); observeVerify($('#free-pluto'));
   } catch {
     $('#free-live').innerHTML = '<div class="section-head"><h2>Pluto TV</h2></div><p class="note">Não foi possível consultar a Pluto TV agora. <a class="linkish" href="https://pluto.tv/" data-inside>Abrir a Pluto TV</a></p>';
     $('#free-pluto').innerHTML = '';
@@ -1145,8 +1413,9 @@ function drawFreeGrid() {
   const list = free.cards.filter(want);
   $('#free-grid').innerHTML = list.length ? list.map((m) => {
     const n = freeVideos(m).length;
-    return cardHTML(m).replace('<div class="card-t">', `<div class="card-m accent">${n} ${n === 1 ? 'vídeo grátis' : 'vídeos grátis'}</div><div class="card-t">`);
+    return freeCardHTML(m, `<div class="card-m accent">${n} ${n === 1 ? 'vídeo grátis' : 'vídeos grátis'}</div>`);
   }).join('') : '<div class="empty" style="grid-column:1/-1"><strong>Nada nesta aba</strong>Tente outra aba.</div>';
+  observeVerify($('#free-grid'));
 }
 
 /* ---------- Player (vídeos do aparelho ou link direto) ---------- */

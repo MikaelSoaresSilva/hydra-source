@@ -207,6 +207,43 @@ async function findAnime(series, season) {
   return null;
 }
 
+/* ---------- verificação: o vídeo existe, é público e toca? ---------- */
+async function checkVideo(id) {
+  let oembed = 0, player = null, reason = '';
+  try {
+    const r = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`, { headers: UA });
+    oembed = r.status;
+  } catch { oembed = -1; }
+  try {
+    const r = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X)' },
+      body: JSON.stringify({ context: { client: { clientName: 'IOS', clientVersion: '20.10.4', deviceMake: 'Apple', deviceModel: 'iPhone16,2',
+        osName: 'iPhone', osVersion: '18.3.2.22D82', hl: 'pt', gl: 'BR' } }, videoId: id }),
+    });
+    const j = await r.json();
+    player = j.playabilityStatus?.status || null;
+    reason = j.playabilityStatus?.reason || '';
+  } catch { player = null; }
+  // apagado, privado ou inexistente: sai da lista
+  if (player === 'ERROR' || [400, 403, 404].includes(oembed)) return { keep: false, why: `${player || '-'} ${oembed} ${reason}` };
+  const v = player === 'OK' ? 'ok' : /pa[ií]s|country/i.test(reason) ? 'rg' : '?';
+  return { keep: true, v, noEmbed: oembed === 401 || undefined };
+}
+async function verifyAll(videos) {
+  const list = [...videos];
+  const out = new Map();
+  let i = 0;
+  const worker = async () => {
+    while (i < list.length) {
+      const v = list[i++];
+      out.set(v.id, await checkVideo(v.id));
+      await sleep(250);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  return out;
+}
+
 /* ---------- principal ---------- */
 const MIN_EPISODE = 12 * 60; // episódios completos têm pelo menos ~12 minutos
 
@@ -248,6 +285,15 @@ async function main() {
     console.error(`${ch.name}: ${[...found.values()].filter((v) => v.ch === ch.name).length} episódios completos`);
   }
 
+  // confere cada vídeo antes de colocar na lista
+  const checks = await verifyAll(found.values());
+  let removed = 0;
+  for (const [id, c] of checks) {
+    if (!c.keep) { console.error(`removido ${id}: ${c.why}`); found.delete(id); removed++; continue; }
+    Object.assign(found.get(id), { v: c.v, noEmbed: c.noEmbed });
+  }
+  console.error(`verificação: ${checks.size - removed} ok, ${removed} removidos`);
+
   // liga cada série ao AniList
   const anime = {};
   const bySeries = new Map();
@@ -263,13 +309,14 @@ async function main() {
     console.error(`[${++i}/${bySeries.size}] ${name}${season ? ` T${season}` : ''} -> ${m ? `${m.id} ${m.title.english || m.title.romaji}` : 'NÃO ACHOU'}`);
     if (!m) continue;
     const entry = anime[m.id] || (anime[m.id] = { title: m.title.english || m.title.romaji, videos: [] });
-    for (const v of vids) if (!entry.videos.some((x) => x.id === v.id)) entry.videos.push({ id: v.id, title: v.title, ep: v.ep, movie: v.movie || undefined, lang: v.lang, dur: v.dur, ch: v.ch });
+    for (const v of vids) if (!entry.videos.some((x) => x.id === v.id)) entry.videos.push({ id: v.id, title: v.title, ep: v.ep, movie: v.movie || undefined, lang: v.lang, dur: v.dur, ch: v.ch, v: v.v, noEmbed: v.noEmbed });
   }
   for (const a of Object.values(anime)) a.videos.sort((x, y) => (x.ep ?? 1e9) - (y.ep ?? 1e9) || x.lang.localeCompare(y.lang));
 
   const out = {
     updated: new Date().toISOString(),
-    note: 'Episódios completos publicados de graça pelos próprios donos dos direitos em canais oficiais do YouTube.',
+    note: 'Episódios completos publicados de graça pelos próprios donos dos direitos em canais oficiais do YouTube. '
+      + 'Cada vídeo foi conferido na geração da lista (v: ok = toca; rg = bloqueado no país do servidor, o app confere no aparelho; ? = sem resposta).',
     channels: CHANNELS.map((c) => ({ name: c.name, url: `https://www.youtube.com/@${c.handle}` })),
     anime,
   };

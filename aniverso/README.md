@@ -11,6 +11,11 @@ Aplicativo (site instalável no celular e no PC) com o catálogo de animes do mu
 - **Página do anime**: sinopse (com botão para traduzir), se é dublado ou legendado, trailer,
   ficha técnica, contagem para o próximo episódio, temporadas/filmes relacionados, recomendações
   e botões para as plataformas oficiais (Crunchyroll, Netflix, Prime Video etc.) + JustWatch Brasil.
+- **Só mostra o que funciona**: antes de liberar um episódio, canal ou anime, o app confere se ele toca.
+  No app Android a conferência é feita pelo próprio celular, no seu país: o YouTube diz se o vídeo está no ar,
+  é público e liberado no seu país, e a Pluto TV entrega (ou não) o vídeo de cada episódio, com a lista real de
+  áudios e legendas. O que falha some da tela; o que passou ganha um ✓. As conferências ficam guardadas por
+  6 horas. O robô que gera a lista também confere cada vídeo e descarta os apagados ou privados.
 - **100% grátis por padrão**: plataformas pagas (Crunchyroll, Netflix, Prime Video…) ficam escondidas.
   Quem quiser vê-las liga a opção "Mostrar também plataformas pagas" na aba Grátis.
 - **Pluto TV dentro do app** (grátis, sem cadastro): canais de anime ao vivo com o que está passando agora,

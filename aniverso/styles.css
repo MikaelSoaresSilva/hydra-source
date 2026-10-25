@@ -451,3 +451,21 @@ details.season { border-top: 1px solid var(--line); padding-block: 10px; }
 details.season summary { cursor: pointer; font-weight: 800; margin-bottom: 10px; }
 .switch { display: flex; gap: 10px; align-items: center; cursor: pointer; font-weight: 500; }
 .switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+/* ---------- Conferência de disponibilidade ---------- */
+.v-checking { pointer-events: none; }
+.v-checking .poster::after, .v-checking.ep::after, .live-card.v-checking::after {
+  content: "Conferindo…"; position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(10, 6, 18, .62); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .03em;
+}
+.v-checking.ep, .live-card.v-checking { position: relative; }
+.v-checking.ep::after, .live-card.v-checking::after { border-radius: 8px; }
+.v-ok .badges::after, .ep.v-ok .ep-n::before {
+  content: "✓"; color: #5fd39a; font-weight: 800;
+}
+.v-ok .badges::after { font-size: 11px; background: rgba(10, 6, 18, .82); border-radius: 5px; padding: 1px 6px; }
+.ep.v-ok .ep-n::before { margin-right: 4px; }
+.v-wait { opacity: .7; cursor: progress; }
+@media (prefers-reduced-motion: no-preference) {
+  .v-checking .poster::after, .v-checking.ep::after, .live-card.v-checking::after { animation: pulse 1.4s ease-in-out infinite; }
+}

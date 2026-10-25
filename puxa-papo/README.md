@@ -2,6 +2,12 @@
 
 App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app fica em `app/index.html`.
 
+## v1.4 — com o Manual do Assassino
+- A IA recebe um resumo do livro *Manual do Assassino* (Cialdini, Chris Voss, Carnegie, Kahneman, Heath, Greene filtrado, Cabane, Aron, Aronson, Fiske, Ekman) adaptado pra conversa por texto, mais a parte de emoções do *Código do Viking*.
+- Cada sugestão mostra a técnica usada (ex: "📚 Espelhamento · Chris Voss"), o resultado traz uma "📚 Lição do Manual" e um "🛡️ Sinal de alerta" se ela usar alguma tática de manipulação (Cap. 6 do livro).
+- Objetivos novos: *Ela tá chateada*, *Consertar mancada*, *Ela disse não*. Refinar: *usando mais o Manual*.
+- Segue a regra do próprio livro: persuasão honesta, táticas sujas só como defesa. Dá pra desligar em Ajustes.
+
 ## v1.3
 - **Servidor lotado (503) resolvido sozinho**: tenta de novo, troca para outro modelo livre (até 6) e, se houver chave do Claude também, passa pra ele. Lembra por 30 min qual funcionou.
 - Mostra "Servidor lotado, tentando outro..." durante a troca; 429 pula direto; chave errada para na hora.
@@ -19,11 +25,11 @@ App Android de sugestões de conversa (WebView + IA Gemini/Claude). Todo o app f
 - No Story, vários stories = uma resposta para cada.
 
 ## Instalar
-`dist/PuxaPapo-v1.3.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
+`dist/PuxaPapo-v1.4.apk` usa a mesma assinatura da v1.0, então instala **por cima** e mantém chave da IA, estilo e histórico.
 
 ## Reconstruir
 ```
-./build.sh PuxaPapo-original.apk 4 1.3
+./build.sh PuxaPapo-original.apk 5 1.4
 ```
 
 ## Testar

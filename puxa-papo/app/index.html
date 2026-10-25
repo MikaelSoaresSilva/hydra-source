@@ -95,6 +95,10 @@ ul.tight li{margin:3px 0;color:#ddd3f0;font-size:14px}
 .music{display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg2);border-radius:12px;margin:8px 0}
 .music .ic{width:36px;height:36px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex:0 0 auto}
 small.mut{color:var(--mut)}
+.tec{display:inline-block;font-size:11.5px;color:#cdb8ff;background:#2a2050;border:1px solid #4b3a86;border-radius:99px;padding:2px 9px;margin:0 0 6px 6px;vertical-align:top}
+.alert{background:#3a2a10;border:1px solid #7a5a1c;color:#ffe2a8;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px}
+.alert b,.manual b{display:block;margin-bottom:4px}
+.manual{background:#221a3a;border:1px solid #4b3a86;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px;color:#e6dcff}
 .pair{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}
 .pair .hd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .pair .n{width:22px;height:22px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-size:12px;letter-spacing:0}
@@ -135,6 +139,9 @@ small.mut{color:var(--mut)}
       <span class="chip" data-v="chamar pra sair / marcar um encontro">Chamar pra sair</span>
       <span class="chip" data-v="sair de um vácuo sem parecer carente">Levei vácuo</span>
       <span class="chip" data-v="primeira mensagem, ainda não conversamos">1ª mensagem</span>
+      <span class="chip" data-v="ela está chateada, cansada ou estressada: acolher primeiro (rotulagem de Chris Voss) e só depois seguir">Ela tá chateada</span>
+      <span class="chip" data-v="consertar uma mancada ou clima ruim que eu criei (auditoria de acusações, sem se humilhar)">Consertar mancada</span>
+      <span class="chip" data-v="ela recusou um convite ou disse não: responder com elegância, sem insistir e sem drama">Ela disse não</span>
     </div>
 
     <label class="lbl">📝 Descrição (opcional)</label>
@@ -256,6 +263,7 @@ small.mut{color:var(--mut)}
     <select id="model"></select>
     <div class="row" style="margin-top:12px"><button class="btn" id="testKey" style="flex:1">Salvar e testar</button></div>
     <div id="keyMsg"></div>
+    <div class="toggle"><label class="sw"><input type="checkbox" id="useManual" checked><span></span></label>Usar o conhecimento do Manual do Assassino nas sugestões</div>
     <div class="toggle"><label class="sw"><input type="checkbox" id="autoSrv" checked><span></span></label>Se um servidor estiver lotado, trocar sozinho por outro</div>
     <div class="row" style="margin-top:12px"><button class="btn ghost" id="bestSrv" style="flex:1">🔎 Procurar o melhor servidor</button></div>
     <div id="srvMsg"></div>
@@ -270,7 +278,7 @@ small.mut{color:var(--mut)}
     <p class="note" style="margin-top:0">Tudo fica salvo só no seu celular. Os prints vão apenas para a IA que você escolheu, na hora da análise. No plano grátis do Gemini o Google pode usar os dados pra melhorar os produtos dele, então evite mandar prints com dados sensíveis (endereço, documentos).</p>
     <button class="btn sm danger" id="wipe">Apagar tudo do app</button>
   </div>
-  <p class="note" style="text-align:center">Puxa Papo v1.3</p>
+  <p class="note" style="text-align:center">Puxa Papo v1.4 · com o Manual do Assassino</p>
 </section>
 </main>
 
@@ -481,16 +489,18 @@ Responda SOMENTE com um JSON válido, sem texto antes ou depois, neste formato:
    "sinais": ["sinais concretos de interesse ou desinteresse que você viu"],
    "ganchos": ["assuntos ou detalhes que ela deu e dá pra explorar"],
    "voce_bem": "o que o Mikael está fazendo bem",
-   "voce_melhorar": "o que ele pode melhorar, direto e sem rodeio"
+   "voce_melhorar": "o que ele pode melhorar, direto e sem rodeio",
+   "alertas": ["só se ELA estiver usando alguma tática de manipulação ou houver sinal de alerta; senão []"]
  },
  "sugestoes": [
-   {"texto": "mensagem pronta pra copiar e mandar", "tipo": "engraçada | curiosa | direta | flerte | acolhedora | leve | convite", "por_que": "por que funciona nessa situação, em 1 frase"}
+   {"texto": "mensagem pronta pra copiar e mandar", "tipo": "engraçada | curiosa | direta | flerte | acolhedora | leve | convite", "por_que": "por que funciona nessa situação, em 1 frase", "tecnica": "técnica usada · autor (ou vazio)"}
  ],
  "respostas_individuais": [
-   {"mensagem_dela": "a mensagem dela copiada exatamente como está", "resposta": "resposta pronta só pra essa mensagem", "alternativa": "outra opção diferente pra mesma mensagem", "por_que": "por que funciona, em 1 frase curta", "dica": "opcional: ex. 'só reaja com 😂' ou 'cite a mensagem dela'"}
+   {"mensagem_dela": "a mensagem dela copiada exatamente como está", "resposta": "resposta pronta só pra essa mensagem", "alternativa": "outra opção diferente pra mesma mensagem", "por_que": "por que funciona, em 1 frase curta", "tecnica": "técnica usada · autor (ou vazio)", "dica": "opcional: ex. 'só reaja com 😂' ou 'cite a mensagem dela'"}
  ],
  "evitar": ["o que NÃO mandar agora e por quê, curto"],
  "proximo_passo": "estratégia pros próximos dias/mensagens em 1 ou 2 frases",
+ "dica_manual": "1 lição prática do Manual do Assassino pra essa situação (ou vazio)",
  "musicas": [{"titulo": "", "artista": "", "por_que": "", "mensagem": "mensagem curta pra mandar junto"}],
  "meus_exemplos": ["mensagens que o Mikael escreveu no print, copiadas exatamente como estão"],
  "estilo_atualizado": {
@@ -506,6 +516,55 @@ Responda SOMENTE com um JSON válido, sem texto antes ou depois, neste formato:
 }
 Regras do formato: entregue 5 sugestões (no modo música podem ser 4). "respostas_individuais" segue o pedido do Mikael no prompt (uma entrada por mensagem dela, na ordem, sem pular nenhuma, sem juntar duas numa só); se ele não pedir, []. Cada resposta individual responde só aquela mensagem e as respostas, lidas em sequência, devem formar uma conversa natural, sem repetir assunto nem pergunta. Quando houver várias mensagens dela, as "sugestoes" passam a ser mensagens únicas que respondem tudo de uma vez (pra quem prefere mandar uma só). "musicas" só no modo música, senão []. "estilo_atualizado" deve juntar o perfil atual com o que você viu de novo (se não viu nada novo, devolva o perfil atual; se ainda não existe e não há mensagens dele, null). Use os números como número, não como texto.`;
 
+/* Conhecimento do "Manual do Assassino" (Biblioteca do Guerreiro), adaptado para conversa por texto.
+   Só a parte de persuasão honesta; as táticas sujas do Cap. 6 entram apenas como alerta/defesa. */
+const MANUAL = `
+
+MANUAL DO ASSASSINO (base extra de conhecimento; use as técnicas abaixo quando encaixarem, sem forçar)
+Regra-mãe do livro: persuasão = verdade + os dois ganham; manipulação = esconder ou mentir pra só um ganhar. Teste do jornal: "o Mikael ficaria tranquilo se ela soubesse exatamente o que ele está fazendo?" Se não, não sugira. Ninguém conquista 100% das pessoas; o que está sob controle é como ela se sente conversando com ele.
+LER A PESSOA (Kahneman, Greene, Navarro)
+- As pessoas decidem pela emoção (Sistema 1) e justificam pela lógica. Mensagem boa gera sensação antes de argumento.
+- Conheça o "normal" dela (tamanho das mensagens, demora, emojis). O que importa é a MUDANÇA: ficou mais seca, mais rápida, mais carinhosa. Mudança = "esse assunto mexe com ela", não prova de nada.
+- Um sinal sozinho não diz nada; tire conclusões só com uns 3 sinais na mesma direção.
+- Mapa de motivação: o que ela mais quer (atenção, segurança, diversão, liberdade, ser ouvida) e o que ela teme. Apresente o convite como caminho pro que ela quer.
+AS 7 ARMAS (Cialdini), versão honesta
+- Reciprocidade: dar antes de pedir, algo personalizado e inesperado (uma indicação de série/música/lugar ligada ao que ela falou, um meme que é a cara dela).
+- Compromisso: Escada do Sim. Antes do convite grande, um passo pequeno e real ("vc já foi no [lugar]?" antes de "bora no [lugar] sábado?").
+- Afeição e Unidade: pontos em comum VERDADEIROS (cidade, gosto, rotina, um problema parecido) e o "nós" ("a gente que treina de manhã sofre").
+- Escassez honesta = vida própria. Não estar sempre disponível nem responder em 5 segundos sempre; nunca escassez inventada, sumiço calculado ou "só hoje".
+- Prova social e autoridade: deixar aparecer, sem contar vantagem, o que ele faz de verdade (treino, apps que cria, metas).
+- "Porque": todo convite com um motivo real e específico ("bora no açaí, porque vc falou que nunca foi e lá é o melhor da cidade").
+NEGOCIAÇÃO DE REFÉM (Chris Voss), no texto
+- Espelhamento: repetir as últimas 1 a 3 palavras dela com tom de curiosidade ("perdeu o ônibus?") faz ela contar mais.
+- Rotulagem: nomear a emoção que dá pra perceber, começando com "parece que", "pelo jeito", "sinto que" (nunca "eu entendo que"). Ex: "pelo jeito o dia foi pesado hj". Ótimo quando ela está chateada, cansada ou desconfiada.
+- Perguntas calibradas com "como" e "o que" ("o que te fez escolher enfermagem?") em vez de sim/não.
+- Buscar o "não": pergunta onde "não" é avanço e deixa ela confortável ("seria muito doido se a gente marcasse um café essa semana?").
+- Auditoria de acusações: pra reacender conversa morta, pedir algo ou consertar mancada, ele mesmo diz antes o que ela pode estar pensando ("vc deve tá achando que eu sumi e voltei do nada kkk").
+- "É isso mesmo": resumir o que ela sente até ela concordar mostra que ele entendeu.
+PALAVRAS QUE COLAM (Aristóteles, Heath)
+- Inesperado e concreto vence genérico: detalhe específico, imagem, mini-história de 1 frase.
+- Reenquadrar sem mentir: transformar algo negativo em leve ("não sei dançar" → "vou ser a atração cômica da festa").
+- Pré-suasão: o que vem antes do pedido muda a resposta (criar clima bom antes do convite).
+PRESENÇA E PODER (Greene filtrado, Cabane, Fiske)
+- Diga menos que o necessário (Lei 4): mensagens curtas e seguras valem mais que explicação longa.
+- Calor antes de força: primeiro mostrar que é do bem, depois a confiança. Carisma = presença (prestar atenção no que ela disse) + poder (segurança, vida própria) + calor (querer bem).
+- Ousadia e momento certo (Leis 28 e 35): quando o interesse está alto, convite claro com lugar e dia, sem hesitar e sem pedir desculpa. Ambiguidade demais parece medo.
+- Ausência (Lei 16) só com cuidado: dar espaço é bom, sumir como jogo é tática suja.
+- Sem pedir desculpa à toa, sem justificar demais, sem buscar aprovação. "Não" dela é não: aceitar com elegância também transmite poder.
+CONQUISTAR (Huang, Aron, Aronson, Carnegie)
+- Perguntas de continuação ("e como foi isso?") fazem a pessoa gostar mais de quem pergunta.
+- Autorrevelação recíproca e gradual: ele conta algo pessoal pequeno depois que ela contar.
+- Efeito tropeço: alguém competente que admite uma falha pequena com humor fica mais simpático (autoironia leve).
+- Callbacks: lembrar algo que ela contou dias atrás e perguntar sobre isso faz ela se sentir importante.
+- Elogiar escolha, esforço ou gosto dela, não só aparência.
+EMOÇÕES (Ekman, Gross, Lieberman, Código do Viking)
+- Se ela está irritada ou triste: não argumentar no pico. Rotular, acolher, depois seguir.
+- Se o Mikael está com raiva, ciúme ou ansiedade: a melhor sugestão pode ser esperar 10 minutos e não mandar nada agora. Diga isso.
+- "Três outras histórias": vácuo não é necessariamente desprezo (dia corrido, esqueceu). Nunca cobrar resposta.
+PROIBIDO (Capítulo 6 do livro: são táticas de manipulador, use só pra ALERTAR)
+Bombardeio de amor, triangulação/ciúme provocado, chantagem de culpa, falsa urgência, tratamento de silêncio como punição, gaslighting, inversão de culpa, isolamento, mudar as regras do jogo. Nunca sugira nada disso. Se perceber ELA usando alguma com o Mikael, coloque em leitura.alertas com a defesa do livro (ex: "chantagem de culpa → 'entendo, e mesmo assim minha resposta é não'").
+COMO USAR NO JSON: em cada sugestão e resposta individual, preencha "tecnica" com o nome curto da técnica usada e o autor (ex: "Espelhamento · Chris Voss", "Escada do Sim · Cialdini", "Efeito tropeço · Aronson"). Em "dica_manual", dê 1 lição prática do livro pro Mikael aplicar nessa situação.`;
+function sysPrompt() { return SYSTEM + (db.settings.manual === false ? "" : MANUAL); }
 function styleBlock() {
   const st = db.style;
   const ex = st.exemplos.slice(-30);
@@ -596,14 +655,14 @@ async function callOnce(prov, model, key, userText, images, maxTok) {
   let r;
   if (prov === "gemini") {
     const body = {
-      systemInstruction: { parts: [{ text: SYSTEM }] },
+      systemInstruction: { parts: [{ text: sysPrompt() }] },
       contents: [{ role: "user", parts: [...images.map(b => ({ inlineData: { mimeType: "image/jpeg", data: b } })), { text: userText }] }],
       generationConfig: { temperature: 0.95, responseMimeType: "application/json", maxOutputTokens: maxTok || 16384 }
     };
     r = await httpT("POST", `${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, { "Content-Type": "application/json", "x-goog-api-key": key }, JSON.stringify(body), 120000);
   } else {
     const body = {
-      model, max_tokens: maxTok || 8000, temperature: 0.9, system: SYSTEM,
+      model, max_tokens: maxTok || 8000, temperature: 0.9, system: sysPrompt(),
       messages: [{ role: "user", content: [...images.map(b => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b } })), { type: "text", text: userText }] }]
     };
     r = await httpT("POST", "https://api.anthropic.com/v1/messages", claudeHeaders(key), JSON.stringify(body), 120000);
@@ -727,6 +786,7 @@ async function run(mode, refine) {
 $$("[data-run]").forEach(b => b.onclick = () => run(b.dataset.run));
 
 /* ---------------- Mostrar resultado ---------------- */
+const tecTag = t => t ? `<span class="tec">📚 ${esc(t)}</span>` : "";
 function meterColor(n) { return n >= 7 ? "var(--ok)" : n >= 4 ? "var(--warn)" : "var(--bad)"; }
 function resultHTML(mode, res, o, noRefine) {
   const L = res.leitura || {}; const n = Math.max(0, Math.min(10, Number(L.interesse) || 0));
@@ -739,6 +799,7 @@ function resultHTML(mode, res, o, noRefine) {
   if ((L.ganchos || []).length) h += `<div class="kv" style="margin-top:8px"><b>Ganchos pra explorar:</b></div><div>${L.ganchos.map(s => `<span class="pill">${esc(s)}</span>`).join("")}</div>`;
   if (L.voce_bem) h += `<div class="kv" style="margin-top:8px">✅ ${esc(L.voce_bem)}</div>`;
   if (L.voce_melhorar) h += `<div class="kv">🔧 ${esc(L.voce_melhorar)}</div>`;
+  if ((L.alertas || []).filter(Boolean).length) h += `<div class="alert"><b>🛡️ Sinal de alerta</b><ul class="tight">${L.alertas.filter(Boolean).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
   h += `</div>`;
   const ri = (res.respostas_individuais || []).filter(r => r && (r.resposta || r.mensagem_dela));
   if (ri.length) {
@@ -751,6 +812,7 @@ function resultHTML(mode, res, o, noRefine) {
       if (t) h += `<div class="bubble">${esc(t)}</div><div class="act"><button class="btn sm" data-copy="${esc(t)}">Copiar</button><button class="btn sm ghost" data-share="${esc(t)}">Enviar</button><button class="btn sm ghost" data-edit="${esc(t)}">Editar</button></div>`;
       if (r.por_que) h += `<div class="why" style="font-size:13px;color:var(--mut);margin:8px 2px 0">${esc(r.por_que)}</div>`;
       if (r.dica) h += `<div class="dica">💡 ${esc(r.dica)}</div>`;
+      if (r.tecnica) h += `<div style="margin-top:6px">${tecTag(r.tecnica)}</div>`;
       if (a && a !== t) h += `<div class="alt">Outra opção:<div class="bubble">${esc(a)}</div><div class="act"><button class="btn sm ghost" data-copy="${esc(a)}">Copiar esta</button><button class="btn sm ghost" data-edit="${esc(a)}">Editar</button></div></div>`;
       h += `</div>`;
     });
@@ -760,10 +822,10 @@ function resultHTML(mode, res, o, noRefine) {
   h += `<div class="card"><h3>💬 ${ri.length > 1 ? "Ou mande uma mensagem só (responde tudo)" : "O que mandar"}</h3>`;
   (res.sugestoes || []).forEach(s => {
     const t = humanize(s.texto);
-    h += `<div class="sug"><span class="tag">${esc(s.tipo || "sugestão")}</span><div class="bubble">${esc(t)}</div>${s.por_que ? `<div class="why">${esc(s.por_que)}</div>` : ""}<div class="act"><button class="btn sm" data-copy="${esc(t)}">Copiar</button><button class="btn sm ghost" data-share="${esc(t)}">Enviar</button><button class="btn sm ghost" data-edit="${esc(t)}">Editar</button></div></div>`;
+    h += `<div class="sug"><span class="tag">${esc(s.tipo || "sugestão")}</span>${tecTag(s.tecnica)}<div class="bubble">${esc(t)}</div>${s.por_que ? `<div class="why">${esc(s.por_que)}</div>` : ""}<div class="act"><button class="btn sm" data-copy="${esc(t)}">Copiar</button><button class="btn sm ghost" data-share="${esc(t)}">Enviar</button><button class="btn sm ghost" data-edit="${esc(t)}">Editar</button></div></div>`;
   });
   if (!noRefine) h += `<div class="refine"><label class="lbl">Não curtiu? Peça de outro jeito</label><div class="chips">
-    ${["mais curtas", "mais engraçadas", "mais diretas", "mais ousadas (com respeito)", "mais carinhosas", "mais parecidas comigo", "outras opções"].map(x => `<span class="chip" data-refine="${mode}|${x}">${x}</span>`).join("")}
+    ${["mais curtas", "mais engraçadas", "mais diretas", "mais ousadas (com respeito)", "mais carinhosas", "mais parecidas comigo", "usando mais o Manual", "outras opções"].map(x => `<span class="chip" data-refine="${mode}|${x}">${x}</span>`).join("")}
     </div></div>`;
   h += `</div>`;
   if ((res.musicas || []).length) {
@@ -774,9 +836,10 @@ function resultHTML(mode, res, o, noRefine) {
     });
     h += `</div>`;
   }
-  if ((res.evitar || []).length || res.proximo_passo) {
+  if ((res.evitar || []).length || res.proximo_passo || res.dica_manual) {
     h += `<div class="card"><h3>🧭 Estratégia</h3>`;
     if (res.proximo_passo) h += `<div class="kv">${esc(res.proximo_passo)}</div>`;
+    if (res.dica_manual) h += `<div class="manual"><b>📚 Lição do Manual</b>${esc(res.dica_manual)}</div>`;
     if ((res.evitar || []).length) h += `<div class="kv" style="margin-top:8px"><b>Evite agora:</b></div><ul class="tight">${res.evitar.map(s => `<li>${esc(s)}</li>`).join("")}</ul>`;
     h += `</div>`;
   }
@@ -859,6 +922,7 @@ function renderAjustes() {
   $("#apikey").value = s.keys[prov] || "";
   const list = Array.from(new Set([s.models[prov], ...(s.modelList[prov].length ? s.modelList[prov] : KNOWN_MODELS[prov])].filter(Boolean)));
   $("#autoSrv").checked = s.auto !== false;
+  $("#useManual").checked = s.manual !== false;
   $("#model").innerHTML = list.map(m => `<option ${m === s.models[prov] ? "selected" : ""}>${esc(m)}</option>`).join("");
   $("#howto").innerHTML = prov === "gemini"
     ? `<ol class="steps"><li>Toque em <a href="#" data-url="https://aistudio.google.com/apikey" style="color:var(--rose)">abrir Google AI Studio</a></li><li>Entre com sua conta Google</li><li>Toque em <b>Create API key</b> (Criar chave)</li><li>Copie a chave, cole abaixo e toque em <b>Salvar e testar</b></li></ol><p class="note">É grátis, com limite de uso por minuto/dia. Pra uso pessoal sobra.</p>`
@@ -881,6 +945,7 @@ $("#testKey").onclick = async () => {
   } catch (e) { msg.innerHTML = `<div class="err">Resposta inesperada: ${esc(e.message)}</div>`; }
 };
 $("#autoSrv").onchange = () => { db.settings.auto = $("#autoSrv").checked; save(); };
+$("#useManual").onchange = () => { db.settings.manual = $("#useManual").checked; save(); toast(db.settings.manual ? "Manual ligado" : "Manual desligado"); };
 // Testa vários modelos ao mesmo tempo com uma pergunta minúscula e escolhe o mais rápido que respondeu.
 $("#bestSrv").onclick = async () => {
   const s = db.settings, prov = s.provider, key = (s.keys[prov] || "").trim(), out = $("#srvMsg"), btn = $("#bestSrv");

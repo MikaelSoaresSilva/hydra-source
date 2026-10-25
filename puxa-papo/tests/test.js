@@ -8,13 +8,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✔ ' + m); } else { fail
 const MOCK = {
   transcricao: "Eu: e ai\nEla: oi sumido\nEla: vai na festa sábado?\nEla: o Lucas disse que vc vai",
   nome_dela: "Ana",
-  leitura: { interesse: 8, clima: "leve", resumo: "Ela puxou assunto 3x.", sinais: ["mandou 3 msgs"], ganchos: ["festa"], voce_bem: "ok", voce_melhorar: "responder" },
+  leitura: { interesse: 8, clima: "leve", resumo: "Ela puxou assunto 3x.", sinais: ["mandou 3 msgs"], ganchos: ["festa"], voce_bem: "ok", voce_melhorar: "responder", alertas: ["chantagem de culpa → 'entendo, e mesmo assim minha resposta é não'"] },
   respostas_individuais: [
-    { mensagem_dela: "oi sumido", resposta: "sumido nada kkkk tava na correria", alternativa: "eu? vc que sumiu", por_que: "leve", dica: "cite a mensagem dela" },
+    { mensagem_dela: "oi sumido", resposta: "sumido nada kkkk tava na correria", alternativa: "eu? vc que sumiu", por_que: "leve", dica: "cite a mensagem dela", tecnica: "Auditoria de acusações · Chris Voss" },
     { mensagem_dela: "vai na festa sábado?", resposta: "pensando em ir sim, e vc?", alternativa: "depende de quem vai kkk", por_que: "devolve" },
     { mensagem_dela: "o Lucas disse que vc vai", resposta: "o lucas fala demais kkkk", alternativa: "", por_que: "humor" }
   ],
-  sugestoes: [{ texto: "kkkk tava na correria, vou sim e vc?", tipo: "leve", por_que: "responde tudo" }],
+  sugestoes: [{ texto: "kkkk tava na correria, vou sim e vc?", tipo: "leve", por_que: "responde tudo", tecnica: "Escada do Sim · Cialdini" }],
+  dica_manual: "Diga menos que o necessário: mensagem curta e segura.",
   evitar: ["textão"], proximo_passo: "marcar", musicas: [], meus_exemplos: ["e ai"], estilo_atualizado: null
 };
 
@@ -45,6 +46,7 @@ const MOCK = {
     }));
   });
   await page.goto(file);
+  const clickAI = async sel => { const n = reqs.length; await page.click(sel); for (let i = 0; i < 200 && reqs.length === n; i++) await page.waitForTimeout(50); await page.waitForTimeout(100); };
   const promptOf = b => b.contents[0].parts.map(p => p.text || '').join('');
   const lastPrompt = () => promptOf(reqs[reqs.length - 1]);
 
@@ -84,21 +86,19 @@ const MOCK = {
   await page.click('#modal', { position: { x: 5, y: 5 } });
 
   console.log('5) Refinar');
-  await page.click('[data-refine="conversa|mais engraçadas"]');
-  await page.waitForFunction(n => window.__n === undefined, null);
-  await page.waitForTimeout(300);
+  await clickAI('[data-refine="conversa|mais engraçadas"]');
   p = lastPrompt();
   ok(p.includes('MODO: REFINAR') && p.includes('refaça "respostas_individuais"') && p.includes('2. vai na festa sábado?'), 'refinar mantém uma por uma');
 
   console.log('6) Opção "Todas as mensagens dela"');
   await page.click('#scope-conversa .chip[data-v="todas"]');
-  await page.click('[data-run="conversa"]'); await page.waitForTimeout(400);
+  await clickAI('[data-run="conversa"]');
   ok(lastPrompt().includes('CADA mensagem DELA que aparece na conversa'), 'prompt pede todas');
 
   console.log('7) Desligar uma por uma');
   await page.click('label.sw:has(#each-conversa)');
   ok(!(await page.isVisible('#eachOpts')), 'opções somem quando desliga');
-  await page.click('[data-run="conversa"]'); await page.waitForTimeout(400);
+  await clickAI('[data-run="conversa"]');
   ok(lastPrompt().includes('RESPONDER UMA POR UMA: não pedido'), 'prompt não pede uma por uma');
   await page.click('label.sw:has(#each-conversa)');
 
@@ -118,7 +118,7 @@ const MOCK = {
   ok((await page.textContent('#styleCard')).length > 0, 'tela Meu estilo ok');
   await page.click('nav [data-tab="conversa"]');
   await page.fill('#ctx-conversa', 'Ela: oi');
-  await page.click('[data-run="conversa"]'); await page.waitForTimeout(400);
+  await clickAI('[data-run="conversa"]');
   ok(lastPrompt().includes('DESCRIÇÃO DO MIKAEL (escrita por ele') && lastPrompt().includes('curto trap e academia'), 'IA recebe a descrição dele');
 
   console.log('9) Histórico abre com as respostas uma por uma');
@@ -139,10 +139,10 @@ const MOCK = {
   for (let i = 0; i < 2; i++) {
     const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('[data-pick="conversa"]')]);
     await fc.setFiles(Array(6).fill(path.join(S, 'tests/print.png')));
-    await page.waitForTimeout(500);
+    await page.waitForFunction(n => document.querySelectorAll('#th-conversa .th').length >= n, Math.min(10, 6 * (i + 1)));
   }
   ok(await page.locator('#th-conversa .th').count() === 10, 'guarda até 10 prints');
-  await page.click('[data-run="conversa"]'); await page.waitForTimeout(500);
+  await clickAI('[data-run="conversa"]');
   const last = reqs[reqs.length - 1];
   ok(last.contents[0].parts.filter(x => x.inlineData).length === 10, 'manda os 10 prints pra IA');
   ok(lastPrompt().includes('(10 print(s) anexado(s), em ordem.)'), 'prompt sabe quantos prints');
@@ -205,6 +205,33 @@ const MOCK = {
   ok(/❌ gemini-3.8-flash\s*lotado/.test(sm), 'mostra o lotado com ❌');
   ok((await page.inputValue('#model')) === 'gemini-3.5-flash-lite', 'modelo selecionado atualizado');
   srv.busy = new Set(); srv.delay = {};
+
+  console.log('18) Manual do Assassino');
+  await page.click('nav [data-tab="conversa"]');
+  await page.fill('#ctx-conversa', 'Ela: oi\nEla: tudo bem?');
+  await page.click('[data-run="conversa"]'); await page.waitForSelector('#out-conversa .pair', { timeout: 20000 });
+  let sys = reqs[reqs.length - 1].systemInstruction.parts[0].text;
+  ok(sys.includes('MANUAL DO ASSASSINO') && sys.includes('Espelhamento') && sys.includes('Escada do Sim') && sys.includes('Teste do jornal'), 'IA recebe o conhecimento do Manual');
+  ok(sys.includes('PROIBIDO') && sys.includes('Bombardeio de amor') && sys.includes('só pra ALERTAR'), 'táticas sujas só como alerta');
+  ok(sys.includes('"tecnica"') && sys.includes('"dica_manual"') && sys.includes('"alertas"'), 'formato pede técnica, alerta e lição');
+  const out = await page.textContent('#out-conversa');
+  ok(out.includes('📚 Escada do Sim · Cialdini'), 'sugestão mostra a técnica usada');
+  ok(out.includes('📚 Auditoria de acusações · Chris Voss'), 'resposta uma por uma mostra a técnica');
+  ok(out.includes('🛡️ Sinal de alerta') && out.includes('chantagem de culpa'), 'mostra alerta de manipulação dela');
+  ok(out.includes('📚 Lição do Manual') && out.includes('Diga menos'), 'mostra a lição do Manual');
+  ok(await page.locator('#goal-conversa .chip').filter({ hasText: 'Ela tá chateada' }).count() === 1 && await page.locator('#goal-conversa .chip').filter({ hasText: 'Consertar mancada' }).count() === 1 && await page.locator('#goal-conversa .chip').filter({ hasText: 'Ela disse não' }).count() === 1, 'novos objetivos do Manual');
+  await page.click('#goal-conversa .chip:has-text("Ela tá chateada")');
+  await clickAI('[data-run="conversa"]');
+  ok(lastPrompt().includes('rotulagem de Chris Voss'), 'objetivo "Ela tá chateada" chega na IA');
+  await clickAI('[data-refine="conversa|usando mais o Manual"]');
+  ok(lastPrompt().includes('PEDIDO DO MIKAEL: usando mais o Manual'), 'refinar "usando mais o Manual"');
+  await page.click('nav [data-tab="ajustes"]');
+  ok(await page.isChecked('#useManual'), 'Manual vem ligado');
+  await page.click('label.sw:has(#useManual)');
+  await page.click('nav [data-tab="conversa"]'); await clickAI('[data-run="conversa"]');
+  sys = reqs[reqs.length - 1].systemInstruction.parts[0].text;
+  ok(!sys.includes('MANUAL DO ASSASSINO') && sys.includes('Puxa Papo'), 'desligado: IA não recebe o Manual');
+  await page.click('nav [data-tab="ajustes"]'); await page.click('label.sw:has(#useManual)');
 
   await page.click('nav [data-tab="conversa"]');
   await page.evaluate(() => document.querySelector('#out-conversa').scrollIntoView());

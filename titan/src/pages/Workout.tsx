@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useRows, useStore } from '../data/AppContext';
+import { useProfile, useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
 import { alternativesFor, demoSearchUrl, getExercise } from '../domain/exercises';
 import { adjustNextSet, groupHistory, isPersonalRecord, suggestProgression, type SetAdjustAction } from '../domain/progression';
 import { sessionLoad, sessionMinutes, tonnage } from '../domain/science';
 import { MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { Card, ErrorBox, Field, Loading, NumberInput, Scale, fmt, useToast } from '../ui/components';
+import { keepScreenOn, playRestBeep, unlockAudio } from '../ui/sound';
 
 interface DraftSet { id?: string; load: number | null; reps: number | null; rir: number | null; done: boolean }
 type Feedback = { action: SetAdjustAction; message: string; pr?: boolean };
@@ -14,24 +15,28 @@ type Draft = Record<number, { sets: DraftSet[]; pain: number; technique: boolean
 
 const draftKey = (id: string) => `titan-workout-draft-${id}`;
 
-function RestTimer({ endsAt, onClear }: { endsAt: number | null; onClear: () => void }) {
+export function RestTimer({ endsAt, onClear, sound }: { endsAt: number | null; onClear: () => void; sound: boolean }) {
   const [now, setNow] = useState(Date.now());
-  const fired = useRef(false);
   useEffect(() => {
     if (!endsAt) return;
-    fired.current = false;
     const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
-  }, [endsAt]);
+    // Alerta no instante exato do fim do descanso (não depende do próximo "tique" da tela).
+    const wait = endsAt - Date.now();
+    const done = setTimeout(() => {
+      if (sound) playRestBeep();
+      navigator.vibrate?.([200, 100, 200]);
+    }, Math.max(0, wait));
+    // Tela acesa durante o descanso, para o bipe tocar mesmo sem mexer no celular.
+    let lock: Awaited<ReturnType<typeof keepScreenOn>> = null;
+    let alive = true;
+    void keepScreenOn().then((l) => { if (alive) lock = l; else void l?.release(); });
+    return () => { alive = false; clearInterval(t); clearTimeout(done); void lock?.release().catch(() => {}); };
+  }, [endsAt, sound]);
   if (!endsAt) return null;
   const left = Math.max(0, Math.round((endsAt - now) / 1000));
-  if (left === 0 && !fired.current) {
-    fired.current = true;
-    navigator.vibrate?.([200, 100, 200]);
-  }
   return (
     <div className="timer" role="timer" aria-live="polite">
-      <span>{left > 0 ? `Descanso ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Descanso concluído'}</span>
+      <span>{left > 0 ? `Descanso ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Descanso concluído'}{sound ? ' 🔔' : ' 🔕'}</span>
       <button className="btn sm" onClick={onClear}>{left > 0 ? 'Pular' : 'OK'}</button>
     </div>
   );
@@ -41,6 +46,7 @@ export function Workout() {
   const { id = '' } = useParams();
   const store = useStore();
   const nav = useNavigate();
+  const { profile } = useProfile();
   const sessions = useRows<SessionRow>('workout_sessions', { eq: { id } });
   const myLogs = useRows<SetLogRow>('set_logs', { eq: { session_id: id } });
   const allLogs = useRows<SetLogRow>('set_logs', { order: { col: 'logged_at', asc: false }, limit: 1500 });
@@ -109,6 +115,7 @@ export function Workout() {
   }
 
   async function logSet(i: number, j: number) {
+    unlockAudio(); // o toque no ✓ libera o áudio para o bipe do fim do descanso
     const ex = session.exercises[i];
     const s = draft![i].sets[j];
     if (s.load === null || s.reps === null) { toast('Informe carga e repetições.'); return; }
@@ -136,7 +143,8 @@ export function Workout() {
         return { ...d!, [i]: { ...cur, sets, feedback: { action: adj.action, message: `Série ${j + 1}: ${adj.message}`, pr } } };
       });
       if (pr) toast(`Novo recorde em ${ex.name}: ${fmt(s.load)} kg × ${s.reps}!`);
-      setTimer(Date.now() + ex.restSec * 1000);
+      // Bi-set (descanso 0): sem cronômetro, segue direto para o próximo exercício.
+      if (ex.restSec > 0) setTimer(Date.now() + ex.restSec * 1000); else setTimer(null);
     } catch (e) {
       setError((e as Error).message);
       updateSet(i, j, { done: false });
@@ -182,7 +190,7 @@ export function Workout() {
   return (
     <div className="stack">
       {node}
-      <RestTimer endsAt={timer} onClear={() => setTimer(null)} />
+      <RestTimer endsAt={timer} onClear={() => setTimer(null)} sound={profile?.preferences.restTimerSound !== false} />
       <div className="row between">
         <div>
           <h1>{program?.config.days[session.sequence % (program?.config.days.length || 1)]?.name ?? 'Treino'}</h1>

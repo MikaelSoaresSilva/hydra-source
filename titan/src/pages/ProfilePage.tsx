@@ -6,6 +6,7 @@ import type { Profile } from '../domain/types';
 import { createTargets, downloadJSON, profileReadyForTargets } from '../services';
 import { Card, ErrorBox, Field, Loading, NumberInput, useToast } from '../ui/components';
 import { apiKeyStore } from '../appearanceClient';
+import { playRestBeep, unlockAudio } from '../ui/sound';
 
 export function ProfilePage() {
   const store = useStore();
@@ -54,6 +55,12 @@ export function ProfilePage() {
               onClick={() => void save({ preferences: { ...p.preferences, theme: t } })}>{t === 'dark' ? 'Escuro' : t === 'light' ? 'Claro' : 'Do sistema'}</button>
           ))}
         </div>
+      </Card>
+
+      <Card title="Treino">
+        <label className="check"><input type="checkbox" checked={p.preferences.restTimerSound !== false} onChange={(e) => void save({ preferences: { ...p.preferences, restTimerSound: e.target.checked } })} /> Tocar bipe quando o descanso acabar</label>
+        <button className="btn sm" onClick={() => { unlockAudio(); if (!playRestBeep()) toast('Este aparelho não suporta áudio no app.'); }}>Testar som</button>
+        <p className="hint">O bipe usa o volume de mídia do celular. Durante o descanso a tela fica acesa para o aviso não falhar.</p>
       </Card>
 
       <Card title="Conteúdo">

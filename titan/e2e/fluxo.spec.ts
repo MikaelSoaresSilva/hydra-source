@@ -193,3 +193,31 @@ test('fotos: escolher várias da galeria de uma vez', async ({ page }) => {
   ]);
   await expect(page.locator('.photo-grid img')).toHaveCount(2);
 });
+
+test('bipe do descanso: botão "Testar som" toca dois bipes no navegador real', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __beeps: number[] };
+    w.__beeps = [];
+    const orig = AudioContext.prototype.createOscillator;
+    AudioContext.prototype.createOscillator = function (this: AudioContext) {
+      const o = orig.call(this);
+      const start = o.start.bind(o);
+      o.start = (when?: number) => { w.__beeps.push(o.frequency.value); start(when); };
+      return o;
+    };
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await page.getByRole('link', { name: 'Perfil e configurações' }).click();
+  await expect(page.getByLabel('Tocar bipe quando o descanso acabar')).toBeChecked();
+  await page.getByRole('button', { name: 'Testar som' }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __beeps: number[] }).__beeps)).toEqual([880, 1320]);
+});

@@ -14,12 +14,15 @@ import com.ascend.faceai.analysis.PoseEstimator
 import com.ascend.faceai.analysis.QualityChecker
 import com.ascend.faceai.analysis.QualityResult
 import com.google.mediapipe.framework.image.BitmapImageBuilder
-import com.google.mediapipe.framework.image.ByteBufferExtractor
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
-import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenter
+import org.tensorflow.lite.Interpreter
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.channels.FileChannel
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -51,21 +54,18 @@ class FaceEngine(private val context: Context) {
 
     private val landmarker by lazy { landmarkerOf(3) }
     private val liveLandmarker by lazy { landmarkerOf(2) }
-    private val segmenter: ImageSegmenter? by lazy {
+    /**
+     * Segmentação multiclasse (cabelo, pele, fundo...) com o modelo selfie_multiclass do MediaPipe executado
+     * diretamente pelo TensorFlow Lite na CPU. Assim funciona em qualquer aparelho, inclusive sem GPU compatível.
+     */
+    private val segInterpreter: Interpreter? by lazy {
         runCatching {
-            ImageSegmenter.createFromOptions(
-                context,
-                ImageSegmenter.ImageSegmenterOptions.builder()
-                    .setBaseOptions(BaseOptions.builder().setModelAssetPath(MODEL_SEG).build())
-                    .setRunningMode(RunningMode.IMAGE)
-                    .setOutputCategoryMask(true)
-                    .setOutputConfidenceMasks(false)
-                    .build()
-            )
+            val fd = context.assets.openFd(MODEL_SEG)
+            val buf = FileInputStream(fd.fileDescriptor).channel.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength)
+            Interpreter(buf, Interpreter.Options().setNumThreads(4))
         }.onFailure { android.util.Log.e("Ascend", "segmenter init failed", it) }.getOrNull()
     }
 
-    /** Verifica modelos E biblioteca nativa (evita fechar o app em processadores sem suporte). */
     fun modelsAvailable(): Boolean = runCatching {
         context.assets.open(MODEL_FACE).close()
         synchronized(this) { landmarker }
@@ -102,28 +102,38 @@ class FaceEngine(private val context: Context) {
         val px = IntArray(outW * outH).also { crop.getPixels(it, 0, outW, 0, 0, outW, outH) }
         val lm = raw.map { P((it.x - l) * scale, (it.y - t) * scale, it.z * scale) }
 
-        val seg = runCatching { segment(bmp, l, t, scale, outW, outH) }.onFailure { android.util.Log.e("Ascend", "segmentation failed", it) }.getOrNull()
+        val seg = runCatching { segment(crop) }.onFailure { android.util.Log.e("Ascend", "segmentation failed", it) }.getOrNull()
 
         val frame = FaceFrame(outW, outH, px, lm, seg, 1, blend, matrix, widthFrac, cOff)
         return PreparedPhoto(type, frame, crop, QualityChecker.check(frame, type))
     }
 
-    private fun segment(bmp: Bitmap, l: Int, t: Int, scale: Double, outW: Int, outH: Int): ByteArray? {
-        val s = segmenter ?: return null
-        val result = s.segment(BitmapImageBuilder(bmp).build())
-        val mask = result.categoryMask().orElse(null)
-        if (mask == null) { android.util.Log.e("Ascend", "segmentation returned no category mask"); return null }
-        val mw = mask.width; val mh = mask.height
-        val buf = ByteBufferExtractor.extract(mask)
-        val all = ByteArray(buf.remaining()).also { buf.get(it) }
-        val sx = mw.toDouble() / bmp.width; val sy = mh.toDouble() / bmp.height
-        val out = ByteArray(outW * outH)
-        for (y in 0 until outH) {
-            val oy = ((t + y / scale) * sy).toInt().coerceIn(0, mh - 1)
-            for (x in 0 until outW) {
-                val ox = ((l + x / scale) * sx).toInt().coerceIn(0, mw - 1)
-                out[y * outW + x] = all[oy * mw + ox]
-            }
+    /** Segmenta o recorte do rosto: devolve a classe (0..5) de cada pixel do recorte. */
+    private fun segment(crop: Bitmap): ByteArray? {
+        val itp = segInterpreter ?: return null
+        val n = SEG_SIZE
+        val small = Bitmap.createScaledBitmap(crop, n, n, true)
+        val px = IntArray(n * n).also { small.getPixels(it, 0, n, 0, 0, n, n) }
+        val input = ByteBuffer.allocateDirect(n * n * 3 * 4).order(ByteOrder.nativeOrder())
+        for (c in px) {
+            input.putFloat(((c shr 16) and 0xFF) / 255f); input.putFloat(((c shr 8) and 0xFF) / 255f); input.putFloat((c and 0xFF) / 255f)
+        }
+        input.rewind()
+        val output = ByteBuffer.allocateDirect(n * n * 6 * 4).order(ByteOrder.nativeOrder())
+        synchronized(itp) { itp.run(input, output) }
+        output.rewind()
+        val fb = output.asFloatBuffer()
+        val cls = ByteArray(n * n)
+        for (i in 0 until n * n) {
+            var best = 0; var bv = fb.get(i * 6)
+            for (k in 1 until 6) { val v = fb.get(i * 6 + k); if (v > bv) { bv = v; best = k } }
+            cls[i] = best.toByte()
+        }
+        val w = crop.width; val h = crop.height
+        val out = ByteArray(w * h)
+        for (y in 0 until h) {
+            val sy = (y * n / h).coerceIn(0, n - 1)
+            for (x in 0 until w) out[y * w + x] = cls[sy * n + (x * n / w).coerceIn(0, n - 1)]
         }
         return out
     }
@@ -166,6 +176,7 @@ class FaceEngine(private val context: Context) {
     companion object {
         const val MODEL_FACE = "face_landmarker.task"
         const val MODEL_SEG = "selfie_multiclass.tflite"
+        const val SEG_SIZE = 256
 
         fun limit(b: Bitmap, maxSide: Int): Bitmap {
             val m = max(b.width, b.height)

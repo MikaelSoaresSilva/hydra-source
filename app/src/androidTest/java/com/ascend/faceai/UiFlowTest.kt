@@ -63,8 +63,8 @@ class UiFlowTest {
 
         // Consentimento
         waitTag("consent_accept"); shot("02_consent")
-        compose.onNodeWithTag("c_process").performClick()
-        compose.onNodeWithTag("c_adult").performClick()
+        compose.onNodeWithTag("c_process").performScrollTo().performClick()
+        compose.onNodeWithTag("c_adult").performScrollTo().performClick()
         compose.onNodeWithTag("consent_accept").performScrollTo().performClick()
 
         // Login opcional
@@ -75,9 +75,9 @@ class UiFlowTest {
         waitText("Faça sua primeira análise"); shot("04_home_empty")
 
         // Scanner + câmera real do emulador (cena sem rosto -> deve pedir para repetir)
-        compose.onNodeWithText("Iniciar análise facial").performClick()
+        compose.onNodeWithText("Iniciar análise facial").performScrollTo().performClick()
         waitTag("slot_FRONTAL"); shot("05_scanner")
-        compose.onNodeWithTag("cam_FRONTAL").performClick()
+        compose.onNodeWithTag("cam_FRONTAL").performScrollTo().performClick()
         waitTag("shutter"); Thread.sleep(3500); shot("06_camera")
         compose.onNodeWithTag("shutter").performClick()
         compose.waitUntil(30_000) { compose.onAllNodes(hasText("Repita a foto") or hasText("Foto aprovada", substring = true)).fetchSemanticsNodes().isNotEmpty() }
@@ -113,7 +113,7 @@ class UiFlowTest {
 
         // Simulador (sem backend: deve mostrar indisponível honestamente)
         compose.onNodeWithTag("tab_home").performClick(); waitText("Seu painel")
-        compose.onNodeWithText("Simulador").performClick(); waitText("Indisponível"); shot("19_simulator")
+        compose.onNodeWithText("Simulador").performScrollTo().performClick(); waitText("Indisponível"); shot("19_simulator")
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
         // Exclusão de tudo

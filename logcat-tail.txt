@@ -1,0 +1,93 @@
+--------- beginning of main
+11-03 02:08:30.612 I/TestRunner( 4624): run started: 4 tests
+11-03 02:08:30.614 I/TestRunner( 4624): started: qualityChecks_rejectBadPhotos(com.ascend.faceai.FacePipelineTest)
+11-03 02:08:33.443 I/AscendTest( 4624): two faces -> faces=2 issues=[Foram detectados 2 rostos. Envie uma foto com apenas você.]
+11-03 02:08:50.571 I/AscendTest( 4624): dark -> faces=1 brightness=33.05042287461855 issues=[Foto muito escura. Fique de frente para uma janela ou luz.]
+11-03 02:09:17.575 I/AscendTest( 4624): blur -> faces=1 sharp=4.003691938395478 vs original=417.1499521621517 issues=[Foto desfocada ou tremida. Segure firme e toque para focar.]
+11-03 02:09:17.670 I/AscendTest( 4624): no face -> issues=[Nenhum rosto detectado. Aproxime-se, melhore a luz e mostre o rosto inteiro.]
+11-03 02:09:17.674 I/TestRunner( 4624): finished: qualityChecks_rejectBadPhotos(com.ascend.faceai.FacePipelineTest)
+11-03 02:09:17.676 I/TestRunner( 4624): started: saveEncryptHistoryPdfAndDelete(com.ascend.faceai.FacePipelineTest)
+11-03 02:09:32.957 I/AscendTest( 4624): photo 723x810, enc bytes=95307
+11-03 02:09:33.069 I/AscendTest( 4624): advisor: Seus maiores pontos fortes na análise de 03/11/2026:
+11-03 02:09:33.069 I/AscendTest( 4624): • Mandíbula e queixo — 100/100. Definição visual do contorno (contraste): 0.33 (ref. ≥ 0,22)
+11-03 02:09:33.069 I/AscendTest( 4624): • Simetria — 98/100. Assimetria dos olhos: 0.4% (ref. 
+11-03 02:09:33.295 I/AscendTest( 4624): pdf size=1695974
+11-03 02:09:33.306 I/TestRunner( 4624): finished: saveEncryptHistoryPdfAndDelete(com.ascend.faceai.FacePipelineTest)
+11-03 02:09:33.307 I/TestRunner( 4624): started: realFaceIsDetectedMeasuredAndScored(com.ascend.faceai.FacePipelineTest)
+11-03 02:09:44.659 I/AscendTest( 4624): prepare ms=11350
+11-03 02:09:44.660 I/AscendTest( 4624): faces=1 brightness=151.8504278329644 balance=0.1081354063889108 sharp=417.1499521621517 yaw=2.5302290160124072 pitch=3.893964120317497 roll=-0.7684656353199386 width=0.23377546668052673 obstruction=3.833924947614043E-4 eyesOpen=true ok=true score=0.9907538300980818
+11-03 02:09:44.660 I/AscendTest( 4624): issues=[] warnings=[Rosto fora do centro. Centralize no guia., Sorriso ou boca aberta detectados: isso altera proporções do terço inferior, olhos e bochechas. Para medir com precisão, use expressão neutra.]
+11-03 02:09:45.294 I/AscendTest( 4624): overall=87 potential=2 conf=0.7088105858946383 shape=Oval
+11-03 02:09:45.294 I/AscendTest( 4624): summary=Rosto classificado como oval. Destaques: Mandíbula e queixo (100), Simetria (98), Sobrancelhas (98). Onde você mais pode evoluir com cuidados e grooming: Qualidade visual da pele (85), Cabelo e enquadramento (88), Sobrancelhas (98). Margem estimada de +2 pontos trabalhando fatores modificáveis. Confiança geral alta (qualidade da foto 99%).
+11-03 02:09:45.295 I/AscendTest( 4624): CAT harmonia score=69 conf=0.79 available=true 
+11-03 02:09:45.295 I/AscendTest( 4624):    thirds: Superior 28% · Médio 32% · Inferior 40% (ref Cada terço ≈ 33%) -> 35.5
+11-03 02:09:45.295 I/AscendTest( 4624):    icd_eye: 1.34 (ref ≈ 1,43 (rosto médio; equivale à regra dos quintos)) -> 86.0
+11-03 02:09:45.295 I/AscendTest( 4624):    mouth_nose: 1.59 (ref ≈ 1,54) -> 98.4
+11-03 02:09:45.295 I/AscendTest( 4624):    eye_face: 0.18 (ref ≈ 0,17 (rosto médio)) -> 74.3
+11-03 02:09:45.295 I/AscendTest( 4624): CAT simetria score=98 conf=0.89 available=true 
+11-03 02:09:45.295 I/AscendTest( 4624):    asym_all: 1.5% da largura do rosto (ref Rostos reais: 1–3%) -> 97.4
+11-03 02:09:45.295 I/AscendTest( 4624):    asym_eyes: 0.4% (ref < 2%) -> 100.0
+11-03 02:09:45.295 I/AscendTest( 4624):    asym_brows: 0.7% (ref < 2,5%) -> 100.0
+11-03 02:09:45.295 I/AscendTest( 4624):    asym_mid: 0.9% (ref < 2%) -> 99.9
+11-03 02:09:45.295 I/AscendTest( 4624):    asym_jaw: 2.0% (ref < 2,5%) -> 92.6
+11-03 02:09:45.295 I/AscendTest( 4624): CAT estrutura score=85 conf=0.74 available=true 
+11-03 02:09:45.295 I/AscendTest( 4624):    lw: 1.45 (ref ≈ 1,35) -> 77.9
+11-03 02:09:45.295 I/AscendTest( 4624):    jaw_cheek: 0.80 (ref ≈ 0,80) -> 100.0
+11-03 02:09:45.295 I/AscendTest( 4624):    fore_cheek: 0.96 (ref ≈ 0,92) -> 80.8
+11-03 02:09:45.295 I/AscendTest( 4624):    fwhr: 1.78 (ref Descritivo (rosto médio ≈ 1,8)) -> null
+11-03 02:09:45.295 I/AscendTest( 4624): CAT mandibula score=100 conf=0.69 available=true 
+11-03 02:09:45.295 I/AscendTest( 4624):    jaw_ratio: 0.80 (ref ≈ 0,80 (levemente acima da média)) -> 100.0
+11-03 02:09:45.296 I/AscendTest( 4624):    chin_ratio: 0.69 (ref ≈ 0,70 (≈ proporção 1:2)) -> 99.5
+11-03 02:09:45.296 I/AscendTest( 4624):    jaw_def: 0.33 (ref ≥ 0,22) -> 100.0
+11-03 02:09:45.296 I/AscendTest( 4624):    chin_mouth: 0.66 (ref Descritivo) -> null
+11-03 02:09:45.296 I/AscendTest( 4624):    gonial_2d: 138.8° (ref Descritivo) -> null
+11-03 02:09:45.296 I/AscendTest( 4624): CAT macas score=86 conf=0.59 available=true 
+11-03 02:09:45.296 I/AscendTest( 4624):    cheek_prom: 1.13 (ref ≈ 1,18) -> 79.8
+11-03 02:09:45.296 I/AscendTest( 4624):    cheek_shade: 0.16 (ref ≥ 0,06) -> 100.0
+11-03 02:09:45.296 I/AscendTest( 4624): CAT olhos score=85 conf=0.79 available=true 
+11-03 02:09:45.296 I/AscendTest( 4624):    tilt: 2.1° (ref ≈ +2° a +6° (levemente para cima)) -> 91.2
+11-03 02:09:45.296 I/AscendTest( 4624):    ear: 0.23 (ref ≈ 0,26) -> 92.0
+11-03 02:09:45.296 I/AscendTest( 4624):    icd: 1.34 (ref ≈ 1,43) -> 86.0
+11-03 02:09:45.296 I/AscendTest( 4624):    eye_size_asym: 1% (ref < 5%) -> 100.0
+11-03 02:09:45.296 I/AscendTest( 4624):    ipd_face: 0.46 (ref Descritivo (≈ 0,41–0,46)) -> null
+11-03 02:09:45.296 I/AscendTest( 4624):    under_eye: -13.3 (ref ≥ −6 (sombra natural)) -> 48.0
+11-03 02:09:45.296 I/AscendTest( 4624): CAT nariz score=93 conf=0.79 available=true 
+11-03 02:09:45.296 I/AscendTest( 4624):    alar_icd: 1.34 (ref Descritivo (rosto médio do modelo ≈ 0,86)) -> null
+11-03 02:09:45.296 I/AscendTest( 4624):    alar_face: 0.33 (ref Descritivo (≈ 0,21 no rosto médio)) -> null
+11-03 02:09:45.296 I/AscendTest( 4624):    nose_len_ratio: 0.62 (ref ≈ 0,73 (rosto médio)) -> 76.8
+11-03 02:09:45.296 I/AscendTest( 4624):    nose_dev: 0% (ref < 1,5%) -> 100.0
+11-03 02:09:45.297 I/AscendTest( 4624):    nostril_sym: 1% (ref < 8%) -> 100.0
+11-03 02:09:45.297 I/AscendTest( 4624):    nose_len: 0.25 (ref Descritivo) -> null
+11-03 02:09:45.297 I/AscendTest( 4624): CAT pele score=85 conf=0.54 available=true 
+11-03 02:09:45.297 I/AscendTest( 4624):    redness: 2% (ref < 6% da pele) -> 100.0
+11-03 02:09:45.297 I/AscendTest( 4624):    spots: 7 pontos (ref Poucos ou nenhum) -> 96.3
+11-03 02:09:45.297 I/AscendTest( 4624):    dark_spots: 31 manchas (ref Poucas) -> 50.8
+11-03 02:09:45.297 I/AscendTest( 4624):    texture: 1.81 (ref ≤ 2,5) -> 100.0
+11-03 02:09:45.297 I/AscendTest( 4624):    tone: 4.43 (ref ≤ 2,5) -> 74.1
+11-03 02:09:45.297 I/AscendTest( 4624):    tone_color: 2.20 (ref ≤ 1,5) -> 89.7
+11-03 02:09:45.297 I/AscendTest( 4624):    shine: 0% (ref < 2%) -> 100.0
+11-03 02:09:45.297 I/AscendTest( 4624):    under_eye_skin: -13.3 (ref ≥ −6) -> 48.0
+11-03 02:09:45.297 I/AscendTest( 4624):    skin_area: 112 mil pixels (ref Descritivo) -> null
+11-03 02:09:45.297 I/AscendTest( 4624): CAT cabelo score=88 conf=0.54 available=true 
+11-03 02:09:45.297 I/AscendTest( 4624):    hair_top: 0.18 (ref ≈ 0.17 para seu formato) -> 99.6
+11-03 02:09:45.297 I/AscendTest( 4624):    hair_side: 0.19 (ref ≈ 0.11 para seu formato) -> 63.3
+11-03 02:09:45.297 I/AscendTest( 4624):    hair_sym: 11% (ref < 20%) -> 100.0
+11-03 02:09:45.298 I/AscendTest( 4624):    fringe: 0% (ref ≈ 12% para seu formato) -> 92.3
+11-03 02:09:45.298 I/AscendTest( 4624):    hair_len: Curto a médio (ref Descritivo) -> null
+11-03 02:09:45.298 I/AscendTest( 4624):    hair_style: Distribuição uniforme (ref Descritivo) -> null
+11-03 02:09:45.298 I/AscendTest( 4624): CAT sobrancelhas score=98 conf=0.69 available=true 
+11-03 02:09:45.298 I/AscendTest( 4624):    brow_asym: 2% (ref < 8%) -> 100.0
+11-03 02:09:45.298 I/AscendTest( 4624):    brow_tilt: -10.6° (ref ≈ −10° (arco natural médio)) -> 99.7
+11-03 02:09:45.298 I/AscendTest( 4624):    brow_tail: 0.54 (ref ≈ 0,49 (rosto médio)) -> 94.1
+11-03 02:09:45.298 I/AscendTest( 4624):    brow_density: 33.7 (ref ≥ 15) -> 100.0
+11-03 02:09:45.298 I/AscendTest( 4624):    brow_height: 0.66 (ref Descritivo) -> null
+11-03 02:09:45.298 I/AscendTest( 4624):    brow_gap: 0.75 (ref Descritivo (rosto médio ≈ 0,75)) -> null
+11-03 02:09:45.298 I/AscendTest( 4624): CAT barba score=null conf=0.45 available=false Barba não detectada (ou clara demais para a câmera). Dicas de estilo abaixo.
+11-03 02:09:45.298 I/AscendTest( 4624):    beard_cov: 0% (ref Descritivo) -> null
+11-03 02:09:45.298 I/AscendTest( 4624):    beard_sym: 47% (ref < 15%) -> 3.2
+11-03 02:09:45.298 I/AscendTest( 4624):    beard_density: 0% (ref ≥ 30% para barba cheia) -> null
+11-03 02:09:45.301 I/TestRunner( 4624): finished: realFaceIsDetectedMeasuredAndScored(com.ascend.faceai.FacePipelineTest)
+11-03 02:09:45.303 I/TestRunner( 4624): started: fullUserJourney(com.ascend.faceai.UiFlowTest)
+11-03 02:10:03.336 I/AscendTest( 4624): camera capture produced a quality result
+11-03 02:10:35.899 I/TestRunner( 4624): finished: fullUserJourney(com.ascend.faceai.UiFlowTest)
+11-03 02:10:35.900 I/TestRunner( 4624): run finished: 4 tests, 0 failed, 0 ignored

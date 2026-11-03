@@ -167,7 +167,7 @@ object FaceAnalyzer {
                 "Linha do cabelo não localizada (${trich.second}); terço superior não avaliado.")
         }
         harm += M("icd_eye", "Distância entre olhos ÷ largura do olho", icd / eyeW, f2(icd / eyeW), "≈ 1,43 (rosto médio; equivale à regra dos quintos)", closeness(icd / eyeW, 1.43, 0.16))
-        harm += M("mouth_nose", "Largura da boca ÷ largura do nariz", mouthW / alarW, f2(mouthW / alarW), "≈ 1,54", closeness(mouthW / alarW, 1.54, 0.22))
+        harm += M("mouth_nose", "Largura da boca ÷ largura do nariz", mouthW / alarW, f2(mouthW / alarW), "≈ 1,54", closeness(mouthW / alarW, 1.54, 0.30))
         harm += M("eye_face", "Largura do olho ÷ largura do rosto", eyeW / faceW, f2(eyeW / faceW), "≈ 0,17 (rosto médio)", closeness(eyeW / faceW, 0.169, 0.02))
         cats += category("harmonia", "Harmonia facial", harm, q * 0.8, norm(lm[LM.NOSE_TIP]), listOf(Modifiability.LOW),
             limits = listOf(
@@ -262,14 +262,16 @@ object FaceAnalyzer {
         val noseDev = abs(ml.offset(lm[LM.NOSE_TIP])) / faceW
         val nostrilSym = abs(ml.offset(lm[LM.ALAR_A]) + ml.offset(lm[LM.ALAR_B])) / alarW
         val nose = ArrayList<M>()
-        nose += M("alar_icd", "Largura do nariz ÷ distância entre olhos", alarW / icd, f2(alarW / icd), "≈ 0,86 (rosto médio)", closeness(alarW / icd, 0.86, 0.12), 1.3)
-        nose += M("alar_face", "Largura do nariz ÷ largura do rosto", alarW / faceW, f2(alarW / faceW), "≈ 0,21", closeness(alarW / faceW, 0.208, 0.03))
+        nose += M("alar_icd", "Largura do nariz ÷ distância entre olhos", alarW / icd, f2(alarW / icd), "Descritivo (rosto médio do modelo ≈ 0,86)", null, 1.0,
+            "Não entra na nota: a largura do nariz varia naturalmente entre etnias e não é um defeito.")
+        nose += M("alar_face", "Largura do nariz ÷ largura do rosto", alarW / faceW, f2(alarW / faceW), "Descritivo (≈ 0,21 no rosto médio)", null)
+        nose += M("nose_len_ratio", "Comprimento do nariz ÷ terço inferior", dist(lm[LM.NASION], sn) / lower, f2(dist(lm[LM.NASION], sn) / lower), "≈ 0,73 (rosto médio)", closeness(dist(lm[LM.NASION], sn) / lower, 0.73, 0.15), 0.8)
         nose += M("nose_dev", "Desvio da ponta em relação à linha média", noseDev, pct(noseDev), "< 1,5%", lowerIsBetter(noseDev, 0.005, 0.015))
         nose += M("nostril_sym", "Simetria das asas do nariz", nostrilSym, pct(nostrilSym), "< 8%", lowerIsBetter(nostrilSym, 0.03, 0.08))
         nose += M("nose_len", "Comprimento do nariz ÷ altura do rosto", dist(lm[LM.NASION], sn) / faceH, f2(dist(lm[LM.NASION], sn) / faceH), "Descritivo", null)
         profile?.let { nose += it.nasal }
         cats += category("nariz", "Nariz", nose, q * 0.8, norm(P(lm[LM.NOSE_TIP].x, (lm[LM.NOSE_TIP].y + lm[LM.NASION].y) / 2)), listOf(Modifiability.LOW, Modifiability.PROFESSIONAL),
-            limits = listOf("Câmeras próximas aumentam o nariz em até 30%; fotografe a ~1 m.", if (profile == null) "Projeção e dorso do nariz exigem foto de perfil." else "Perfil estimado — aproximado."),
+            limits = listOf("Câmeras próximas aumentam o nariz em até 30%; fotografe a ~1 m.", "Largura do nariz é apenas descritiva: varia entre etnias e não é penalizada.", if (profile == null) "Projeção e dorso do nariz exigem foto de perfil." else "Perfil estimado — aproximado."),
             recs = { _ -> listOf("O nariz é estrutural. Barba e cabelo com volume equilibrado reduzem o destaque visual do centro do rosto.", "Qualquer intervenção no nariz é decisão médica, a ser discutida com um profissional — o app não recomenda procedimentos.") })
 
         // Pele
@@ -375,8 +377,8 @@ object FaceAnalyzer {
             unavailable != null -> unavailable
             score == null -> "Sem métricas pontuáveis nesta foto."
             else -> "Média ponderada de ${scoredMs.size} medições. " +
-                (if (strengths.isNotEmpty()) "Mais próximo da referência: ${scoredMs.maxByOrNull { it.score!! }!!.label.lowercase()}. " else "") +
-                (if (opps.isNotEmpty()) "Mais distante: ${scoredMs.minByOrNull { it.score!! }!!.label.lowercase()}." else "Nenhuma medição ficou muito distante da referência.")
+                (if (strengths.isNotEmpty()) "Mais próximo da referência: ${scoredMs.maxByOrNull { it.score!! }!!.label}. " else "") +
+                (if (opps.isNotEmpty()) "Mais distante: ${scoredMs.minByOrNull { it.score!! }!!.label}." else "Nenhuma medição ficou muito distante da referência.")
         }
         return CategoryResult(
             id = id, name = name, score = score, confidence = confidence.coerceIn(0.05, 0.95), justification = just,

@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.ascend.faceai.LocalContainer
 import com.ascend.faceai.data.AppSettings
 import com.ascend.faceai.ui.components.Eyebrow
+import com.ascend.faceai.ui.onMain
 import com.ascend.faceai.ui.components.GlassCard
 import com.ascend.faceai.ui.components.GlowOrb
 import com.ascend.faceai.ui.components.PrimaryButton
@@ -79,7 +80,7 @@ fun OnboardingScreen(onDone: () -> Unit) {
     val c = LocalContainer.current
     val scope = rememberCoroutineScope()
     var page by remember { mutableIntStateOf(0) }
-    val finish = { scope.launch { c.settings.setOnboardingDone(); onDone() }; Unit }
+    val finish = { scope.launch { c.settings.setOnboardingDone(); onMain(onDone) }; Unit }
     Column(Modifier.fillMaxSize().background(Ac.Bg).statusBarsPadding().navigationBarsPadding().padding(24.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = finish, modifier = Modifier.testTag("skip")) { Text("Pular", color = Ac.TextMid) }
@@ -138,7 +139,7 @@ fun ConsentScreen(onPrivacy: () -> Unit, onAccepted: () -> Unit) {
         CheckRow(external, "Opcional: autorizo enviar meus relatórios (e fotos, só quando eu usar o simulador) a serviços externos de IA que eu configurar. Posso mudar depois.", "c_ext") { external = it }
         Spacer(Modifier.height(18.dp))
         PrimaryButton("Aceitar e continuar", Modifier.fillMaxWidth().testTag("consent_accept"), enabled = processing && adult) {
-            scope.launch { c.settings.giveConsent(external); onAccepted() }
+            scope.launch { c.settings.giveConsent(external); onMain(onAccepted) }
         }
     }
 }
@@ -224,7 +225,7 @@ fun LoginScreen(onDone: () -> Unit, onBack: (() -> Unit)?) {
             msg?.let { Spacer(Modifier.height(10.dp)); Text(it, style = MaterialTheme.typography.bodyMedium, color = Ac.Cyan) }
             Spacer(Modifier.height(16.dp))
             PrimaryButton(if (onBack == null) "Continuar sem conta (modo local)" else "Concluir", Modifier.fillMaxWidth().testTag("login_skip")) {
-                scope.launch { c.settings.setLoginSkipped(true); onDone() }
+                scope.launch { c.settings.setLoginSkipped(true); onMain(onDone) }
             }
             Spacer(Modifier.height(24.dp))
         }

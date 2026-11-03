@@ -52,6 +52,7 @@ import com.ascend.faceai.ui.components.SecondaryButton
 import com.ascend.faceai.ui.components.Tag
 import com.ascend.faceai.ui.components.TopBar
 import com.ascend.faceai.ui.goTab
+import com.ascend.faceai.ui.onMain
 import com.ascend.faceai.ui.theme.Ac
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -180,7 +181,7 @@ fun ReportScreen(nav: NavHostController, id: String) {
         onDismissRequest = { confirmDelete = false },
         title = { Text("Excluir análise?") },
         text = { Text("O relatório, o plano dessa análise e as fotos criptografadas serão apagados deste aparelho. Não dá para desfazer.") },
-        confirmButton = { TextButton(onClick = { scope.launch { c.repo.delete(id); confirmDelete = false; nav.popBackStack() } }) { Text("Excluir", color = Ac.Bad) } },
+        confirmButton = { TextButton(onClick = { scope.launch { c.repo.delete(id); onMain { confirmDelete = false; nav.popBackStack() } } }) { Text("Excluir", color = Ac.Bad) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } },
         containerColor = Ac.SurfaceHi
     )

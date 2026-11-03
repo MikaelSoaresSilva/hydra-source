@@ -36,6 +36,7 @@ import com.ascend.faceai.BuildConfig
 import com.ascend.faceai.LocalContainer
 import com.ascend.faceai.data.AppSettings
 import com.ascend.faceai.ui.Routes
+import com.ascend.faceai.ui.onMain
 import com.ascend.faceai.ui.components.DangerButton
 import com.ascend.faceai.ui.components.Eyebrow
 import com.ascend.faceai.ui.components.GlassCard
@@ -174,9 +175,9 @@ fun SettingsScreen(nav: NavHostController) {
                                 }.getOrElse { "Atenção: não foi possível excluir na nuvem (${it.message}). Os dados locais foram apagados." } else ""
                                 c.repo.deleteAllLocal(); c.settings.clearAll()
                                 dataMsg = "Dados locais excluídos. $remote"
-                                nav.navigate(Routes.ONBOARDING) { popUpTo(0) { inclusive = true } }
+                                onMain { nav.navigate(Routes.ONBOARDING) { popUpTo(0) { inclusive = true } } }
                             }
-                            Danger.CONSENT -> { c.settings.revokeConsent(); nav.navigate(Routes.CONSENT) { popUpTo(0) { inclusive = true } } }
+                            Danger.CONSENT -> { c.settings.revokeConsent(); onMain { nav.navigate(Routes.CONSENT) { popUpTo(0) { inclusive = true } } } }
                         }
                         danger = null
                     }

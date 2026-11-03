@@ -65,8 +65,11 @@ class FaceEngine(private val context: Context) {
         }.getOrNull()
     }
 
+    /** Verifica modelos E biblioteca nativa (evita fechar o app em processadores sem suporte). */
     fun modelsAvailable(): Boolean = runCatching {
-        context.assets.open(MODEL_FACE).close(); true
+        context.assets.open(MODEL_FACE).close()
+        synchronized(this) { landmarker }
+        true
     }.getOrDefault(false)
 
     @Synchronized

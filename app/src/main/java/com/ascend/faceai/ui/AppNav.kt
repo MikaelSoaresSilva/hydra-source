@@ -83,6 +83,9 @@ private val tabs = listOf(
     Tab(Routes.SETTINGS, "Ajustes", Icons.Outlined.Tune)
 )
 
+/** Garante que navegação/efeitos de UI após uma suspensão rodem na thread principal. */
+suspend fun onMain(block: () -> Unit) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { block() }
+
 fun NavHostController.goTab(route: String) = navigate(route) {
     popUpTo(Routes.HOME) { saveState = true }
     launchSingleTop = true

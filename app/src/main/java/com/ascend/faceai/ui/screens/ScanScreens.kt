@@ -88,6 +88,7 @@ import com.ascend.faceai.analysis.CaptureType
 import com.ascend.faceai.data.FaceEngine
 import com.ascend.faceai.data.PreparedPhoto
 import com.ascend.faceai.ui.Routes
+import com.ascend.faceai.ui.onMain
 import com.ascend.faceai.ui.components.BulletList
 import com.ascend.faceai.ui.components.Eyebrow
 import com.ascend.faceai.ui.components.GlassCard
@@ -359,9 +360,11 @@ fun ProcessingScreen(nav: NavHostController) {
         steps += "Pontos faciais e segmentação: ${photos.count { it.quality.ok }} foto(s) aprovada(s)"
         val result = runCatching { c.repo.analyzeAndSave(photos) { s -> steps += s } }
         result.onSuccess { r ->
-            steps += "Concluído"
-            scan.clear()
-            nav.navigate(Routes.report(r.id)) { popUpTo(Routes.HOME) }
+            onMain {
+                steps += "Concluído"
+                scan.clear()
+                nav.navigate(Routes.report(r.id)) { popUpTo(Routes.HOME) }
+            }
         }.onFailure { error = it.message ?: it.toString(); Log.e("Ascend", "analysis", it) }
     }
     Box(Modifier.fillMaxSize().background(Ac.Bg), contentAlignment = Alignment.Center) {

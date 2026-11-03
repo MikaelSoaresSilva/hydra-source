@@ -61,6 +61,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front emulated -camera-back emulated
           disable-animations: true
           script: |
+            adb shell getprop ro.product.cpu.abilist > abilist.txt || true
             adb logcat -c || true
             (adb logcat -v time AscendTest:I Ascend:V AndroidRuntime:E TestRunner:I *:S > logcat.txt &) ; ./gradlew connectedDebugAndroidTest --console=plain > emu.log 2>&1 ; echo "exit=$?" >> emu.log ; adb pull /sdcard/Android/data/com.ascend.faceai.debug/files/shots shots || true ; adb pull /sdcard/Android/data/com.ascend.faceai.debug/files/results results || true ; adb shell pm list packages | grep ascend >> emu.log || true
 
@@ -69,7 +70,7 @@ jobs:
         run: |
           mkdir -p out && cd out
           cp ../build.log . 2>/dev/null || true; cp ../backend.log . 2>/dev/null || true
-          cp ../emu.log . 2>/dev/null || true; cp ../logcat.txt . 2>/dev/null || true
+          cp ../emu.log ../abilist.txt . 2>/dev/null || true; cp ../logcat.txt . 2>/dev/null || true
           [ -f build.log ] && (grep -E "^e: |error:|FAILED|What went wrong" -A3 build.log | head -300 > build-errors.txt; tail -200 build.log > build-tail.txt; rm build.log) || true
           [ -f logcat.txt ] && tail -3000 logcat.txt > logcat-tail.txt && rm logcat.txt || true
           cp -r ../shots . 2>/dev/null || true; cp -r ../results . 2>/dev/null || true

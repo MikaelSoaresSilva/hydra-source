@@ -63,7 +63,7 @@ jobs:
           script: |
             adb shell getprop ro.product.cpu.abilist > abilist.txt || true
             adb logcat -c || true
-            (adb logcat -v time AscendTest:I Ascend:V AndroidRuntime:E TestRunner:I *:S > logcat.txt &) ; ./gradlew connectedDebugAndroidTest --console=plain > emu.log 2>&1 ; echo "exit=$?" >> emu.log ; adb pull /sdcard/Android/data/com.ascend.faceai.debug/files/shots shots || true ; adb pull /sdcard/Android/data/com.ascend.faceai.debug/files/results results || true ; adb shell pm list packages | grep ascend >> emu.log || true
+            (adb logcat -v time AscendTest:I Ascend:V AndroidRuntime:E TestRunner:I *:S > logcat.txt &) ; ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true --console=plain > emu.log 2>&1 ; echo "exit=$?" >> emu.log ; adb pull /sdcard/Android/data/com.ascend.faceai.debug/files/shots shots >> emu.log 2>&1 || true ; adb pull /sdcard/Android/data/com.ascend.faceai.debug/files/results results || true ; adb shell pm list packages | grep ascend >> emu.log || true
 
       - name: Publicar logs (branch ascend-ci-logs)
         if: always()

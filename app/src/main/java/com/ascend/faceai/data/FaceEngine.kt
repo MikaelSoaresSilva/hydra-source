@@ -62,7 +62,7 @@ class FaceEngine(private val context: Context) {
                     .setOutputConfidenceMasks(false)
                     .build()
             )
-        }.getOrNull()
+        }.onFailure { android.util.Log.e("Ascend", "segmenter init failed", it) }.getOrNull()
     }
 
     /** Verifica modelos E biblioteca nativa (evita fechar o app em processadores sem suporte). */
@@ -102,7 +102,7 @@ class FaceEngine(private val context: Context) {
         val px = IntArray(outW * outH).also { crop.getPixels(it, 0, outW, 0, 0, outW, outH) }
         val lm = raw.map { P((it.x - l) * scale, (it.y - t) * scale, it.z * scale) }
 
-        val seg = runCatching { segment(bmp, l, t, scale, outW, outH) }.getOrNull()
+        val seg = runCatching { segment(bmp, l, t, scale, outW, outH) }.onFailure { android.util.Log.e("Ascend", "segmentation failed", it) }.getOrNull()
 
         val frame = FaceFrame(outW, outH, px, lm, seg, 1, blend, matrix, widthFrac, cOff)
         return PreparedPhoto(type, frame, crop, QualityChecker.check(frame, type))
@@ -111,7 +111,8 @@ class FaceEngine(private val context: Context) {
     private fun segment(bmp: Bitmap, l: Int, t: Int, scale: Double, outW: Int, outH: Int): ByteArray? {
         val s = segmenter ?: return null
         val result = s.segment(BitmapImageBuilder(bmp).build())
-        val mask = result.categoryMask().orElse(null) ?: return null
+        val mask = result.categoryMask().orElse(null)
+        if (mask == null) { android.util.Log.e("Ascend", "segmentation returned no category mask"); return null }
         val mw = mask.width; val mh = mask.height
         val buf = ByteBufferExtractor.extract(mask)
         val all = ByteArray(buf.remaining()).also { buf.get(it) }

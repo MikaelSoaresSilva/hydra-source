@@ -1,0 +1,11 @@
+name: smoke
+on: { push: { branches: [ascend-face-ai] } }
+permissions: { contents: write }
+jobs:
+  s:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          java -version 2>&1 | tee log.txt; echo "ANDROID=$ANDROID_HOME" >> log.txt; ls $ANDROID_HOME/build-tools $ANDROID_HOME/platforms >> log.txt
+          git init -q l && cd l && git checkout -q -b ascend-ci-logs && cp ../log.txt . && git add . && git -c user.name=ci -c user.email=ci@x commit -qm "log [skip ci]"
+          git push -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ascend-ci-logs

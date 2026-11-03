@@ -154,19 +154,20 @@ const rirFor = (key: string) => (EXERCISE_BY_KEY[key]?.kind === 'isolation' ? 1 
 
 const ALL_EQUIPMENT: Equipment[] = ['barbell', 'ez_bar', 'dumbbell', 'bench', 'rack', 'cable', 'machine', 'smith', 'pullup_bar', 'dip_station', 'leg_press', 'hack_squat'];
 
-export function generateJkk(): ProgramConfig {
-  const days: ProgramDay[] = JKK_DAYS.map((d, i) => ({
+export function generateJkk(variant: 'jkk' | 'jkk4' = 'jkk'): ProgramConfig {
+  const source = variant === 'jkk4' ? JKK4_DAYS : JKK_DAYS;
+  const days: ProgramDay[] = source.map((d, i) => ({
     dayIndex: d.dayIndex,
     name: d.name,
     focus: `${d.meta} — ${d.intro}`,
     slots: d.rows.map(([key, label, sets, range, restSec, restText, note, tag, unit], j): SlotPrescription => ({
-      slotId: `j${i}s${j}`, exerciseKey: key, sets, repRange: range, restSec, rir: rirFor(key), label, note, tag, restText, unit: unit ?? 'reps',
+      slotId: `${variant === 'jkk4' ? 'k' : 'j'}${i}s${j}`, exerciseKey: key, sets, repRange: range, restSec, rir: rirFor(key), label, note, tag, restText, unit: unit ?? 'reps',
     })),
   }));
   const priorities: Muscle[] = ['biceps', 'triceps', 'brachialis', 'chest', 'quads', 'hamstrings', 'calves'];
   return {
-    version: 1, trainingDays: JKK_TRAINING_DAYS, sessionMinutes: 75, priorities, equipment: ALL_EQUIPMENT, days,
-    notes: [], protocol: 'jkk', deloadWeeks: [], locked: true,
+    version: 1, trainingDays: variant === 'jkk4' ? JKK4_TRAINING_DAYS : JKK_TRAINING_DAYS, sessionMinutes: variant === 'jkk4' ? 95 : 75,
+    priorities, equipment: ALL_EQUIPMENT, days, notes: [], protocol: variant, deloadWeeks: [], locked: true,
   };
 }
 
@@ -181,4 +182,79 @@ export function jkkPhase(week: number, deloadWeeks: number[] = []): WeekPhase {
   }
   if (week >= 6) return { ...normal, label: 'Semanas 6–8 · Janela de deload (entra quando a fadiga pedir)', deload: false };
   return { ...normal, label: 'Treino normal · 1–2 reps sobrando; isolados: última série até a falha', deload: false };
+}
+
+// ------------------------------------------------------------------ JKK-4: o mesmo protocolo em 4 dias
+// Mesmos exercícios, faixas, descansos e orientações do PDF (cada linha vem do JKK original),
+// reorganizados em superior/inferior 2×. Volume semanal por músculo ≥ ao do JKK de 5 dias.
+
+export const JKK4_TRAINING_DAYS = [1, 2, 4, 5]; // seg, ter, qui, sex
+
+/** Linha do JKK original pela chave do exercício (texto idêntico ao PDF); `sets` só quando o JKK-4 muda. */
+function jkkRow(key: string, sets?: number): Row {
+  const r = JKK_DAYS.flatMap((d) => d.rows).find((x) => x[0] === key);
+  if (!r) throw new Error(`exercício ${key} não está no JKK`);
+  const copy = [...r] as Row;
+  if (sets !== undefined) copy[2] = sets;
+  return copy;
+}
+const totalSets = (rows: Row[]) => rows.reduce((t, r) => t + r[2], 0);
+const day4 = (dayIndex: number, name: string, dow: string, minutes: number, intro: string, rows: Row[]): JkkDay =>
+  ({ dayIndex, name, meta: `${dow} · ~${minutes} min · ${totalSets(rows)} séries`, intro, rows });
+
+export const JKK4_DAYS: JkkDay[] = [
+  day4(1, 'Dia 1 · Superior A — Peito superior + Costas (largura) + Ombro + Tríceps', 'SEG', 95,
+    'Comece pelo peito superior, quando você está mais forte. Alterne empurrar e puxar: enquanto o peito descansa, as costas trabalham.', [
+      jkkRow('incline_db_press'), jkkRow('lat_pulldown'), jkkRow('incline_smith_press'), jkkRow('chest_supported_row'),
+      jkkRow('low_high_cable_fly'), jkkRow('cable_lateral_raise'), jkkRow('overhead_cable_extension'), jkkRow('incline_db_curl'),
+      jkkRow('skull_crusher_ez'),
+    ]),
+  day4(2, 'Dia 2 · Inferior A — Quadríceps + Antebraço', 'TER', 85,
+    'Base do vídeo PERNA 1. Antebraço e braquial no fim, porque as pernas não cansam a pegada.', [
+      jkkRow('back_squat'), jkkRow('leg_press'), jkkRow('bulgarian_split_squat'), jkkRow('leg_extension'),
+      jkkRow('seated_leg_curl'), jkkRow('standing_calf_raise'), jkkRow('hanging_leg_raise'),
+      jkkRow('hammer_curl'), jkkRow('wrist_curl'), jkkRow('reverse_wrist_curl'),
+    ]),
+  day4(4, 'Dia 3 · Superior B — Braços + Peito central + Costas (espessura)', 'QUI', 95,
+    'Braço é a sua prioridade nº 1, então ele vem primeiro, com você descansado. Bíceps e tríceps alternados: enquanto um trabalha, o outro descansa.', [
+      jkkRow('preacher_curl_machine'), jkkRow('db_overhead_extension'), jkkRow('bayesian_cable_curl'), jkkRow('rope_pushdown'),
+      jkkRow('db_bench_press'), jkkRow('cable_fly'), jkkRow('seated_cable_row'), jkkRow('straight_arm_pulldown'),
+      jkkRow('db_lateral_raise', 4),
+    ]),
+  day4(5, 'Dia 4 · Inferior B — Posterior + Glúteo + Braquial', 'SEX', 80,
+    'Completa as pernas com posterior, glúteo e um segundo estímulo de quadríceps e panturrilha.', [
+      jkkRow('romanian_deadlift'), jkkRow('standing_leg_curl'), jkkRow('hack_squat'), jkkRow('hip_thrust'),
+      jkkRow('seated_calf_raise'), jkkRow('cable_crunch'), jkkRow('side_plank'), jkkRow('reverse_curl_ez'),
+    ]),
+];
+
+export const JKK4_INTRO = {
+  kicker: 'PROTOCOLO JKK · VERSÃO 4 DIAS',
+  title: 'PROTOCOLO JKK — 4 DIAS',
+  text: 'Os mesmos exercícios, séries, faixas, descansos e orientações do Protocolo JKK, reorganizados em 4 treinos (superior/inferior duas vezes). O volume semanal de cada músculo é igual ou maior que o do plano de 5 dias, e as costas passam a ser treinadas 2x por semana.',
+  week: [
+    ['SEG', 'Superior A'], ['TER', 'Inferior A'], ['QUA', 'Descanso'], ['QUI', 'Superior B'],
+    ['SEX', 'Inferior B'], ['SÁB', 'Descanso'], ['DOM', 'Descanso'],
+  ] as [string, string][],
+  why: [
+    'O que mais faz o músculo crescer é o total de séries duras por semana. O JKK-4 mantém exatamente as mesmas séries de cada músculo, só que divididas em 4 dias.',
+    'Com o volume igual, treinar cada músculo 2x por semana dá resultado igual ou melhor que 1x. No JKK de 5 dias as costas eram treinadas 1x por semana; aqui são 2x, com as mesmas 11 séries.',
+    'Elevação lateral sobe de 7 para 8 séries por semana (ombro largo = visual em V e cintura parecendo menor).',
+    'Três dias de descanso (qua, sáb, dom) em vez de dois: mais recuperação entre os treinos.',
+    'O custo: cada treino fica mais longo (cerca de 80–95 min, dentro do seu tempo de 1h30–1h50). Descanso e técnica continuam iguais aos do PDF — não encurte o descanso para terminar antes.',
+  ],
+};
+
+/** Séries diretas por semana e quantos dias o músculo é treinado diretamente. */
+export function weeklyDirect(days: JkkDay[]): Record<string, { sets: number; days: number }> {
+  const out: Record<string, { sets: number; days: number }> = {};
+  for (const d of days) {
+    const seen = new Set<string>();
+    for (const [key, , sets] of d.rows) {
+      const m = EXERCISE_BY_KEY[key].primary;
+      out[m] = { sets: (out[m]?.sets ?? 0) + sets, days: (out[m]?.days ?? 0) + (seen.has(m) ? 0 : 1) };
+      seen.add(m);
+    }
+  }
+  return out;
 }

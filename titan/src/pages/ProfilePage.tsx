@@ -6,7 +6,8 @@ import type { Profile } from '../domain/types';
 import { createTargets, downloadJSON, profileReadyForTargets } from '../services';
 import { Card, ErrorBox, Field, Loading, NumberInput, useToast } from '../ui/components';
 import { apiKeyStore } from '../appearanceClient';
-import { playRestBeep, unlockAudio } from '../ui/sound';
+import { ensureRestAlerts, playRestBeep, scheduleRestAlert, unlockAudio } from '../ui/sound';
+import { Capacitor } from '@capacitor/core';
 
 export function ProfilePage() {
   const store = useStore();
@@ -59,8 +60,15 @@ export function ProfilePage() {
 
       <Card title="Treino">
         <label className="check"><input type="checkbox" checked={p.preferences.restTimerSound !== false} onChange={(e) => void save({ preferences: { ...p.preferences, restTimerSound: e.target.checked } })} /> Tocar bipe quando o descanso acabar</label>
-        <button className="btn sm" onClick={() => { unlockAudio(); if (!playRestBeep()) toast('Este aparelho não suporta áudio no app.'); }}>Testar som</button>
-        <p className="hint">O bipe usa o volume de mídia do celular. Durante o descanso a tela fica acesa para o aviso não falhar.</p>
+        <div className="row">
+          <button className="btn sm" onClick={() => { unlockAudio(); setTimeout(() => { if (!playRestBeep()) toast('Este aparelho não suporta áudio no app.'); }, 150); }}>Testar som</button>
+          {Capacitor.isNativePlatform() && <button className="btn sm" onClick={async () => {
+            if (!(await ensureRestAlerts())) { toast('Permita as notificações do Titan nas configurações do Android para o bipe tocar em segundo plano.'); return; }
+            await scheduleRestAlert(Date.now() + 6000);
+            toast('Bloqueie a tela agora: o bipe toca em 6 segundos.');
+          }}>Testar em segundo plano</button>}
+        </div>
+        <p className="hint">Com o app aberto, o bipe usa o volume de mídia. Com a tela bloqueada ou em outro app, ele toca como notificação ("Fim do descanso"), no volume de notificação. Durante o descanso a tela fica acesa.</p>
       </Card>
 
       <Card title="Conteúdo">

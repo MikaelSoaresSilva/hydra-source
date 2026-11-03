@@ -52,3 +52,61 @@ describe('Protocolo JKK (fiel ao PDF)', () => {
     expect([plank.unit, plank.repRange, plank.restText]).toEqual(['s', [30, 45], 'cada lado']);
   });
 });
+
+describe('JKK em 4 dias', () => {
+  test('seg, ter, qui, sex; travado; mesmo texto do PDF em cada exercício', async () => {
+    const { JKK4_DAYS, JKK4_TRAINING_DAYS } = await import('./jkk');
+    const c = generateJkk('jkk4');
+    expect(c.protocol).toBe('jkk4');
+    expect(c.locked).toBe(true);
+    expect(c.days.map((d) => d.dayIndex)).toEqual(JKK4_TRAINING_DAYS);
+    expect(JKK4_TRAINING_DAYS).toEqual([1, 2, 4, 5]);
+    const original = new Map(JKK_DAYS.flatMap((d) => d.rows).map((r) => [r[0], r]));
+    JKK4_DAYS.flatMap((d) => d.rows).forEach((r) => {
+      const o = original.get(r[0])!;
+      expect([r[1], r[3], r[5], r[6], r[7]]).toEqual([o[1], o[3], o[5], o[6], o[7]]); // nome, faixa, descanso, orientação, origem
+    });
+  });
+  test('todo exercício do JKK de 5 dias está no de 4 dias', async () => {
+    const { JKK4_DAYS } = await import('./jkk');
+    const four = new Set(JKK4_DAYS.flatMap((d) => d.rows.map((r) => r[0])));
+    JKK_DAYS.flatMap((d) => d.rows).forEach((r) => expect(four.has(r[0]), r[0]).toBe(true));
+  });
+  test('volume semanal e frequência de cada músculo ≥ ao JKK de 5 dias; costas sobem para 2x', async () => {
+    const { JKK4_DAYS, weeklyDirect } = await import('./jkk');
+    const five = weeklyDirect(JKK_DAYS);
+    const four = weeklyDirect(JKK4_DAYS);
+    for (const m of Object.keys(five)) {
+      expect(four[m].sets, m).toBeGreaterThanOrEqual(five[m].sets);
+      expect(four[m].days, m).toBeGreaterThanOrEqual(five[m].days);
+    }
+    expect([five.back.days, four.back.days]).toEqual([1, 2]);
+    expect(four.side_delts.sets).toBe(8);
+  });
+  test('mesmas regras do PDF: deload na semana 8 com metade das séries e mesmas cargas', () => {
+    const c = generateJkk('jkk4');
+    expect(phaseFor(c, 8, JKK_WEEKS).deload).toBe(true);
+    expect(phaseFor(c, 3, JKK_WEEKS).deload).toBe(false);
+    const plan = buildSessionPlan({ id: 'p', weeks: JKK_WEEKS, config: c } as never, 1, 0, [], [], null);
+    expect(plan[0].name).toBe('Supino inclinado com halteres (30°)');
+    expect(plan[0].warmup).toMatch(/2 séries leves/);
+  });
+});
+
+describe('guardar e voltar ao JKK de 5 dias', () => {
+  test('ao voltar, o ciclo arquivado é reativado na mesma semana (não começa do zero)', async () => {
+    const { LocalStore } = await import('../data/store');
+    const { activateProtocol } = await import('../services');
+    const { EMPTY_PROFILE } = await import('../data/AppContext');
+    const store = await LocalStore.open(`u-${Math.random()}`);
+    const profile = EMPTY_PROFILE(store.userId);
+    const five = await activateProtocol(store, profile, 'jkk');
+    await store.upsert('workout_sessions', { id: 's1', program_id: five.id, week: 1, day_index: 1, sequence: 0, status: 'done', exercises: [] });
+    const four = await activateProtocol(store, profile, 'jkk4');
+    expect(four.config.protocol).toBe('jkk4');
+    const back = await activateProtocol(store, profile, 'jkk');
+    expect(back.id).toBe(five.id); // mesmo ciclo, com o histórico
+    const active = await store.list<{ id: string }>('programs', { eq: { status: 'active' } });
+    expect(active.map((p) => p.id)).toEqual([five.id]);
+  });
+});

@@ -8,8 +8,8 @@ import { estimateMinutes, plannedWeeklyVolume, phaseFor, prescribeDay } from '..
 import { nextSession, projectedEnd } from '../domain/schedule';
 import { weeklyVolume } from '../domain/volume';
 import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
-import { applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
-import { JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
+import { activateProtocol, applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
+import { Jkk4Why, JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
 import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
 import { decliningExercises } from '../domain/progression';
 import { recentRecovery } from '../domain/recommendations';
@@ -37,13 +37,20 @@ export function Training() {
   const program = programs.data[0];
   const today = todayISO();
   // O Protocolo JKK substitui qualquer ciclo anterior (o histórico de séries é mantido).
-  const needsJkk = !programs.loading && !!profile && program?.config.protocol !== 'jkk';
+  // Treino escolhido: JKK em 4 dias (padrão atual) ou o JKK original de 5 dias, que fica guardado.
+  const target = profile?.preferences.trainingProtocol ?? 'jkk4';
+  const needsJkk = !programs.loading && !!profile && program?.config.protocol !== target;
   const switching = useRef(false);
   useEffect(() => {
     if (!needsJkk || switching.current) return;
     switching.current = true;
-    void createProgram(store, profile!, todayISO(), 'jkk').then(() => toast('Protocolo JKK ativado. O treino anterior foi arquivado; seu histórico continua salvo.'));
-  }, [needsJkk, profile, store, toast]);
+    void activateProtocol(store, profile!, target).then(() => {
+      switching.current = false;
+      toast(target === 'jkk4'
+        ? 'Protocolo JKK — 4 dias ativado. O JKK de 5 dias ficou guardado (com sua semana e histórico) para quando quiser voltar.'
+        : 'Protocolo JKK (5 dias) reativado de onde você parou.');
+    });
+  }, [needsJkk, profile, store, toast, target]);
 
   const info = useMemo(() => {
     if (!program) return null;
@@ -73,7 +80,8 @@ export function Training() {
   const muscles = (Object.keys(planned) as Muscle[]).filter((m) => (planned[m] ?? 0) >= 2);
   const loads = weeklyLoads(mine, logs.data).slice(-8);
   const olympia = program.config.protocol === 'olympia';
-  const jkk = program.config.protocol === 'jkk';
+  const jkk = program.config.protocol === 'jkk' || program.config.protocol === 'jkk4';
+  const jkk4 = program.config.protocol === 'jkk4';
   const declining = decliningExercises(logs.data.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -28)));
   const rec = recentRecovery(checkins.data, today);
   const lastTqrs = [...mine].filter((x) => x.readiness).sort((a, b) => ((a.started_at ?? '') < (b.started_at ?? '') ? -1 : 1)).map((x) => x.readiness!.tqr);
@@ -126,7 +134,7 @@ export function Training() {
     <div className="stack">
       {node}
       {flash && <div className="banner info" role="status">{flash}</div>}
-      {jkk && <JkkHeader />}
+      {jkk && <JkkHeader four={jkk4} />}
       <div>
         <h1>Treino</h1>
         <p className="muted">{program.name} · início {formatBR(program.start_date)} · fim previsto {info.end ? formatBR(info.end) : '—'}</p>
@@ -206,7 +214,8 @@ export function Training() {
       {jkk ? (
         <>
           <JkkPhotos />
-          <JkkWorkouts />
+          {jkk4 && <Jkk4Why />}
+          <JkkWorkouts four={jkk4} />
           <JkkHow />
           <JkkFlanks />
           <JkkSources />
@@ -273,7 +282,7 @@ export function Training() {
           </details>
         ))}
         {program.config.notes.map((n, i) => <p key={i} className="hint">• {n}</p>)}
-        {jkk ? <p className="hint">Ciclo de 8 semanas. Intensidade: 1 a 2 repetições sobrando; nos isolados, a última série até a falha. Deload a cada 6 a 8 semanas: metade das séries e as mesmas cargas (na semana 8, ou antes, nas semanas 6–7, se a fadiga pedir). Depois, um novo ciclo igual começa com as cargas atuais.</p> : olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
+        {jkk ? <p className="hint">{jkk4 ? 'Versão 4 dias (seg, ter, qui, sex) com o mesmo volume semanal do JKK de 5 dias. ' : ''}Ciclo de 8 semanas. Intensidade: 1 a 2 repetições sobrando; nos isolados, a última série até a falha. Deload a cada 6 a 8 semanas: metade das séries e as mesmas cargas (na semana 8, ou antes, nas semanas 6–7, se a fadiga pedir). Depois, um novo ciclo igual começa com as cargas atuais.</p> : olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
         {locked ? <p className="hint">🔒 Plano fechado: você só registra o que fez. A carga de cada série é ajustada pelo app; trocas só acontecem por dor ou aparelho indisponível, dentro do próprio treino.</p>
           : <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!, undefined, program.config.protocol); }}>Regerar ciclo (ex.: mudei de academia)</button>}
       </Card>

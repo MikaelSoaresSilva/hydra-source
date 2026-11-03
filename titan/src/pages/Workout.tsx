@@ -7,7 +7,7 @@ import { adjustNextSet, groupHistory, isPersonalRecord, suggestProgression, type
 import { sessionLoad, sessionMinutes, tonnage } from '../domain/science';
 import { MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { Card, ErrorBox, Field, Loading, NumberInput, Scale, fmt, useToast } from '../ui/components';
-import { keepScreenOn, playRestBeep, unlockAudio } from '../ui/sound';
+import { cancelRestAlert, ensureRestAlerts, keepScreenOn, playRestBeep, scheduleRestAlert, unlockAudio } from '../ui/sound';
 
 interface DraftSet { id?: string; load: number | null; reps: number | null; rir: number | null; done: boolean }
 type Feedback = { action: SetAdjustAction; message: string; pr?: boolean };
@@ -20,17 +20,26 @@ export function RestTimer({ endsAt, onClear, sound }: { endsAt: number | null; o
   useEffect(() => {
     if (!endsAt) return;
     const t = setInterval(() => setNow(Date.now()), 250);
-    // Alerta no instante exato do fim do descanso (não depende do próximo "tique" da tela).
     const wait = endsAt - Date.now();
+    // Segundo plano (APK): o sistema toca o bipe no fim do descanso, mesmo com a tela bloqueada.
+    if (sound) void scheduleRestAlert(endsAt);
+    // Com o app aberto, o próprio app toca: cancela o aviso do sistema pouco antes, para não tocar dobrado.
+    const visible = () => typeof document === 'undefined' || document.visibilityState === 'visible';
+    const pre = setTimeout(() => { if (visible()) void cancelRestAlert(); }, Math.max(0, wait - 1500));
     const done = setTimeout(() => {
+      // Se o app voltou depois do fim, o aviso do sistema já tocou: não repete atrasado.
+      if (!visible() || Date.now() - endsAt > 2000) return;
       if (sound) playRestBeep();
-      navigator.vibrate?.([200, 100, 200]);
+      navigator.vibrate?.([300, 120, 300, 120, 300]);
     }, Math.max(0, wait));
-    // Tela acesa durante o descanso, para o bipe tocar mesmo sem mexer no celular.
     let lock: Awaited<ReturnType<typeof keepScreenOn>> = null;
     let alive = true;
     void keepScreenOn().then((l) => { if (alive) lock = l; else void l?.release(); });
-    return () => { alive = false; clearInterval(t); clearTimeout(done); void lock?.release().catch(() => {}); };
+    return () => {
+      alive = false; clearInterval(t); clearTimeout(pre); clearTimeout(done);
+      if (Date.now() < endsAt) void cancelRestAlert(); // pulou o descanso
+      void lock?.release().catch(() => {});
+    };
   }, [endsAt, sound]);
   if (!endsAt) return null;
   const left = Math.max(0, Math.round((endsAt - now) / 1000));
@@ -47,6 +56,8 @@ export function Workout() {
   const store = useStore();
   const nav = useNavigate();
   const { profile } = useProfile();
+  // Pede a permissão de notificação ao abrir o treino (necessária para o bipe em segundo plano).
+  useEffect(() => { if (profile?.preferences.restTimerSound !== false) void ensureRestAlerts(); }, [profile?.preferences.restTimerSound]);
   const sessions = useRows<SessionRow>('workout_sessions', { eq: { id } });
   const myLogs = useRows<SetLogRow>('set_logs', { eq: { session_id: id } });
   const allLogs = useRows<SetLogRow>('set_logs', { order: { col: 'logged_at', asc: false }, limit: 1500 });

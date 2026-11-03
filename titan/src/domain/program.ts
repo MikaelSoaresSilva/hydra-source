@@ -79,7 +79,7 @@ export function weekPhase(week: number, totalWeeks = 8): WeekPhase {
 /** Fase da semana conforme o protocolo do ciclo. */
 export function phaseFor(config: Pick<ProgramConfig, 'protocol' | 'deloadWeeks'>, week: number, totalWeeks = 8): WeekPhase {
   if (config.protocol === 'olympia') return olympiaPhase(week, config.deloadWeeks);
-  if (config.protocol === 'jkk') return jkkPhase(week, config.deloadWeeks);
+  if (config.protocol === 'jkk' || config.protocol === 'jkk4') return jkkPhase(week, config.deloadWeeks);
   if (config.deloadWeeks?.includes(week)) return { ...weekPhase(totalWeeks, totalWeeks), week, label: 'Deload (aplicado por fadiga/desempenho)', assessment: false };
   return weekPhase(week, totalWeeks);
 }

@@ -96,7 +96,13 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
-## Treino ativo: Protocolo JKK
+## Treino ativo: Protocolo JKK — 4 dias (JKK de 5 dias guardado)
+
+`JKK4_DAYS` em `src/domain/jkk.ts` reorganiza o Protocolo JKK em superior/inferior 2× (seg, ter, qui, sex) usando as mesmas linhas do PDF; o volume semanal e a frequência de cada músculo são ≥ aos do JKK de 5 dias (testado). A preferência `trainingProtocol` (padrão `jkk4`) escolhe o plano ativo; ao voltar para `jkk`, o ciclo arquivado é reativado na mesma semana, com o histórico.
+
+**Bipe do descanso:** com o app aberto, toca `public/sounds/rest_beep.wav` (bip-bip-bip a 2400 Hz, volume máximo, com compressor); em segundo plano/tela bloqueada, uma notificação local (`@capacitor/local-notifications`, canal `rest_end_v1`, som `res/raw/rest_beep.wav`, alarme exato com `USE_EXACT_ALARM`) toca no fim exato do descanso. Com o app visível, o aviso do sistema é cancelado 1,5 s antes para não tocar dobrado.
+
+## Protocolo JKK (5 dias)
 
 `src/domain/jkk.ts` transcreve o PDF "Protocolo JKK" (5 dias: seg, ter, qua, sex, sáb): exercícios, séries, faixas de repetição, descansos, orientações e origem de cada item, além das seções "O que vi nas fotos", "Como treinar", "Flancos" e "De onde veio cada coisa". O plano é fechado (só registro), usa RIR 1–2 com a última série dos isolados até a falha, progressão dupla, aquecimento de 2 séries leves no 1º exercício e deload a cada 6–8 semanas com metade das séries e as mesmas cargas. Ao abrir a aba Treino, o JKK substitui o ciclo anterior (o histórico de séries é mantido).
 

@@ -90,6 +90,8 @@ export interface Preferences {
   aiAppearance?: boolean;
   /** Data de início da Missão Titan (12 semanas). */
   missionStart?: string;
+  /** Treino ativo escolhido (o JKK de 5 dias fica guardado para voltar quando pedir). */
+  trainingProtocol?: 'jkk' | 'jkk4';
 }
 
 export interface Profile {
@@ -137,7 +139,7 @@ export interface ProgramConfig {
   days: ProgramDay[];
   notes: string[];
   /** Protocolo usado para gerar o ciclo (padrão: modelo de 8 semanas do Titan). */
-  protocol?: 'olympia' | 'jkk';
+  protocol?: 'olympia' | 'jkk' | 'jkk4';
   /** Semanas em que o deload foi aplicado por decisão baseada em dados. */
   deloadWeeks?: number[];
   /** Plano fechado: o usuário só registra; trocas apenas por dor ou aparelho indisponível. */

@@ -27,8 +27,9 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   // Treino
   await page.getByRole('link', { name: 'Treino' }).first().click();
   await expect(page.getByText(/Próxima sessão:/)).toBeVisible();
-  await expect(page.getByText(/^Protocolo JKK · início/)).toBeVisible();
-  await expect(page.getByText('Próxima sessão: Dia 1 · Peito superior + Ombros + Tríceps')).toBeVisible();
+  await expect(page.getByText(/^Protocolo JKK — 4 dias · início/)).toBeVisible();
+  await expect(page.getByText('Próxima sessão: Dia 1 · Superior A — Peito superior + Costas (largura) + Ombro + Tríceps')).toBeVisible();
+  await expect(page.getByText('Por que 4 dias dá o mesmo resultado (ou melhor)')).toBeVisible();
   await expect(page.getByText('Supino inclinado com halteres (30°)').first()).toBeVisible();
   await expect(page.getByText('FLANCOS: O QUE FUNCIONA DE VERDADE')).toBeVisible();
   await page.getByRole('button', { name: 'Iniciar treino' }).click();
@@ -194,9 +195,9 @@ test('fotos: escolher várias da galeria de uma vez', async ({ page }) => {
   await expect(page.locator('.photo-grid img')).toHaveCount(2);
 });
 
-test('bipe do descanso: botão "Testar som" toca dois bipes no navegador real', async ({ page }) => {
+test('bipe do descanso: botão "Testar som" toca o bipe alto no navegador real', async ({ page }) => {
   await page.addInitScript(() => {
-    const w = window as unknown as { __beeps: number[] };
+    const w = window as unknown as { __beeps: (number | string)[] };
     w.__beeps = [];
     const orig = AudioContext.prototype.createOscillator;
     AudioContext.prototype.createOscillator = function (this: AudioContext) {
@@ -204,6 +205,13 @@ test('bipe do descanso: botão "Testar som" toca dois bipes no navegador real', 
       const start = o.start.bind(o);
       o.start = (when?: number) => { w.__beeps.push(o.frequency.value); start(when); };
       return o;
+    };
+    const origBuf = AudioContext.prototype.createBufferSource;
+    AudioContext.prototype.createBufferSource = function (this: AudioContext) {
+      const b = origBuf.call(this);
+      const start = b.start.bind(b);
+      b.start = (...a: number[]) => { w.__beeps.push(`arquivo:${b.buffer?.duration.toFixed(2)}`); start(...a); };
+      return b;
     };
   });
   await page.goto('/');
@@ -219,5 +227,9 @@ test('bipe do descanso: botão "Testar som" toca dois bipes no navegador real', 
   await page.getByRole('link', { name: 'Perfil e configurações' }).click();
   await expect(page.getByLabel('Tocar bipe quando o descanso acabar')).toBeChecked();
   await page.getByRole('button', { name: 'Testar som' }).click();
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __beeps: number[] }).__beeps)).toEqual([880, 1320]);
+  // 1º toque: arquivo ainda carregando → bipe sintetizado (3 × 2400 Hz). 2º toque: toca o arquivo rest_beep.wav.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __beeps: unknown[] }).__beeps.length)).toBeGreaterThan(0);
+  await page.waitForTimeout(500);
+  await page.getByRole('button', { name: 'Testar som' }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __beeps: unknown[] }).__beeps)).toContain('arquivo:0.62');
 });

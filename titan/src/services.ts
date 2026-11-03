@@ -19,12 +19,12 @@ export function overridesMap(rows: OverrideRow[]) {
   return { map, blocked };
 }
 
-export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia' | 'jkk'): Promise<ProgramRow> {
+export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia' | 'jkk' | 'jkk4'): Promise<ProgramRow> {
   const old = await store.list<ProgramRow>('programs', { eq: { status: 'active' } });
   for (const p of old) await store.upsert('programs', { ...p, status: 'archived' });
   let row: ProgramRow;
-  if (protocol === 'jkk') {
-    row = { id: uuid(), user_id: store.userId, name: 'Protocolo JKK', start_date: startDate, weeks: JKK_WEEKS, config: generateJkk(), status: 'active' };
+  if (protocol === 'jkk' || protocol === 'jkk4') {
+    row = { id: uuid(), user_id: store.userId, name: protocol === 'jkk4' ? 'Protocolo JKK — 4 dias' : 'Protocolo JKK', start_date: startDate, weeks: JKK_WEEKS, config: generateJkk(protocol), status: 'active' };
   } else {
     // Protocolo travado: trocas pessoais antigas não entram no plano.
     const ov = protocol === 'olympia' ? { map: {}, blocked: new Set<string>() } : overridesMap(await store.list<OverrideRow>('exercise_overrides'));
@@ -76,7 +76,7 @@ export function buildSessionPlan(
 ): PlannedExercise[] {
   const ov = program.config.locked ? { map: {}, blocked: new Set<string>() } : overridesMap(overrides);
   let firstCompound = true;
-  const jkk = program.config.protocol === 'jkk';
+  const jkk = program.config.protocol === 'jkk' || program.config.protocol === 'jkk4';
   return prescribeDay(program.config, dayPos, week, program.weeks).map((s, idx) => {
     const ex = resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked);
     // Protocolo importado: a faixa de repetições é a do documento, não a padrão do exercício.
@@ -154,4 +154,20 @@ export async function applyDeload(store: DataStore, program: ProgramRow, week: n
 export async function upgradeOlympia(store: DataStore, program: ProgramRow, profile: Profile): Promise<void> {
   const config = generateProgram({ training: profile.training, protocol: 'olympia' });
   await store.upsert('programs', { ...program, config: { ...config, deloadWeeks: program.config.deloadWeeks ?? [] } } as unknown as Record<string, unknown>);
+}
+
+/**
+ * Troca o treino ativo. Se esse protocolo já foi usado antes (ciclo arquivado), ele volta de onde
+ * parou — mesma semana e histórico; senão, um ciclo novo começa hoje.
+ */
+export async function activateProtocol(store: DataStore, profile: Profile, protocol: 'jkk' | 'jkk4'): Promise<ProgramRow> {
+  const archived = (await store.list<ProgramRow>('programs', { eq: { status: 'archived' } }))
+    .filter((p) => p.config.protocol === protocol)
+    .sort((a, b) => ((a.updated_at ?? a.created_at ?? '') < (b.updated_at ?? b.created_at ?? '') ? 1 : -1))[0];
+  if (!archived) return createProgram(store, profile, todayISO(), protocol);
+  const active = await store.list<ProgramRow>('programs', { eq: { status: 'active' } });
+  for (const p of active) await store.upsert('programs', { ...p, status: 'archived' });
+  const restored = { ...archived, status: 'active' as const };
+  await store.upsert('programs', restored as unknown as Record<string, unknown>);
+  return restored;
 }

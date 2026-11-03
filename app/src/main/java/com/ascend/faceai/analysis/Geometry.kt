@@ -76,8 +76,8 @@ object LM {
     const val GONION_B = 397
     const val TEMPLE_A = 21
     const val TEMPLE_B = 251
-    const val ALAR_A = 129
-    const val ALAR_B = 358
+    const val ALAR_A = 64
+    const val ALAR_B = 294
     const val MOUTH_A = 61
     const val MOUTH_B = 291
     const val CHIN_A = 176

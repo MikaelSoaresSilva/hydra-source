@@ -163,12 +163,12 @@ object FaceAnalyzer {
                 "Cada terço ≈ 33%", closeness(dev, 0.0, 0.045), 1.5, "Maior desvio entre os terços: ${pct(dev)}")
         } else {
             val ratio = middle / lower
-            harm += M("thirds_ml", "Terço médio ÷ terço inferior", ratio, f2(ratio), "≈ 1,00", closeness(ratio, 1.0, 0.13), 1.5,
+            harm += M("thirds_ml", "Terço médio ÷ terço inferior", ratio, f2(ratio), "≈ 0,95 (rosto médio)", closeness(ratio, 0.95, 0.12), 1.5,
                 "Linha do cabelo não localizada (${trich.second}); terço superior não avaliado.")
         }
-        harm += M("icd_eye", "Distância entre olhos ÷ largura do olho", icd / eyeW, f2(icd / eyeW), "≈ 1,00 (regra dos quintos)", closeness(icd / eyeW, 1.0, 0.16))
-        harm += M("mouth_nose", "Largura da boca ÷ largura do nariz", mouthW / alarW, f2(mouthW / alarW), "≈ 1,50", closeness(mouthW / alarW, 1.5, 0.25))
-        harm += M("eye_face", "Largura do olho ÷ largura do rosto", eyeW / faceW, f2(eyeW / faceW), "≈ 0,21 (rosto ≈ 5 olhos)", closeness(eyeW / faceW, 0.21, 0.025))
+        harm += M("icd_eye", "Distância entre olhos ÷ largura do olho", icd / eyeW, f2(icd / eyeW), "≈ 1,43 (rosto médio; equivale à regra dos quintos)", closeness(icd / eyeW, 1.43, 0.16))
+        harm += M("mouth_nose", "Largura da boca ÷ largura do nariz", mouthW / alarW, f2(mouthW / alarW), "≈ 1,54", closeness(mouthW / alarW, 1.54, 0.22))
+        harm += M("eye_face", "Largura do olho ÷ largura do rosto", eyeW / faceW, f2(eyeW / faceW), "≈ 0,17 (rosto médio)", closeness(eyeW / faceW, 0.169, 0.02))
         cats += category("harmonia", "Harmonia facial", harm, q * 0.8, norm(lm[LM.NOSE_TIP]), listOf(Modifiability.LOW),
             limits = listOf(
                 "Referências de proporção (terços, quintos) são convenções artísticas e estatísticas, não um padrão obrigatório de beleza.",
@@ -197,9 +197,9 @@ object FaceAnalyzer {
         val estr = ArrayList<M>()
         if (trichion != null) estr += M("lw", "Altura ÷ largura do rosto", lw, f2(lw), "≈ 1,35", closeness(lw, 1.35, 0.14), 1.5)
         else estr += M("lw", "Altura ÷ largura (sem linha do cabelo)", lw, f2(lw), "Descritivo", null, 1.0, "Subestimado: a altura vai só até o topo detectado da testa.")
-        estr += M("jaw_cheek", "Mandíbula ÷ maçãs (largura)", jawRatio, f2(jawRatio), "≈ 0,87", closeness(jawRatio, 0.87, 0.08))
-        estr += M("fore_cheek", "Testa ÷ maçãs (largura)", foreheadRatio, f2(foreheadRatio), "≈ 0,90", closeness(foreheadRatio, 0.90, 0.08))
-        estr += M("fwhr", "Índice largura/altura facial (fWHR)", fwhr, f2(fwhr), "Descritivo (média adulta ≈ 1,9)", null)
+        estr += M("jaw_cheek", "Mandíbula ÷ maçãs (largura)", jawRatio, f2(jawRatio), "≈ 0,80", closeness(jawRatio, 0.80, 0.07))
+        estr += M("fore_cheek", "Testa ÷ maçãs (largura)", foreheadRatio, f2(foreheadRatio), "≈ 0,92", closeness(foreheadRatio, 0.925, 0.06))
+        estr += M("fwhr", "Índice largura/altura facial (fWHR)", fwhr, f2(fwhr), "Descritivo (rosto médio ≈ 1,8)", null)
         profile?.let { estr += it.convexity }
         cats += category("estrutura", "Estrutura facial observável", estr, q * 0.75, norm(lm[LM.FOREHEAD_TOP]), listOf(Modifiability.LOW, Modifiability.PROFESSIONAL),
             limits = listOf(
@@ -210,9 +210,9 @@ object FaceAnalyzer {
 
         // Mandíbula
         val jaw = ArrayList<M>()
-        jaw += M("jaw_ratio", "Largura da mandíbula ÷ largura do rosto", jawRatio, f2(jawRatio), "≈ 0,87", closeness(jawRatio, 0.87, 0.08), 1.5)
+        jaw += M("jaw_ratio", "Largura da mandíbula ÷ largura do rosto", jawRatio, f2(jawRatio), "≈ 0,80 (levemente acima da média)", closeness(jawRatio, 0.80, 0.07), 1.5)
         val chinRatio = dist(stomion, menton) / dist(sn, menton)
-        jaw += M("chin_ratio", "Lábios→queixo ÷ nariz→queixo", chinRatio, f2(chinRatio), "≈ 0,67 (proporção 1:2)", closeness(chinRatio, 0.667, 0.055))
+        jaw += M("chin_ratio", "Lábios→queixo ÷ nariz→queixo", chinRatio, f2(chinRatio), "≈ 0,70 (≈ proporção 1:2)", closeness(chinRatio, 0.70, 0.06))
         val jd = listOfNotNull(jawDef.first, jawDef.second).average()
         jaw += M("jaw_def", "Definição visual do contorno (contraste)", jd, f2(jd), "≥ 0,22", higherIsBetter(jd, 0.22, 0.10), 0.8,
             "Mede o contraste de luz/sombra ao longo do contorno — depende da iluminação e da gordura/pele da região." + if (jawDef.second != null) " Inclui a foto de 45°." else "")
@@ -232,7 +232,7 @@ object FaceAnalyzer {
 
         // Maçãs do rosto
         val mac = listOf(
-            M("cheek_prom", "Proeminência das maçãs (largura relativa)", cheekProm, f2(cheekProm), "≈ 1,12", closeness(cheekProm, 1.12, 0.07), 1.5),
+            M("cheek_prom", "Proeminência das maçãs (largura relativa)", cheekProm, f2(cheekProm), "≈ 1,18", closeness(cheekProm, 1.18, 0.07), 1.5),
             M("cheek_shade", "Contraste luz/sombra abaixo das maçãs", cheekShade, f2(cheekShade), "≥ 0,06", higherIsBetter(cheekShade, 0.06, 0.05), 0.6,
                 "Depende fortemente da direção da luz.")
         )
@@ -243,18 +243,18 @@ object FaceAnalyzer {
         // Olhos
         val underEye = skin.underEye
         val eyes = listOf(
-            M("tilt", "Inclinação dos cantos dos olhos", tilt, deg(tilt), "≈ +4° a +8° (levemente para cima)", closeness(tilt, 5.0, 4.5), 1.2),
-            M("ear", "Abertura ocular (altura ÷ largura)", ear, f2(ear), "≈ 0,30", closeness(ear, 0.30, 0.08)),
-            M("icd", "Espaçamento entre os olhos", icd / eyeW, f2(icd / eyeW), "≈ 1,00", closeness(icd / eyeW, 1.0, 0.16)),
+            M("tilt", "Inclinação dos cantos dos olhos", tilt, deg(tilt), "≈ +2° a +6° (levemente para cima)", closeness(tilt, 4.0, 4.5), 1.2),
+            M("ear", "Abertura ocular (altura ÷ largura)", ear, f2(ear), "≈ 0,26", closeness(ear, 0.26, 0.07)),
+            M("icd", "Espaçamento entre os olhos", icd / eyeW, f2(icd / eyeW), "≈ 1,43", closeness(icd / eyeW, 1.43, 0.16)),
             M("eye_size_asym", "Diferença de tamanho entre os olhos", abs(wA - wB) / eyeW, pct(abs(wA - wB) / eyeW), "< 5%", lowerIsBetter(abs(wA - wB) / eyeW, 0.03, 0.06)),
-            M("ipd_face", "Distância entre pupilas ÷ largura do rosto", ipd / faceW, f2(ipd / faceW), "Descritivo (≈ 0,46)", null),
-            M("under_eye", "Região abaixo dos olhos (ΔL vs bochecha)", underEye, f1(underEye), "≥ −3 (pouco mais escuro)", higherIsBetter(underEye, -3.0, 4.0), 0.8,
+            M("ipd_face", "Distância entre pupilas ÷ largura do rosto", ipd / faceW, f2(ipd / faceW), "Descritivo (≈ 0,41–0,46)", null),
+            M("under_eye", "Região abaixo dos olhos (ΔL vs bochecha)", underEye, f1(underEye), "≥ −6 (sombra natural)", higherIsBetter(underEye, -6.0, 6.0), 0.8,
                 "Valores mais negativos = olheiras aparentes. Sombra da própria anatomia também escurece a região.")
         )
         cats += category("olhos", "Olhos e região orbital", eyes, q * 0.8, norm(mid(lm[LM.EYE_A_IN], lm[LM.EYE_A_OUT])), listOf(Modifiability.LOW, Modifiability.SELF_CARE),
             limits = listOf("Formato e inclinação dos olhos são estruturais.", "Olheiras medidas por luminosidade: sombra anatômica e luz de cima podem exagerar o valor."),
             recs = { _ -> buildList {
-                if (underEye < -6) add("Olheiras aparentes: priorize 7–9 h de sono, hidratação e protetor solar; persistindo, procure um dermatologista.")
+                if (underEye < -10) add("Olheiras aparentes: priorize 7–9 h de sono, hidratação e protetor solar; persistindo, procure um dermatologista.")
                 add("Sobrancelhas bem definidas emolduram os olhos (veja Sobrancelhas).")
             } })
 
@@ -262,8 +262,8 @@ object FaceAnalyzer {
         val noseDev = abs(ml.offset(lm[LM.NOSE_TIP])) / faceW
         val nostrilSym = abs(ml.offset(lm[LM.ALAR_A]) + ml.offset(lm[LM.ALAR_B])) / alarW
         val nose = ArrayList<M>()
-        nose += M("alar_icd", "Largura do nariz ÷ distância entre olhos", alarW / icd, f2(alarW / icd), "≈ 1,00", closeness(alarW / icd, 1.0, 0.16), 1.3)
-        nose += M("alar_face", "Largura do nariz ÷ largura do rosto", alarW / faceW, f2(alarW / faceW), "≈ 0,26", closeness(alarW / faceW, 0.26, 0.035))
+        nose += M("alar_icd", "Largura do nariz ÷ distância entre olhos", alarW / icd, f2(alarW / icd), "≈ 0,86 (rosto médio)", closeness(alarW / icd, 0.86, 0.12), 1.3)
+        nose += M("alar_face", "Largura do nariz ÷ largura do rosto", alarW / faceW, f2(alarW / faceW), "≈ 0,21", closeness(alarW / faceW, 0.208, 0.03))
         nose += M("nose_dev", "Desvio da ponta em relação à linha média", noseDev, pct(noseDev), "< 1,5%", lowerIsBetter(noseDev, 0.005, 0.015))
         nose += M("nostril_sym", "Simetria das asas do nariz", nostrilSym, pct(nostrilSym), "< 8%", lowerIsBetter(nostrilSym, 0.03, 0.08))
         nose += M("nose_len", "Comprimento do nariz ÷ altura do rosto", dist(lm[LM.NASION], sn) / faceH, f2(dist(lm[LM.NASION], sn) / faceH), "Descritivo", null)
@@ -298,17 +298,17 @@ object FaceAnalyzer {
         val browGap = dist(lm[LM.BROW_A_IN], lm[LM.BROW_B_IN]) / icd
         val brows = listOf(
             M("brow_asym", "Diferença de altura entre sobrancelhas", browAsym, pct(browAsym), "< 8%", lowerIsBetter(browAsym, 0.04, 0.10), 1.3),
-            M("brow_tilt", "Inclinação (início → cauda)", browTilt, deg(browTilt), "≈ 0° a +10°", closeness(browTilt, 5.0, 8.0)),
-            M("brow_tail", "Extensão da cauda além do canto do olho", (tailA + tailB) / 2, f2((tailA + tailB) / 2), "≈ 0,10–0,25", closeness((tailA + tailB) / 2, 0.15, 0.15)),
+            M("brow_tilt", "Inclinação (início → ponta)", browTilt, deg(browTilt), "≈ −10° (arco natural médio)", closeness(browTilt, -10.0, 7.0)),
+            M("brow_tail", "Extensão da cauda além do canto do olho", (tailA + tailB) / 2, f2((tailA + tailB) / 2), "≈ 0,49 (rosto médio)", closeness((tailA + tailB) / 2, 0.49, 0.15)),
             M("brow_density", "Contraste/densidade (ΔL vs testa)", browDensity, f1(browDensity), "≥ 15", higherIsBetter(browDensity, 15.0, 8.0), 0.7, "Pelos claros em pele clara reduzem o valor sem significar falhas."),
             M("brow_height", "Altura média acima dos olhos", (bhA + bhB) / 2, f2((bhA + bhB) / 2), "Descritivo", null),
-            M("brow_gap", "Espaço entre as sobrancelhas ÷ distância entre olhos", browGap, f2(browGap), "Descritivo (≈ 0,9–1,1)", null)
+            M("brow_gap", "Espaço entre as sobrancelhas ÷ distância entre olhos", browGap, f2(browGap), "Descritivo (rosto médio ≈ 0,75)", null)
         )
         cats += category("sobrancelhas", "Sobrancelhas", brows, q * 0.7, norm(lm[LM.BROW_B_MID]), listOf(Modifiability.GROOMING),
             limits = listOf("Altura e inclinação mudam com a expressão (sobrancelhas levantadas).", "Densidade é medida por contraste e varia com cor de pelos e pele."),
             recs = { _ -> buildList {
                 if (browAsym > 0.08) add("Diferença de altura visível: um design profissional (só limpeza, sem afinar demais) pode equilibrar os dois lados.")
-                if (browGap < 0.85) add("Sobrancelhas próximas: remover pelos do centro (glabela) abre o olhar.")
+                if (browGap < 0.62) add("Sobrancelhas próximas: remover pelos do centro (glabela) abre o olhar.")
                 if (browDensity < 12) add("Pouca densidade aparente: evite afinar; pentear para cima e um gel fixador transparente dão volume natural.")
                 add("Mantenha o formato natural masculino: retire só pelos soltos fora do desenho.")
             } })
@@ -453,14 +453,23 @@ object FaceAnalyzer {
         fun underEyeRegion(outer: P, inner: P, bottom: P): BooleanArray {
             val m = BooleanArray(w * h)
             val x0 = min(outer.x, inner.x) + eyeW * 0.15; val x1 = max(outer.x, inner.x) - eyeW * 0.15
-            val y0 = bottom.y + eyeW * 0.10; val y1 = bottom.y + eyeW * 0.50
-            for (y in y0.toInt()..y1.toInt()) for (x in x0.toInt()..x1.toInt()) if (x in 0 until w && y in 0 until h && !eyes[y * w + x]) m[y * w + x] = true
+            val y0 = bottom.y + eyeW * 0.22; val y1 = bottom.y + eyeW * 0.55
+            for (y in y0.toInt()..y1.toInt()) for (x in x0.toInt()..x1.toInt()) {
+                if (x !in 0 until w || y !in 0 until h || eyes[y * w + x]) continue
+                if (f.seg != null && (f.seg[y * w + x].toInt() and 0xFF) != SegClass.FACE_SKIN) continue
+                m[y * w + x] = true
+            }
             return m
         }
         val ueA = underEyeRegion(f.lm[LM.EYE_A_OUT], f.lm[LM.EYE_A_IN], f.lm[LM.EYE_A_BOT])
         val ueB = underEyeRegion(f.lm[LM.EYE_B_OUT], f.lm[LM.EYE_B_IN], f.lm[LM.EYE_B_BOT])
-        val ueL = (PixelOps.mean(L, ueA) + PixelOps.mean(L, ueB)) / 2
-        val cheekL = (patchMean(L, f, f.lm[LM.CHEEK_CENTER_A], eyeW * 0.3) + patchMean(L, f, f.lm[LM.CHEEK_CENTER_B], eyeW * 0.3)) / 2
+        val ueL = (PixelOps.percentile(L, ueA, 0.5) + PixelOps.percentile(L, ueB, 0.5)) / 2
+        val cheekMask = BooleanArray(w * h)
+        for (c in listOf(f.lm[LM.CHEEK_CENTER_A], f.lm[LM.CHEEK_CENTER_B])) {
+            val rr = (eyeW * 0.3).toInt()
+            for (dy in -rr..rr) for (dx in -rr..rr) { val x = c.x.toInt() + dx; val y = c.y.toInt() + dy; if (x in 0 until w && y in 0 until h && dx * dx + dy * dy <= rr * rr) cheekMask[y * w + x] = true }
+        }
+        val cheekL = PixelOps.percentile(L, cheekMask, 0.5)
         val underEye = if (ueL.isNaN()) 0.0 else ueL - cheekL
 
         if (n < 2000) return SkinOut(emptyList(), listOf("Envie uma foto mais próxima e bem iluminada para avaliar a pele."), underEye, 0.3, n)
@@ -479,8 +488,8 @@ object FaceAnalyzer {
         for (i in mask.indices) {
             if (!mask[i]) continue
             val dl = Lm[i] - Ls[i]; val da = As[i] - Am[i]
-            if (dl > 4.0 && da > 3.5) redSpot[i] = true
-            else if (dl > 7.0 && da <= 2.0) darkSpot[i] = true
+            if (dl > 5.0 && da > 4.0) redSpot[i] = true
+            else if (dl > 10.0 && da <= 2.0) darkSpot[i] = true
         }
         val minA = max(6, (w / 200.0).let { (it * it).toInt() })
         val maxA = (w / 22.0).let { (it * it).toInt() }
@@ -518,27 +527,27 @@ object FaceAnalyzer {
         val sharpFactor = higherIsBetter(q.sharpness, 35.0, 15.0) / 100
         val ms = ArrayList<M>()
         ms += M("redness", "Vermelhidão (área avermelhada)", redFrac, pct(redFrac), "< 6% da pele", lowerIsBetter(redFrac, 0.05, 0.07), 1.0)
-        ms += M("spots", "Pontos avermelhados (acne visível aproximada)", redDens, "$redCount pontos", "Poucos ou nenhum", lowerIsBetter(redDens, 3.0, 6.0), 1.2,
+        ms += M("spots", "Pontos avermelhados (acne visível aproximada)", redDens, "$redCount pontos", "Poucos ou nenhum", lowerIsBetter(redDens, 4.0, 8.0), 1.2,
             "Pelos, pintas e poros dilatados podem ser contados; confira visualmente.")
-        ms += M("dark_spots", "Manchas escuras pequenas", darkDens, "$darkCount manchas", "Poucas", lowerIsBetter(darkDens, 4.0, 8.0), 0.8, "Inclui pintas e sardas, que não são problemas.")
-        ms += M("texture", "Textura aparente/poros (microcontraste)", texture, f2(texture), "≤ 2,0", lowerIsBetter(texture, 2.0, 1.4), 0.8 * sharpFactor + 0.1,
+        ms += M("dark_spots", "Manchas escuras pequenas", darkDens, "$darkCount manchas", "Poucas", lowerIsBetter(darkDens, 10.0, 15.0), 0.6, "Inclui pintas e sardas, que não são problemas.")
+        ms += M("texture", "Textura aparente/poros (microcontraste)", texture, f2(texture), "≤ 2,5", lowerIsBetter(texture, 2.5, 1.5), 0.8 * sharpFactor + 0.1,
             "Ruído da câmera e nitidez alteram esta medida.")
         if (!unevenL.isNaN()) {
             ms += M("tone", "Uniformidade do tom (luminosidade)", unevenL, f2(unevenL), "≤ 2,5", lowerIsBetter(unevenL, 2.5, 2.5), 1.0)
             ms += M("tone_color", "Uniformidade da cor (avermelhado)", unevenA, f2(unevenA), "≤ 1,5", lowerIsBetter(unevenA, 1.5, 1.5), 0.8)
         }
         ms += M("shine", "Brilho/oleosidade aparente", shineFrac, pct(shineFrac), "< 2%", lowerIsBetter(shineFrac, 0.02, 0.04), 0.7, "Flash e luz direta criam reflexos que não são oleosidade.")
-        ms += M("under_eye_skin", "Olheiras aparentes (ΔL)", underEye, f1(underEye), "≥ −3", higherIsBetter(underEye, -3.0, 4.0), 0.7)
+        ms += M("under_eye_skin", "Olheiras aparentes (ΔL)", underEye, f1(underEye), "≥ −6", higherIsBetter(underEye, -6.0, 6.0), 0.7)
         ms += M("skin_area", "Pele analisada", n.toDouble(), "${(n / 1000)} mil pixels", "Descritivo", null)
 
         val recs = ArrayList<String>()
         recs += "Base diária: limpeza suave 2x/dia, hidratante leve e protetor solar FPS 30+ todas as manhãs (inclusive em dias nublados)."
-        if (redDens > 6) recs += "Pontos avermelhados acima do esperado: sabonete com ácido salicílico 0,5–2% à noite pode ajudar; acne inflamada ou persistente deve ser avaliada por dermatologista."
+        if (redDens > 10) recs += "Pontos avermelhados acima do esperado: sabonete com ácido salicílico 0,5–2% à noite pode ajudar; acne inflamada ou persistente deve ser avaliada por dermatologista."
         if (redFrac > 0.10) recs += "Vermelhidão difusa: evite água muito quente e esfoliação agressiva; prefira produtos sem fragrância."
         if (shineFrac > 0.04) recs += "Brilho aparente alto: gel de limpeza para pele oleosa e hidratante oil-free; papel absorvente durante o dia."
         if (!unevenL.isNaN() && unevenL > 3.5) recs += "Tom irregular: o protetor solar diário é a medida com melhor evidência; vitamina C ou niacinamida são opções comuns (teste em pequena área antes)."
         if (texture > 3.0) recs += "Textura aparente marcada: hidratação consistente e esfoliação química suave 1–2x/semana, se a pele tolerar."
-        if (underEye < -6) recs += "Olheiras aparentes: sono regular e hidratação; se persistirem, avaliação dermatológica."
+        if (underEye < -10) recs += "Olheiras aparentes: sono regular e hidratação; se persistirem, avaliação dermatológica."
         return SkinOut(ms, recs, underEye, 0.55 * (0.5 + 0.5 * sharpFactor), n)
     }
 
@@ -677,7 +686,7 @@ object FaceAnalyzer {
         var dark = 0; var hair = 0; var darkA = 0; var nA = 0; var darkB = 0; var nB = 0
         for (i in zone.indices) {
             if (!zone[i]) continue
-            val isDark = L[i] < ref - 16
+            val isDark = L[i] < ref - 25
             if (isDark) dark++
             if (f.seg != null && (f.seg[i].toInt() and 0xFF) == SegClass.HAIR) hair++
             val side = ml.offset(P((i % f.w).toDouble(), (i / f.w).toDouble()))
@@ -685,8 +694,9 @@ object FaceAnalyzer {
         }
         val darkFrac = dark.toDouble() / zn
         val hairFrac = hair.toDouble() / zn
-        val cov = max(darkFrac, hairFrac)
-        val present = cov > 0.15
+        // A segmentação de cabelo é o sinal principal; escurecimento só confirma (sombras não viram barba).
+        val cov = if (f.seg != null) max(hairFrac, min(darkFrac, hairFrac * 2.5)) else darkFrac
+        val present = if (f.seg != null) hairFrac > 0.10 else darkFrac > 0.30
         val level = when { cov > 0.40 -> "Barba cheia"; cov > 0.25 -> "Barba curta"; cov > 0.15 -> "Barba por fazer/rala"; else -> "Sem barba visível" }
         val fa = if (nA > 0) darkA.toDouble() / nA else 0.0; val fb = if (nB > 0) darkB.toDouble() / nB else 0.0
         val covAsym = if (fa + fb > 0) abs(fa - fb) / (fa + fb) else 0.0
@@ -733,17 +743,17 @@ object FaceAnalyzer {
 
     // ---------------- Formato ----------------
     fun classifyShape(lw: Double, jaw: Double, forehead: Double, hairlineKnown: Boolean): String {
-        val l = if (hairlineKnown) lw else lw * 1.12 // compensa a altura subestimada sem linha do cabelo
+        val l = if (hairlineKnown) lw else lw * 1.17 // compensa a altura subestimada sem linha do cabelo (rosto médio: 1,15 → 1,35)
         return when {
-            jaw > forehead + 0.10 -> "Triangular"
-            l < 1.25 -> if (jaw >= 0.88) "Quadrado" else "Redondo"
+            jaw > forehead - 0.03 -> "Triangular"
+            l < 1.25 -> if (jaw >= 0.84) "Quadrado" else "Redondo"
             l <= 1.45 -> when {
-                jaw >= 0.92 -> "Quadrado"
-                forehead > 0.95 && jaw < 0.80 -> "Coração"
-                forehead < 0.84 && jaw < 0.82 -> "Diamante"
+                jaw >= 0.87 -> "Quadrado"
+                forehead > 0.97 && jaw < 0.74 -> "Coração"
+                forehead < 0.87 && jaw < 0.76 -> "Diamante"
                 else -> "Oval"
             }
-            else -> if (jaw >= 0.88) "Retangular" else "Oblongo"
+            else -> if (jaw >= 0.84) "Retangular" else "Oblongo"
         }
     }
 

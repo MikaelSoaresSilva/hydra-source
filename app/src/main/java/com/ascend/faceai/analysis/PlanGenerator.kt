@@ -67,11 +67,11 @@ object PlanGenerator {
             "Não afine demais — o crescimento de volta pode levar meses.", "sobrancelhas")
         t += PlanTask("sleep", 7, "Sono e hidratação",
             "7–9 h de sono em horário regular e água ao longo do dia.",
-            "Sono afeta olheiras aparentes e aspecto da pele.", "Diário", "Média", "Grátis", if ((m("olhos", "under_eye")?.value ?: 0.0) < -6) "Alta" else "Média", "—", "olhos")
+            "Sono afeta olheiras aparentes e aspecto da pele.", "Diário", "Média", "Grátis", if ((m("olhos", "under_eye")?.value ?: 0.0) < -10) "Alta" else "Média", "—", "olhos")
 
         // ---- 30 dias ----
         val redDens = m("pele", "spots")?.value ?: 0.0
-        if (redDens > 6) t += PlanTask("acne", 30, "Cuidado específico: pontos avermelhados",
+        if (redDens > 10) t += PlanTask("acne", 30, "Cuidado específico: pontos avermelhados",
             "Inclua à noite um sabonete ou gel com ácido salicílico (0,5–2%), 3x por semana no começo.",
             "Reduzir os pontos avermelhados medidos (${m("pele", "spots")?.display}).", "3–7x por semana", "Média", "R$ 40–90", "Alta",
             "Pode ressecar; use hidratante. Acne dolorosa, com nódulos ou que deixa marcas: procure dermatologista. Gestantes devem consultar médico antes.", "pele")

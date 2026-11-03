@@ -93,7 +93,7 @@ class UiFlowTest {
         waitTag("report", 60_000); shot("09_report")
         compose.onNodeWithTag("cat_pele").performScrollTo(); shot("10_report_ranking")
         compose.onNodeWithTag("cat_pele").performClick()
-        waitText("Medições"); shot("11_category_skin")
+        waitText("Medido:"); shot("11_category_skin")
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         waitTag("report")
         compose.onNodeWithTag("export_pdf").performScrollTo()

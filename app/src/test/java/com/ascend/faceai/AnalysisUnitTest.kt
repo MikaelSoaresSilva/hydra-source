@@ -83,11 +83,13 @@ class AnalysisUnitTest {
     }
 
     @Test fun faceShape_rules() {
-        assertEquals("Redondo", FaceAnalyzer.classifyShape(1.15, 0.80, 0.90, true))
-        assertEquals("Quadrado", FaceAnalyzer.classifyShape(1.15, 0.92, 0.90, true))
-        assertEquals("Oval", FaceAnalyzer.classifyShape(1.35, 0.85, 0.88, true))
-        assertEquals("Oblongo", FaceAnalyzer.classifyShape(1.55, 0.82, 0.90, true))
-        assertEquals("Triangular", FaceAnalyzer.classifyShape(1.35, 0.98, 0.84, true))
+        assertEquals("Redondo", FaceAnalyzer.classifyShape(1.15, 0.80, 0.92, true))
+        assertEquals("Quadrado", FaceAnalyzer.classifyShape(1.15, 0.86, 0.92, true))
+        assertEquals("Oval", FaceAnalyzer.classifyShape(1.35, 0.78, 0.92, true))
+        assertEquals("Oblongo", FaceAnalyzer.classifyShape(1.55, 0.78, 0.92, true))
+        assertEquals("Triangular", FaceAnalyzer.classifyShape(1.35, 0.95, 0.90, true))
+        // Sem linha do cabelo, a altura do rosto médio (1,15) é corrigida para ~1,35 => Oval
+        assertEquals("Oval", FaceAnalyzer.classifyShape(1.152, 0.775, 0.925, false))
     }
 
     private fun fakeReport(id: String, t: Long, skin: Int, hair: Int): FaceReport {

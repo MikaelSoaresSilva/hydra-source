@@ -96,7 +96,8 @@ class FaceEngine(private val context: Context) {
         val l = max(0, (minX - fw * 0.45).toInt()); val r = min(bmp.width, (maxX + fw * 0.45).toInt())
         val t = max(0, (minY - fh * 0.80).toInt()); val b = min(bmp.height, (maxY + fh * 0.25).toInt())
         val cw = r - l; val ch = b - t
-        val scale = min(1.0, 720.0 / cw)
+        // Padroniza a escala: rosto com ~380 px de largura, para que textura e manchas sejam comparáveis entre fotos.
+        val scale = (380.0 / fw).coerceIn(0.25, 3.0)
         val outW = max(1, (cw * scale).toInt()); val outH = max(1, (ch * scale).toInt())
         val crop = Bitmap.createScaledBitmap(Bitmap.createBitmap(bmp, l, t, cw, ch), outW, outH, true)
         val px = IntArray(outW * outH).also { crop.getPixels(it, 0, outW, 0, 0, outW, outH) }

@@ -81,6 +81,10 @@ object QualityChecker {
         val blinkB = f.blendshapes["eyeBlinkRight"] ?: 0f
         val eyesOpen = blinkA < 0.55f && blinkB < 0.55f
         if (!eyesOpen && type == CaptureType.FRONTAL) issues.add("Olhos fechados ou semicerrados. Mantenha os olhos abertos.")
+        val smile = maxOf(f.blendshapes["mouthSmileLeft"] ?: 0f, f.blendshapes["mouthSmileRight"] ?: 0f)
+        val jawOpen = f.blendshapes["jawOpen"] ?: 0f
+        if (type == CaptureType.FRONTAL && (smile > 0.45f || jawOpen > 0.25f))
+            warnings.add("Sorriso ou boca aberta detectados: isso altera proporções do terço inferior, olhos e bochechas. Para medir com precisão, use expressão neutra.")
 
         // Obstruções (segmentação): acessórios sobre os olhos, mão/objeto sobre o rosto
         var obstruction = 0.0

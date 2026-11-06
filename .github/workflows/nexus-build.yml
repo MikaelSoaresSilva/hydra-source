@@ -1,0 +1,89 @@
+name: nexus-build
+on:
+  push:
+    branches: [nexus-guard]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nexus-build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.11.1" }
+
+      - name: Compilar APK de depuração, APK de teste e testes unitários
+        id: build
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew assembleDebug assembleDebugAndroidTest testDebugUnitTest --stacktrace --console=plain 2>&1 | tee build.log
+
+      - name: Compilar versão de lançamento (verifica R8/minificação)
+        id: release
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease --console=plain 2>&1 | tee release.log
+
+      - name: Habilitar KVM
+        if: steps.build.outcome == 'success'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Testes no emulador Android 14 (API 34)
+        id: emu
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          ram-size: 4096M
+          disk-size: 6000M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb logcat -c || true
+            (adb logcat -v time NexusTest:I AndroidRuntime:E TestRunner:I *:S > logcat.txt &) ; ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true --console=plain > emu.log 2>&1 ; echo "exit=$?" >> emu.log ; adb pull /sdcard/Android/data/com.nexusguard.app.debug/files/shots shots >> emu.log 2>&1 || true ; adb pull /sdcard/Android/data/com.nexusguard.app.debug/files/results results >> emu.log 2>&1 || true ; adb shell dumpsys batterystats com.nexusguard.app.debug > battery.txt 2>&1 || true ; adb shell dumpsys meminfo com.nexusguard.app.debug > meminfo.txt 2>&1 || true
+
+      - name: Publicar logs (branch nexus-ci-logs)
+        if: always()
+        run: |
+          mkdir -p out && cd out
+          [ -f ../build.log ] && (grep -E "^e: |error:|FAILED|What went wrong|warning: .*deprecated" -A3 ../build.log | head -400 > build-errors.txt; tail -150 ../build.log > build-tail.txt) || true
+          [ -f ../release.log ] && (grep -E "^e: |error:|FAILED|What went wrong|Missing class|R8" -A5 ../release.log | head -200 > release-errors.txt; tail -60 ../release.log > release-tail.txt) || true
+          cp ../emu.log ../battery.txt ../meminfo.txt . 2>/dev/null || true
+          [ -f ../logcat.txt ] && tail -4000 ../logcat.txt > logcat-tail.txt || true
+          cp -r ../shots . 2>/dev/null || true; cp -r ../results . 2>/dev/null || true
+          mkdir -p reports; cp -r ../app/build/reports/tests reports/unit 2>/dev/null || true
+          cp -r ../app/build/reports/androidTests reports/android 2>/dev/null || true
+          cp -r ../app/build/test-results/testDebugUnitTest reports/unit-xml 2>/dev/null || true
+          find ../app/build/outputs/androidTest-results -name "*.xml" -exec cp {} reports/ \; 2>/dev/null || true
+          mkdir -p apk; cp ../app/build/outputs/apk/debug/app-debug.apk apk/NexusGuard-debug.apk 2>/dev/null || true
+          ls -la ../app/build/outputs/apk/*/ > apk-ls.txt 2>&1 || true
+          echo "build=${{ steps.build.outcome }} release=${{ steps.release.outcome }} emu=${{ steps.emu.outcome }} sha=${{ github.sha }} run=${{ github.run_id }}" > status.txt
+          git init -q && git checkout -q -b nexus-ci-logs && git add -A && git -c user.name=ci -c user.email=ci@example.com commit -qm "logs ${{ github.sha }} [skip ci]"
+          git push -f -q https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} nexus-ci-logs
+
+      - name: Publicar APK (release nexus-latest)
+        if: steps.build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk NexusGuard-debug.apk
+          git archive --format=zip -o NexusGuard-source.zip HEAD
+          gh release delete nexus-latest -y --cleanup-tag || true
+          gh release create nexus-latest NexusGuard-debug.apk NexusGuard-source.zip --target ${{ github.sha }} --prerelease \
+            --title "NEXUS GUARD (debug) — build ${{ github.run_number }}" \
+            --notes "APK de depuração instalável. Testes no emulador: ${{ steps.emu.outcome }}. Commit ${{ github.sha }}."

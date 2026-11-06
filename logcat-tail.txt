@@ -1,0 +1,104 @@
+--------- beginning of main
+11-06 01:31:14.514 I/TestRunner( 4660): run started: 24 tests
+11-06 01:31:14.515 I/TestRunner( 4660): started: a01_keystoreRoundTrip(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:14.530 I/NexusTest( 4660): keystore: ok (56 chars)
+11-06 01:31:14.532 I/TestRunner( 4660): finished: a01_keystoreRoundTrip(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:14.541 I/TestRunner( 4660): started: a02_encryptedDatabase(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:15.244 I/NexusTest( 4660): database: arquivo 4096 bytes, cabeçalho cifrado: d3 b0 fa cc d9 b2 52 c7
+11-06 01:31:15.245 I/TestRunner( 4660): finished: a02_encryptedDatabase(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:15.247 I/TestRunner( 4660): started: a03_iocLoaded(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:15.334 I/NexusTest( 4660): ioc: 149 famílias, 628 domínios
+11-06 01:31:15.336 I/TestRunner( 4660): finished: a03_iocLoaded(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:15.338 I/TestRunner( 4660): started: b01_deviceScan(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:16.399 I/NexusTest( 4660): deviceScan: nota=65 android_version=PASS; patch=FAIL; screen_lock=FAIL; encryption=PASS; adb=FAIL; root=PASS; bootloader=UNKNOWN; unknown_sources=PASS; accessibility=PASS; device_admin=PASS; notif_listener=PASS; stalkerware=PASS; private_dns=UNKNOWN; biometric=INFO; play_protect=UNKNOWN
+11-06 01:31:16.401 I/TestRunner( 4660): finished: b01_deviceScan(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:16.402 I/TestRunner( 4660): started: b02_appAnalysis(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.256 I/NexusTest( 4660): apps: 224 apps, 224 com certificado lido; top risco: Android System Intelligence=Moderado/42, Shell=Moderado/38, Google Play services=Moderado/32, Google=Moderado/30, Phone=Moderado/25
+11-06 01:31:19.257 I/TestRunner( 4660): finished: b02_appAnalysis(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.259 I/TestRunner( 4660): started: b03_fileScanOwnApk(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.738 I/NexusTest( 4660): apkScan: Aplicativo Android (APK), sha256=58b89f384541507a…, certs=1, debug=true, achados=[Arquivo executável/instalável (.apk), Assinado com certificado de depuração, É um aplicativo Android]
+11-06 01:31:19.739 I/TestRunner( 4660): finished: b03_fileScanOwnApk(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.741 I/TestRunner( 4660): started: b04_fileScanDisguised(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.745 I/NexusTest( 4660): fileScan: foto.jpg -> Perigoso (70) Tipo real não corresponde ao nome
+11-06 01:31:19.747 I/TestRunner( 4660): finished: b04_fileScanDisguised(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.749 I/TestRunner( 4660): started: b05_phishing(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.762 I/NexusTest( 4660): phishing: DANGEROUS score=79
+11-06 01:31:19.764 I/TestRunner( 4660): finished: b05_phishing(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.771 I/TestRunner( 4660): started: c01_connectionState(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.776 I/NexusTest( 4660): connection: tipo=WIFI validada=true dns=[10.0.2.3] privateDns=false wifi=WifiDetails(ssid=null, bssid=null, rssiDbm=-50, signalLevel=4, linkSpeedMbps=1, txLinkSpeedMbps=1, rxLinkSpeedMbps=null, frequencyMhz=2437, channel=6, standard=802.11a/b/g (legado), securityType=Aberta (sem senha), securityLevel=0, gatewayIp=10.0.2.2) cell=null
+11-06 01:31:19.777 I/TestRunner( 4660): finished: c01_connectionState(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:19.777 I/TestRunner( 4660): started: c02_latencyReal(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:24.560 I/NexusTest( 4660): latency: TCP 8/8 mediana=12.001425999999999 jitter=4.079035571428571 perda=0.0
+11-06 01:31:24.563 I/TestRunner( 4660): finished: c02_latencyReal(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:24.566 I/TestRunner( 4660): started: c03_dnsReal(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:25.429 I/NexusTest( 4660): dns: DNS atual do sistema=14ms/100%; Cloudflare=29ms/100%; Cloudflare Segurança=32ms/100%; Google=32ms/100%; Quad9=24ms/100%; AdGuard=37ms/100%; OpenDNS=23ms/100% melhor=Quad9
+11-06 01:31:25.431 I/TestRunner( 4660): finished: c03_dnsReal(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:25.433 I/TestRunner( 4660): started: c04_captiveProbe(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:25.533 I/NexusTest( 4660): captive: ok
+11-06 01:31:25.550 I/TestRunner( 4660): finished: c04_captiveProbe(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:25.552 I/TestRunner( 4660): started: c05_speedTestReal(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:29.621 I/NexusTest( 4660): speed: down=106.37213056379824 up=79.87740733399406 idle=49.4124615 loaded=145.605129 bytes=25019231/10074538 erro=null
+11-06 01:31:29.624 I/TestRunner( 4660): finished: c05_speedTestReal(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:29.628 I/TestRunner( 4660): started: c06_optimizerAndDiagnosis(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:42.329 I/NexusTest( 4660): optimizer: nota=94 Excelente problemas=[wifi_link_low, wifi_open, wifi_24]
+11-06 01:31:42.330 I/TestRunner( 4660): finished: c06_optimizerAndDiagnosis(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:42.331 I/TestRunner( 4660): started: c07_wifiAssessment(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:42.338 I/NexusTest( 4660): wifi: onWifi=true label=Insegura sec=Aberta (sem senha) band=2,4 GHz rssi=-50
+11-06 01:31:42.341 I/TestRunner( 4660): finished: c07_wifiAssessment(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:42.342 I/TestRunner( 4660): started: d01_stabilityService(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:51.995 I/NexusTest( 4660): stability: total=4 falhas=0 rtt=15.9326055
+11-06 01:31:53.157 I/TestRunner( 4660): finished: d01_stabilityService(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:31:53.167 I/TestRunner( 4660): started: d02_connectivityLossAndReturn(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:32:04.450 I/NexusTest( 4660): connectivity: antes=WIFI offlineDetectado=true falhas=3 quedas=1 maiorQueda=6023ms voltou=true depois=CELLULAR
+11-06 01:32:05.142 I/TestRunner( 4660): finished: d02_connectivityLossAndReturn(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:32:05.143 I/TestRunner( 4660): started: d03_wifiToMobileSwitch(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:32:07.877 I/NexusTest( 4660): switch: inicio=CELLULAR semWifi=CELLULAR/3G/T-Mobile trocou=true fim=WIFI
+11-06 01:32:07.881 I/TestRunner( 4660): finished: d03_wifiToMobileSwitch(com.nexusguard.app.CoreFeaturesTest)
+11-06 01:32:07.882 I/TestRunner( 4660): started: a_home_and_scan(com.nexusguard.app.UiFlowTest)
+11-06 01:32:09.764 I/NexusTest( 4660): screenshot 01_onboarding
+11-06 01:32:12.690 I/NexusTest( 4660): screenshot 02_home
+11-06 01:32:15.035 I/NexusTest( 4660): screenshot 03_home_after_scan
+11-06 01:32:15.888 I/NexusTest( 4660): screenshot 04_home_alerts
+11-06 01:32:16.618 I/TestRunner( 4660): finished: a_home_and_scan(com.nexusguard.app.UiFlowTest)
+11-06 01:32:16.645 I/TestRunner( 4660): started: b_security_tools(com.nexusguard.app.UiFlowTest)
+11-06 01:32:18.960 I/NexusTest( 4660): screenshot 05_security
+11-06 01:32:19.963 I/NexusTest( 4660): screenshot 06_scan_details
+11-06 01:32:21.347 I/NexusTest( 4660): screenshot 07_apps
+11-06 01:32:23.421 I/NexusTest( 4660): screenshot 08_phishing_result
+11-06 01:32:24.865 I/NexusTest( 4660): screenshot 09_wifi_security
+11-06 01:32:26.083 I/NexusTest( 4660): screenshot 10_files
+11-06 01:32:27.273 I/NexusTest( 4660): screenshot 11_security_history
+11-06 01:32:27.843 I/TestRunner( 4660): finished: b_security_tools(com.nexusguard.app.UiFlowTest)
+11-06 01:32:27.884 I/TestRunner( 4660): started: c_internet_tools(com.nexusguard.app.UiFlowTest)
+11-06 01:32:29.883 I/NexusTest( 4660): screenshot 12_internet
+11-06 01:32:39.867 I/NexusTest( 4660): screenshot 13_internet_ping
+11-06 01:32:42.029 I/NexusTest( 4660): screenshot 14_dns
+11-06 01:32:43.265 I/NexusTest( 4660): screenshot 15_optimize_running
+11-06 01:32:56.248 I/NexusTest( 4660): screenshot 16_optimize_result
+11-06 01:33:09.796 I/NexusTest( 4660): screenshot 17_optimize_before_after
+11-06 01:33:16.058 I/NexusTest( 4660): screenshot 18_speed_running
+11-06 01:33:16.865 I/NexusTest( 4660): screenshot 19_speed_result
+11-06 01:33:30.222 I/NexusTest( 4660): screenshot 20_stability_running
+11-06 01:33:31.639 I/NexusTest( 4660): screenshot 21_mobile
+11-06 01:33:32.718 I/NexusTest( 4660): screenshot 22_wifi_smart
+11-06 01:33:33.871 I/NexusTest( 4660): screenshot 23_net_history
+11-06 01:33:34.540 I/TestRunner( 4660): finished: c_internet_tools(com.nexusguard.app.UiFlowTest)
+11-06 01:33:34.544 I/TestRunner( 4660): started: d_ai_and_settings(com.nexusguard.app.UiFlowTest)
+11-06 01:33:37.765 I/NexusTest( 4660): screenshot 24_ai
+11-06 01:33:39.245 I/NexusTest( 4660): screenshot 25_ai_ping
+11-06 01:33:40.355 I/NexusTest( 4660): screenshot 26_settings
+11-06 01:33:41.347 I/NexusTest( 4660): screenshot 27_permissions
+11-06 01:33:42.423 I/NexusTest( 4660): screenshot 28_policy
+11-06 01:33:43.111 I/TestRunner( 4660): finished: d_ai_and_settings(com.nexusguard.app.UiFlowTest)
+11-06 01:33:43.113 I/TestRunner( 4660): started: e_share_link_intent(com.nexusguard.app.UiFlowTest)
+11-06 01:33:45.041 I/NexusTest( 4660): screenshot 29_shared_link
+11-06 01:33:45.485 I/TestRunner( 4660): finished: e_share_link_intent(com.nexusguard.app.UiFlowTest)
+11-06 01:33:45.493 I/TestRunner( 4660): started: f_screen_sizes(com.nexusguard.app.UiFlowTest)
+11-06 01:33:50.228 I/NexusTest( 4660): screenshot 30_size_720x1280_320dpi
+11-06 01:33:51.964 I/NexusTest( 4660): screenshot 30_size_720x1280_internet
+11-06 01:33:55.962 I/NexusTest( 4660): screenshot 31_size_1080x2400_420dpi
+11-06 01:33:57.725 I/NexusTest( 4660): screenshot 31_size_1080x2400_internet
+11-06 01:34:01.873 I/NexusTest( 4660): screenshot 32_size_1440x3200_560dpi
+11-06 01:34:03.804 I/NexusTest( 4660): screenshot 32_size_1440x3200_internet
+11-06 01:34:06.560 I/TestRunner( 4660): finished: f_screen_sizes(com.nexusguard.app.UiFlowTest)
+11-06 01:34:06.563 I/TestRunner( 4660): run finished: 24 tests, 0 failed, 0 ignored

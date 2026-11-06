@@ -1,0 +1,18 @@
+[keystore] ok (56 chars)
+[database] arquivo 4096 bytes, cabeçalho cifrado: d3 b0 fa cc d9 b2 52 c7
+[ioc] 149 famílias, 628 domínios
+[deviceScan] nota=65 android_version=PASS; patch=FAIL; screen_lock=FAIL; encryption=PASS; adb=FAIL; root=PASS; bootloader=UNKNOWN; unknown_sources=PASS; accessibility=PASS; device_admin=PASS; notif_listener=PASS; stalkerware=PASS; private_dns=UNKNOWN; biometric=INFO; play_protect=UNKNOWN
+[apps] 224 apps, 224 com certificado lido; top risco: Android System Intelligence=Moderado/42, Shell=Moderado/38, Google Play services=Moderado/32, Google=Moderado/30, Phone=Moderado/25
+[apkScan] Aplicativo Android (APK), sha256=58b89f384541507a…, certs=1, debug=true, achados=[Arquivo executável/instalável (.apk), Assinado com certificado de depuração, É um aplicativo Android]
+[fileScan] foto.jpg -> Perigoso (70) Tipo real não corresponde ao nome
+[phishing] DANGEROUS score=79
+[connection] tipo=WIFI validada=true dns=[10.0.2.3] privateDns=false wifi=WifiDetails(ssid=null, bssid=null, rssiDbm=-50, signalLevel=4, linkSpeedMbps=1, txLinkSpeedMbps=1, rxLinkSpeedMbps=null, frequencyMhz=2437, channel=6, standard=802.11a/b/g (legado), securityType=Aberta (sem senha), securityLevel=0, gatewayIp=10.0.2.2) cell=null
+[latency] TCP 8/8 mediana=12.001425999999999 jitter=4.079035571428571 perda=0.0
+[dns] DNS atual do sistema=14ms/100%; Cloudflare=29ms/100%; Cloudflare Segurança=32ms/100%; Google=32ms/100%; Quad9=24ms/100%; AdGuard=37ms/100%; OpenDNS=23ms/100% melhor=Quad9
+[captive] ok
+[speed] down=106.37213056379824 up=79.87740733399406 idle=49.4124615 loaded=145.605129 bytes=25019231/10074538 erro=null
+[optimizer] nota=94 Excelente problemas=[wifi_link_low, wifi_open, wifi_24]
+[wifi] onWifi=true label=Insegura sec=Aberta (sem senha) band=2,4 GHz rssi=-50
+[stability] total=4 falhas=0 rtt=15.9326055
+[connectivity] antes=WIFI offlineDetectado=true falhas=3 quedas=1 maiorQueda=6023ms voltou=true depois=CELLULAR
+[switch] inicio=CELLULAR semWifi=CELLULAR/3G/T-Mobile trocou=true fim=WIFI

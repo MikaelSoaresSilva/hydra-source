@@ -1,0 +1,20 @@
+../app/build/outputs/apk/androidTest/:
+total 12
+drwxr-xr-x 3 runner runner 4096 Nov  6 01:27 .
+drwxr-xr-x 5 runner runner 4096 Nov  6 01:29 ..
+drwxr-xr-x 2 runner runner 4096 Nov  6 01:27 debug
+
+../app/build/outputs/apk/debug/:
+total 35092
+drwxr-xr-x 2 runner runner     4096 Nov  6 01:27 .
+drwxr-xr-x 5 runner runner     4096 Nov  6 01:29 ..
+-rw-r--r-- 1 runner runner 35921333 Nov  6 01:27 app-debug.apk
+-rw-r--r-- 1 runner runner      414 Nov  6 01:27 output-metadata.json
+
+../app/build/outputs/apk/release/:
+total 18320
+drwxr-xr-x 3 runner runner     4096 Nov  6 01:29 .
+drwxr-xr-x 5 runner runner     4096 Nov  6 01:29 ..
+-rw-r--r-- 1 runner runner 18742193 Nov  6 01:29 app-release-unsigned.apk
+drwxr-xr-x 4 runner runner     4096 Nov  6 01:29 baselineProfiles
+-rw-r--r-- 1 runner runner      735 Nov  6 01:29 output-metadata.json

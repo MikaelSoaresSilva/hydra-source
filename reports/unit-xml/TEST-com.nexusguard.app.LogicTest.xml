@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.nexusguard.app.LogicTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-06T01:27:49" hostname="runnervm7aw5e" time="0.155">
+  <properties/>
+  <testcase name="aiIntents" classname="com.nexusguard.app.LogicTest" time="0.025"/>
+  <testcase name="diagnosisBad" classname="com.nexusguard.app.LogicTest" time="0.052"/>
+  <testcase name="fileTypes" classname="com.nexusguard.app.LogicTest" time="0.008"/>
+  <testcase name="dnsPacketRoundTrip" classname="com.nexusguard.app.LogicTest" time="0.014"/>
+  <testcase name="appRisk" classname="com.nexusguard.app.LogicTest" time="0.002"/>
+  <testcase name="securityScore" classname="com.nexusguard.app.LogicTest" time="0.001"/>
+  <testcase name="stats" classname="com.nexusguard.app.LogicTest" time="0.001"/>
+  <testcase name="pingParser" classname="com.nexusguard.app.LogicTest" time="0.007"/>
+  <testcase name="diagnosisGood" classname="com.nexusguard.app.LogicTest" time="0.0"/>
+  <testcase name="dnsRecommendation" classname="com.nexusguard.app.LogicTest" time="0.01"/>
+  <testcase name="aiNeverInventsMissingData" classname="com.nexusguard.app.LogicTest" time="0.029"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.nexusguard.app.CoreFeaturesTest" tests="24" failures="0" errors="0" skipped="0" time="172.701" timestamp="2026-11-06T01:34:07" hostname="localhost">
+  <properties>
+    <property name="device" value="emulator-5554 - 14" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="a01_keystoreRoundTrip" classname="com.nexusguard.app.CoreFeaturesTest" time="0.008" />
+  <testcase name="a02_encryptedDatabase" classname="com.nexusguard.app.CoreFeaturesTest" time="0.635" />
+  <testcase name="a03_iocLoaded" classname="com.nexusguard.app.CoreFeaturesTest" time="0.077" />
+  <testcase name="b01_deviceScan" classname="com.nexusguard.app.CoreFeaturesTest" time="1.06" />
+  <testcase name="b02_appAnalysis" classname="com.nexusguard.app.CoreFeaturesTest" time="2.855" />
+  <testcase name="b03_fileScanOwnApk" classname="com.nexusguard.app.CoreFeaturesTest" time="0.483" />
+  <testcase name="b04_fileScanDisguised" classname="com.nexusguard.app.CoreFeaturesTest" time="0.001" />
+  <testcase name="b05_phishing" classname="com.nexusguard.app.CoreFeaturesTest" time="0.033" />
+  <testcase name="c01_connectionState" classname="com.nexusguard.app.CoreFeaturesTest" time="0.0" />
+  <testcase name="c02_latencyReal" classname="com.nexusguard.app.CoreFeaturesTest" time="4.778" />
+  <testcase name="c03_dnsReal" classname="com.nexusguard.app.CoreFeaturesTest" time="0.884" />
+  <testcase name="c04_captiveProbe" classname="com.nexusguard.app.CoreFeaturesTest" time="0.101" />
+  <testcase name="c05_speedTestReal" classname="com.nexusguard.app.CoreFeaturesTest" time="4.074" />
+  <testcase name="c06_optimizerAndDiagnosis" classname="com.nexusguard.app.CoreFeaturesTest" time="12.726" />
+  <testcase name="c07_wifiAssessment" classname="com.nexusguard.app.CoreFeaturesTest" time="0.001" />
+  <testcase name="d01_stabilityService" classname="com.nexusguard.app.CoreFeaturesTest" time="10.837" />
+  <testcase name="d02_connectivityLossAndReturn" classname="com.nexusguard.app.CoreFeaturesTest" time="11.95" />
+  <testcase name="d03_wifiToMobileSwitch" classname="com.nexusguard.app.CoreFeaturesTest" time="2.721" />
+  <testcase name="a_home_and_scan" classname="com.nexusguard.app.UiFlowTest" time="8.739" />
+  <testcase name="b_security_tools" classname="com.nexusguard.app.UiFlowTest" time="11.199" />
+  <testcase name="c_internet_tools" classname="com.nexusguard.app.UiFlowTest" time="66.663" />
+  <testcase name="d_ai_and_settings" classname="com.nexusguard.app.UiFlowTest" time="8.556" />
+  <testcase name="e_share_link_intent" classname="com.nexusguard.app.UiFlowTest" time="2.311" />
+  <testcase name="f_screen_sizes" classname="com.nexusguard.app.UiFlowTest" time="21.077" />
+</testsuite>

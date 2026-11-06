@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.nexusguard.app.PhishingAnalyzerTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-06T01:27:49" hostname="runnervm7aw5e" time="0.045">
+  <properties/>
+  <testcase name="extractFromSharedText" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.003"/>
+  <testcase name="javascriptScheme" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.0"/>
+  <testcase name="brandImpersonation" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.009"/>
+  <testcase name="iocDomain" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.003"/>
+  <testcase name="ipAtAndPunycode" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.005"/>
+  <testcase name="legitimateSitesAreNotFlaggedHigh" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.012"/>
+  <testcase name="ipDetection" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.0"/>
+  <testcase name="levenshtein" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.0"/>
+  <testcase name="registrableDomain" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.0"/>
+  <testcase name="apkDownloadAndShortener" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.002"/>
+  <testcase name="freeHosting" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.001"/>
+  <testcase name="fakeGovBr" classname="com.nexusguard.app.PhishingAnalyzerTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -163,11 +163,11 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean 
             .clip(shape)
             .background(if (enabled) c.accentH else Brush.horizontalGradient(listOf(c.surfaceHigh, c.surfaceHigh)))
             .clickable(enabled = enabled) { onClick() }
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            icon?.let { Icon(it, null, tint = Color.White, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(10.dp)) }
+            icon?.let { Icon(it, null, tint = Color.White, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)) }
             Text(text, style = MaterialTheme.typography.labelLarge, color = if (enabled) Color.White else c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -225,7 +225,7 @@ fun MetricTile(label: String, value: String, unit: String = "", modifier: Modifi
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             if (value == NA) Text("não disponível", style = MaterialTheme.typography.labelMedium, color = c.muted, maxLines = 2)
-            else Text(value, fontFamily = Grotesk, fontWeight = FontWeight.Bold, fontSize = if (value.length > 9) 14.sp else 22.sp, color = color ?: c.text,
+            else Text(value, fontFamily = Grotesk, fontWeight = FontWeight.Bold, fontSize = when { value.length > 9 -> 14.sp; value.length > 5 -> 17.sp; else -> 22.sp }, color = color ?: c.text,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             if (unit.isNotEmpty() && value != NA) { Spacer(Modifier.width(4.dp)); Text(unit, style = MaterialTheme.typography.labelSmall, color = c.muted, modifier = Modifier.padding(bottom = 3.dp)) }
         }

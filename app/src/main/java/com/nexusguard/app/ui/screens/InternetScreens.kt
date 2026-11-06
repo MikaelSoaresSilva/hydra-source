@@ -278,10 +278,17 @@ fun DnsScreen(nav: NavHostController) {
             if (res == null && !ui.running) item { NexusCard { EmptyState("Sem comparação ainda", "Toque em COMPARAR DNS. São enviadas cerca de 20 consultas pequenas a cada servidor.") } }
             if (res != null) {
                 val best = res.best
+                val sysMs = res.system?.combinedMs
+                val systemFaster = best != null && sysMs != null && res.system!!.successRate >= 0.8 && sysMs <= best.combinedMs!!
                 item {
                     best?.let { b ->
                         SectionTitle("Recomendação para esta rede")
                         NexusCard(glow = true) {
+                            if (systemFaster) {
+                                Text("Seu DNS atual já é o mais rápido (${fmt1(sysMs)} ms)", style = MaterialTheme.typography.titleLarge, color = c.success, modifier = Modifier.testTag("dns_best"))
+                                Text("Trocar não traria ganho de velocidade nesta rede. Opcional, por privacidade (consultas criptografadas): o DNS público mais rápido aqui foi ${b.name}, com ${fmt1(b.combinedMs)} ms.",
+                                    style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(vertical = 6.dp))
+                            } else
                             Text("${b.name} — ${fmt1(b.combinedMs)} ms", style = MaterialTheme.typography.titleLarge, color = c.text, modifier = Modifier.testTag("dns_best"))
                             Text("Nome do host para o DNS privado:", style = MaterialTheme.typography.bodySmall, color = c.muted)
                             Text(b.dotHost ?: "-", style = MaterialTheme.typography.titleMedium, color = c.cyan)

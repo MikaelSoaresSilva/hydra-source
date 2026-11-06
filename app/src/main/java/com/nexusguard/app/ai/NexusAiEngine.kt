@@ -257,7 +257,9 @@ object NexusAiEngine {
         val acts = mutableListOf<String>()
         connLine(c.connection)?.let { p += it }
         val best = c.dns?.best
-        if (best != null) acts += "DNS privado recomendado para esta rede: \"${best.dotHost}\" (${best.name}, ${f(best.combinedMs)} ms). Configure em Ajustes do Android > Conexão e compartilhamento > DNS privado. Efeito: consultas criptografadas e resolução possivelmente mais rápida; não altera a velocidade de download. Para desfazer: voltar para \"Automático\"."
+        val sysMs = c.dns?.system?.combinedMs
+        if (best != null && sysMs != null && sysMs <= best.combinedMs!!) acts += "Seu DNS atual já é o mais rápido nesta rede (${f(sysMs)} ms); trocar não traria ganho de velocidade. Opcional, por privacidade: DNS privado \"${best.dotHost}\" (${best.name}, ${f(best.combinedMs)} ms) criptografa as consultas."
+        else if (best != null) acts += "DNS privado recomendado para esta rede: \"${best.dotHost}\" (${best.name}, ${f(best.combinedMs)} ms). Configure em Ajustes do Android > Conexão e compartilhamento > DNS privado. Efeito: consultas criptografadas e resolução possivelmente mais rápida; não altera a velocidade de download. Para desfazer: voltar para \"Automático\"."
         else acts += "Faça a comparação de DNS para eu recomendar o melhor resolvedor nesta rede."
         when (c.connection?.type) {
             ConnType.WIFI -> {

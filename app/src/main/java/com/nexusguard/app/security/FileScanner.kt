@@ -196,7 +196,7 @@ class FileScanner(private val context: Context, private val ioc: IocDatabase) {
             sameSigner, installedVersion, iocMatch)
     }
 
-    /** Fallback para assinatura v1 (META-INF/*.RSA|DSA|EC): extrai o certificado do bloco PKCS#7. */
+    /** Fallback para assinatura v1 (arquivos .RSA, .DSA ou .EC em META-INF): extrai o certificado do bloco PKCS#7. */
     private fun v1Certs(file: File, entries: List<String>): List<CertInfo> = runCatching {
         val sigEntry = entries.firstOrNull { it.startsWith("META-INF/") && (it.endsWith(".RSA") || it.endsWith(".DSA") || it.endsWith(".EC")) } ?: return emptyList()
         ZipFile(file).use { z ->

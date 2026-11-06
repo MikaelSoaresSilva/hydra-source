@@ -109,7 +109,7 @@ fun SecurityScreen(nav: NavHostController, main: MainViewModel) {
                                 style = MaterialTheme.typography.titleSmall, color = NX.c.text)
                             scan?.let { Text("Última: ${ago(it.timestamp)}", style = MaterialTheme.typography.labelSmall, color = NX.c.muted) }
                             Spacer(Modifier.height(10.dp))
-                            PrimaryButton(if (scanUi.running) "VERIFICANDO…" else "VERIFICAÇÃO COMPLETA", Modifier.fillMaxWidth(), enabled = !scanUi.running, icon = Icons.Filled.Radar, tag = "btn_full_scan") {
+                            PrimaryButton(if (scanUi.running) "VERIFICANDO…" else "VERIFICAR", Modifier.fillMaxWidth(), enabled = !scanUi.running, icon = Icons.Filled.Radar, tag = "btn_full_scan") {
                                 main.runScan(); nav.navigate("security/scan")
                             }
                         }

@@ -46,9 +46,12 @@ class SecurityWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             c.notifier.alert("security", "high", "Risco: ${it.title}", it.detail, "security/scan", dedupeHours = 72)
         }
         if (wifi.label == "Insegura") c.notifier.alert("security", "warn", "Wi-Fi potencialmente inseguro", wifi.findings.first().explanation, "security/wifi", dedupeHours = 24)
-        val ageDays = (System.currentTimeMillis() - (c.history.history.latestOnce(Kind.APP_SCAN)?.timestamp ?: 0L)) / 86_400_000L
-        if (ageDays >= 14) c.notifier.alert("security", "info", "Revisão de aplicativos recomendada",
-            "Faz ${if (ageDays > 1000) "muito tempo" else "$ageDays dias"} que os aplicativos não são analisados. Abra Segurança > Análise de aplicativos.", "security/apps", dedupeHours = 24 * 14)
+        val last = c.history.history.latestOnce(Kind.APP_SCAN)?.timestamp
+        val ageDays = last?.let { (System.currentTimeMillis() - it) / 86_400_000L }
+        if (ageDays == null) c.notifier.alert("security", "info", "Analise seus aplicativos",
+            "Você ainda não revisou as permissões dos apps instalados. Abra Segurança > Análise de aplicativos.", "security/apps", dedupeHours = 24 * 14)
+        else if (ageDays >= 14) c.notifier.alert("security", "info", "Revisão de aplicativos recomendada",
+            "Faz $ageDays dias que os aplicativos não são analisados. Abra Segurança > Análise de aplicativos.", "security/apps", dedupeHours = 24 * 14)
         return Result.success()
     }
 }

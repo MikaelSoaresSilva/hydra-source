@@ -224,7 +224,8 @@ fun MetricTile(label: String, value: String, unit: String = "", modifier: Modifi
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(value, fontFamily = Grotesk, fontWeight = FontWeight.Bold, fontSize = if (value.length > 9) 14.sp else 22.sp, color = color ?: c.text,
+            if (value == NA) Text("não disponível", style = MaterialTheme.typography.labelMedium, color = c.muted, maxLines = 2)
+            else Text(value, fontFamily = Grotesk, fontWeight = FontWeight.Bold, fontSize = if (value.length > 9) 14.sp else 22.sp, color = color ?: c.text,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             if (unit.isNotEmpty() && value != NA) { Spacer(Modifier.width(4.dp)); Text(unit, style = MaterialTheme.typography.labelSmall, color = c.muted, modifier = Modifier.padding(bottom = 3.dp)) }
         }

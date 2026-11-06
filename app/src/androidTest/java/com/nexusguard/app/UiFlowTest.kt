@@ -41,6 +41,8 @@ class UiFlowTest {
 
     private fun shot(name: String) {
         compose.waitForIdle()
+        // fecha diálogos do sistema (ex.: "Pixel Launcher não está respondendo" do emulador) e notificações flutuantes
+        runCatching { inst.uiAutomation.executeShellCommand("am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS").close() }
         Thread.sleep(700)
         runCatching {
             val bmp: Bitmap = inst.uiAutomation.takeScreenshot() ?: return
@@ -90,7 +92,7 @@ class UiFlowTest {
         click("btn_scan")
         waitText("Ver detalhes da verificação", 40_000)
         shot("03_home_after_scan")
-        tag("home_list").performScrollToNode(hasText("Alertas recentes", substring = true))
+        tag("home_list").performScrollToNode(hasText("ALERTAS RECENTES", substring = true))
         shot("04_home_alerts")
     }
 
@@ -114,7 +116,7 @@ class UiFlowTest {
         shot("08_phishing_result"); back()
 
         clickIn("security_list", "nav_wifi_sec")
-        waitText("O que encontramos"); shot("09_wifi_security"); back()
+        waitText("O QUE ENCONTRAMOS"); shot("09_wifi_security"); back()
 
         clickIn("security_list", "nav_files")
         waitTag("btn_pick_file"); shot("10_files"); back()
@@ -140,12 +142,12 @@ class UiFlowTest {
         clickIn("internet_list", "btn_optimize")
         click("btn_run_optimize")
         waitTag("opt_step", 5_000); shot("15_optimize_running")
-        waitTag("btn_measure_after", 90_000)
+        waitTag("opt_issues", 90_000)
         shot("16_optimize_result")
         tag("optimize_list").performScrollToNode(hasTestTag("btn_measure_after"))
         click("btn_measure_after")
-        waitText("Antes × depois", 90_000)
-        tag("optimize_list").performScrollToNode(hasText("Antes × depois", substring = true))
+        waitText("ANTES × DEPOIS", 90_000)
+        tag("optimize_list").performScrollToNode(hasText("ANTES × DEPOIS", substring = true))
         shot("17_optimize_before_after"); back()
 
         clickIn("internet_list", "nav_speed")
@@ -163,9 +165,9 @@ class UiFlowTest {
         click("btn_stab_stop")
         compose.waitForIdle(); back()
 
-        clickIn("internet_list", "nav_mobile"); waitText("Como interpretar o sinal"); shot("21_mobile"); back()
-        clickIn("internet_list", "nav_wifi_net"); waitText("Recomendação para a conexão atual"); shot("22_wifi_smart"); back()
-        clickIn("internet_list", "nav_net_history"); waitText("Registros"); shot("23_net_history"); back()
+        clickIn("internet_list", "nav_mobile"); waitText("COMO INTERPRETAR O SINAL"); shot("21_mobile"); back()
+        clickIn("internet_list", "nav_wifi_net"); waitText("RECOMENDAÇÃO PARA A CONEXÃO ATUAL"); shot("22_wifi_smart"); back()
+        clickIn("internet_list", "nav_net_history"); waitText("REGISTROS"); shot("23_net_history"); back()
     }
 
     @Test fun d_ai_and_settings() {

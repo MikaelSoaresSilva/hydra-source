@@ -190,7 +190,9 @@ object DiagnosticsEngine {
         if (c.httpProxy != null) issues += Issue("proxy", IssueLevel.INFO, "Proxy configurado (${c.httpProxy})",
             "O tráfego web passa por um servidor intermediário.", "Se você não configurou isso, remova o proxy nas configurações da rede Wi-Fi.")
 
-        val score = computeScore(s, issues)
+        // Problemas de desempenho detectados descontam da nota (questões só de segurança, como rede aberta, não)
+        val penalty = issues.filter { it.id !in setOf("wifi_open", "proxy", "roaming") }.sumOf { when (it.level) { IssueLevel.BAD -> 12; IssueLevel.WARN -> 5; else -> 0 }.toInt() }
+        val score = computeScore(s, issues)?.let { (it - penalty).coerceIn(0, 100) }
         val label = when {
             score == null -> "Sem dados suficientes"
             score >= 85 -> "Excelente"

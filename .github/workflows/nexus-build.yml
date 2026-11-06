@@ -56,6 +56,8 @@ jobs:
           disable-animations: true
           script: |
             adb logcat -c || true
+            adb shell settings put global hide_error_dialogs 1 || true
+            adb shell settings put global heads_up_notifications_enabled 0 || true
             (adb logcat -v time NexusTest:I AndroidRuntime:E TestRunner:I *:S > logcat.txt &) ; ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true --console=plain > emu.log 2>&1 ; echo "exit=$?" >> emu.log ; adb pull /sdcard/Android/data/com.nexusguard.app.debug/files/shots shots >> emu.log 2>&1 || true ; adb pull /sdcard/Android/data/com.nexusguard.app.debug/files/results results >> emu.log 2>&1 || true ; adb shell dumpsys batterystats com.nexusguard.app.debug > battery.txt 2>&1 || true ; adb shell dumpsys meminfo com.nexusguard.app.debug > meminfo.txt 2>&1 || true
 
       - name: Publicar logs (branch nexus-ci-logs)

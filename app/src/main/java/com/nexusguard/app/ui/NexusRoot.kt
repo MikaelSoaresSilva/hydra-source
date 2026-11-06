@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -165,7 +166,7 @@ private fun BottomBar(nav: NavHostController, route: String?) {
                         }
                     },
                     icon = { Icon(t.icon, t.label) },
-                    label = { Text(t.label, maxLines = 1) },
+                    label = { Text(t.label, maxLines = 1, softWrap = false, fontSize = 10.5.sp, letterSpacing = 0.sp) },
                     modifier = Modifier.testTag("tab_${t.route}"),
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White, selectedTextColor = c.text, indicatorColor = c.blue.copy(alpha = .35f),

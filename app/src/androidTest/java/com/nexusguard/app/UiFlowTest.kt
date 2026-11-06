@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -55,21 +56,30 @@ class UiFlowTest {
     private fun waitText(t: String, ms: Long = 15_000) = compose.waitUntil(ms) { hasTxt(t) }
     private fun tag(t: String): SemanticsNodeInteraction = compose.onNodeWithTag(t, useUnmergedTree = true)
 
+    /** Rola até o elemento (se estiver fora da tela) e toca nele. */
+    private fun click(t: String) {
+        val n = tag(t)
+        runCatching { n.performScrollTo() }
+        compose.waitForIdle()
+        n.performClick()
+        compose.waitForIdle()
+    }
+
     private fun clickIn(list: String, target: String) {
         waitTag(list)
         tag(list).performScrollToNode(hasTestTag(target))
         compose.waitForIdle()
-        tag(target).performClick()
+        click(target)
     }
 
-    private fun back() { if (has("back")) tag("back").performClick() else inst.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); compose.waitForIdle() }
+    private fun back() { if (has("back")) click("back") else inst.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); compose.waitForIdle() }
 
     private fun passOnboarding() {
         compose.waitUntil(10_000) { has("btn_start") || has("btn_scan") }
         if (has("btn_start")) {
             shot("01_onboarding")
-            tag("sw_accept").performClick()
-            tag("btn_start").performClick()
+            click("sw_accept")
+            click("btn_start")
         }
         waitTag("btn_scan", 15_000)
     }
@@ -77,7 +87,7 @@ class UiFlowTest {
     @Test fun a_home_and_scan() {
         passOnboarding()
         shot("02_home")
-        tag("btn_scan").performClick()
+        click("btn_scan")
         waitText("Ver detalhes da verificação", 40_000)
         shot("03_home_after_scan")
         tag("home_list").performScrollToNode(hasText("Alertas recentes", substring = true))
@@ -86,7 +96,7 @@ class UiFlowTest {
 
     @Test fun b_security_tools() {
         passOnboarding()
-        tag("tab_security").performClick()
+        click("tab_security")
         waitTag("security_list")
         shot("05_security")
         clickIn("security_list", "nav_scan")
@@ -99,7 +109,7 @@ class UiFlowTest {
         clickIn("security_list", "nav_phishing")
         waitTag("url_input")
         tag("url_input").performTextInput("Seu Nubank foi bloqueado. Regularize em http://nubank-seguranca-conta.xyz/login?cpf=1")
-        tag("btn_analyze_url").performClick()
+        click("btn_analyze_url")
         waitTag("phish_level")
         shot("08_phishing_result"); back()
 
@@ -115,42 +125,42 @@ class UiFlowTest {
 
     @Test fun c_internet_tools() {
         passOnboarding()
-        tag("tab_internet").performClick()
+        click("tab_internet")
         waitTag("internet_list")
         shot("12_internet")
-        tag("btn_quick_ping").performClick()
+        click("btn_quick_ping")
         compose.waitUntil(40_000) { hasTxt("medir ping") }
         shot("13_internet_ping")
 
         clickIn("internet_list", "nav_dns")
-        tag("btn_dns").performClick()
+        click("btn_dns")
         waitTag("dns_best", 40_000)
         shot("14_dns"); back()
 
         clickIn("internet_list", "btn_optimize")
-        tag("btn_run_optimize").performClick()
+        click("btn_run_optimize")
         waitTag("opt_step", 5_000); shot("15_optimize_running")
         waitTag("btn_measure_after", 90_000)
         shot("16_optimize_result")
         tag("optimize_list").performScrollToNode(hasTestTag("btn_measure_after"))
-        tag("btn_measure_after").performClick()
+        click("btn_measure_after")
         waitText("Antes × depois", 90_000)
         tag("optimize_list").performScrollToNode(hasText("Antes × depois", substring = true))
         shot("17_optimize_before_after"); back()
 
         clickIn("internet_list", "nav_speed")
-        tag("btn_start_speed").performClick()
+        click("btn_start_speed")
         compose.waitForIdle()
-        if (has("confirm_speed")) tag("confirm_speed").performClick()
+        if (has("confirm_speed")) click("confirm_speed")
         Thread.sleep(5_000); shot("18_speed_running")
         waitTag("res_down", 120_000)
         shot("19_speed_result"); back()
 
         clickIn("internet_list", "nav_stability")
-        tag("btn_stab_start").performClick()
+        click("btn_stab_start")
         Thread.sleep(12_000)
         shot("20_stability_running")
-        tag("btn_stab_stop").performClick()
+        click("btn_stab_stop")
         compose.waitForIdle(); back()
 
         clickIn("internet_list", "nav_mobile"); waitText("Como interpretar o sinal"); shot("21_mobile"); back()
@@ -160,18 +170,18 @@ class UiFlowTest {
 
     @Test fun d_ai_and_settings() {
         passOnboarding()
-        tag("tab_ai").performClick()
+        click("tab_ai")
         waitTag("ai_input")
         tag("ai_input").performTextInput("Por que minha internet está lenta?")
-        tag("ai_send").performClick()
+        click("ai_send")
         compose.waitUntil(20_000) { hasTxt("Por que a internet está lenta") }
         shot("24_ai")
         tag("ai_input").performTextInput("O que posso fazer para melhorar meu ping?")
-        tag("ai_send").performClick()
+        click("ai_send")
         compose.waitUntil(20_000) { hasTxt("Como melhorar o ping") }
         shot("25_ai_ping")
 
-        tag("tab_settings").performClick()
+        click("tab_settings")
         waitTag("settings_list"); shot("26_settings")
         clickIn("settings_list", "nav_permissions"); waitText("Menor privilégio"); shot("27_permissions"); back()
         clickIn("settings_list", "nav_policy"); waitText("POLÍTICA DE PRIVACIDADE"); shot("28_policy"); back()
@@ -197,7 +207,7 @@ class UiFlowTest {
                 Thread.sleep(3_000)
                 compose.waitUntil(15_000) { has("btn_scan") || has("tab_home") }
                 shot("3${idx}_size_${sz}_${dpi}dpi")
-                if (has("tab_internet")) { tag("tab_internet").performClick(); Thread.sleep(800); shot("3${idx}_size_${sz}_internet"); tag("tab_home").performClick() }
+                if (has("tab_internet")) { click("tab_internet"); Thread.sleep(800); shot("3${idx}_size_${sz}_internet"); click("tab_home") }
             }
         } finally {
             inst.uiAutomation.executeShellCommand("wm size reset").close()

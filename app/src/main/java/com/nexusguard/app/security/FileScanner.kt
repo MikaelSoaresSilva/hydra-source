@@ -79,6 +79,7 @@ class FileScanner(private val context: Context, private val ioc: IocDatabase) {
                 c.getColumnIndex(OpenableColumns.SIZE).takeIf { it >= 0 && !c.isNull(it) }?.let { size = c.getLong(it) }
             }
         }
+        if (name == "arquivo") uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }?.let { name = it }
         val mime = cr.getType(uri)
         val head = ByteArray(64)
         var headLen = 0

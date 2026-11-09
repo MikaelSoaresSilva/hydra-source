@@ -100,6 +100,8 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 `JKK4_DAYS` em `src/domain/jkk.ts` reorganiza o Protocolo JKK em superior/inferior 2× (seg, ter, qui, sex) usando as mesmas linhas do PDF; o volume semanal e a frequência de cada músculo são ≥ aos do JKK de 5 dias (testado). A preferência `trainingProtocol` (padrão `jkk4`) escolhe o plano ativo; ao voltar para `jkk`, o ciclo arquivado é reativado na mesma semana, com o histórico.
 
+**Revisão automática após cada medição** (`src/domain/autoReview.ts`): ao salvar medidas em Evolução, o app reavalia o plano de 4 dias e troca exercícios só se necessário — dor ≥ 4/10 em duas sessões seguidas, ou carga parada há 4 sessões com a medida da região sem crescer ≥ 0,5 cm em 28+ dias (fadiga vira deload, não troca). Máximo de 2 trocas por vez, sem trocar de novo o mesmo exercício antes de 28 dias, sempre por uma variação do mesmo músculo e sem repetir exercício no dia. Séries, faixas, descansos e dias não mudam. Peso e cintura geram orientação de dieta, não troca. Cada revisão fica registrada em `config.revisions` e aparece em Evolução e no Treino.
+
 **Bipe do descanso:** com o app aberto, toca `public/sounds/rest_beep.wav` (bip-bip-bip a 2400 Hz, volume máximo, com compressor); em segundo plano/tela bloqueada, uma notificação local (`@capacitor/local-notifications`, canal `rest_end_v1`, som `res/raw/rest_beep.wav`, alarme exato com `USE_EXACT_ALARM`) toca no fim exato do descanso. Com o app visível, o aviso do sistema é cancelado 1,5 s antes para não tocar dobrado.
 
 ## Protocolo JKK (5 dias)

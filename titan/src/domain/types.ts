@@ -126,6 +126,9 @@ export interface SlotPrescription {
   restText?: string;
   /** 's' = séries por tempo (segundos) em vez de repetições. */
   unit?: 'reps' | 's';
+  /** Troca automática: exercício original do plano e data da troca. */
+  originalKey?: string;
+  changedOn?: string;
 }
 
 export interface ProgramDay { dayIndex: number; name: string; focus: string; slots: SlotPrescription[] }
@@ -145,7 +148,12 @@ export interface ProgramConfig {
   /** Plano fechado: o usuário só registra; trocas apenas por dor ou aparelho indisponível. */
   locked?: boolean;
   olympiaVersion?: number;
+  /** Revisões automáticas feitas após cada medição (só trocas de exercício, quando necessárias). */
+  revisions?: ProgramRevision[];
 }
+
+export interface ExerciseChange { slotId: string; day: string; from: string; to: string; fromName: string; toName: string; reason: string }
+export interface ProgramRevision { date: string; metricId: string | null; changes: ExerciseChange[]; kept: string[]; notes: string[] }
 
 export interface ProgramRow extends Row {
   name: string;

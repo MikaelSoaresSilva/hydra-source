@@ -30,6 +30,7 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await expect(page.getByText(/^Protocolo JKK — 4 dias · início/)).toBeVisible();
   await expect(page.getByText('Próxima sessão: Dia 1 · Superior A — Peito superior + Costas (largura) + Ombro + Tríceps')).toBeVisible();
   await expect(page.getByText('Por que 4 dias dá o mesmo resultado (ou melhor)')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Revisões automáticas' })).toBeVisible();
   await expect(page.getByText('Supino inclinado com halteres (30°)').first()).toBeVisible();
   await expect(page.getByText('FLANCOS: O QUE FUNCIONA DE VERDADE')).toBeVisible();
   await page.getByRole('button', { name: 'Iniciar treino' }).click();
@@ -91,6 +92,10 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await page.getByLabel('Braço direito contraído (cm)').fill('38,5');
   await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByRole('cell', { name: '80,4' })).toBeVisible();
+  // Ao salvar medidas, o app reavalia o treino de 4 dias (1ª medição = linha de base: nada muda)
+  await expect(page.getByRole('heading', { name: /Avaliação do treino/ })).toBeVisible();
+  await expect(page.getByText('Nenhuma troca necessária.')).toBeVisible();
+  await expect(page.getByText(/linha de base/).first()).toBeVisible();
   await page.getByRole('tab', { name: 'Gráficos' }).click();
   await expect(page.locator('.recharts-surface').first()).toBeVisible();
 

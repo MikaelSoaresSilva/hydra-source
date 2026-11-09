@@ -5,8 +5,9 @@ import { formatBR, todayISO } from '../domain/dates';
 import { photoComparability } from '../domain/recommendations';
 import { movingAverage } from '../domain/trend';
 import { MEASURING_GUIDE } from '../domain/olympia';
-import type { CheckinRow, MetricRow, PhotoRow } from '../domain/types';
-import { sanitizeImage } from '../services';
+import type { CheckinRow, MetricRow, PhotoRow, ProgramRevision } from '../domain/types';
+import { reviewAfterMeasurement, sanitizeImage } from '../services';
+import { RevisionResultCard } from './RevisionCard';
 import { TrendChart } from '../ui/charts';
 import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Scale, Tabs, fmt, useToast } from '../ui/components';
 
@@ -87,6 +88,7 @@ export function Evolution() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | PhotoRow['category']>('all');
+  const [revision, setRevision] = useState<ProgramRevision | null>(null);
   const { toast, node } = useToast();
 
   const asc = [...metrics.data].reverse();
@@ -96,12 +98,15 @@ export function Evolution() {
   async function saveMetric() {
     setError(null);
     if (!m.date || METRIC_FIELDS.every(([k]) => m[k] === null || m[k] === undefined)) { setError('Informe a data e pelo menos uma medida.'); return; }
+    const metricId = uuid();
     await store.upsert('body_metrics', {
-      id: uuid(), date: m.date, ...Object.fromEntries(METRIC_FIELDS.map(([k]) => [k, m[k] ?? null])),
+      id: metricId, date: m.date, ...Object.fromEntries(METRIC_FIELDS.map(([k]) => [k, m[k] ?? null])),
       conditions: m.conditions ?? {}, notes: m.notes ?? null,
     });
     setM({ date: todayISO(), conditions: m.conditions });
-    toast('Medidas salvas.');
+    toast('Medidas salvas. Avaliando o treino…');
+    // Reavalia o treino de 4 dias com as medidas novas e troca exercícios só se necessário.
+    try { setRevision(await reviewAfterMeasurement(store, metricId)); } catch (e) { setError(`Medidas salvas, mas a avaliação do treino falhou: ${(e as Error).message}`); }
   }
 
   async function upload(file: File) {
@@ -131,6 +136,7 @@ export function Evolution() {
 
       {tab === 'medidas' && (
         <>
+          {revision && <RevisionResultCard r={revision} />}
           <Card title="Nova medição">
             <div className="grid two">
               <Field label="Data"><input type="date" value={m.date} max={todayISO()} onChange={(e) => setM({ ...m, date: e.target.value })} /></Field>

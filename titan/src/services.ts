@@ -4,12 +4,13 @@ import { calculateTargets } from './domain/nutrition';
 import { generateProgram, phaseFor, prescribeDay, warmupFor } from './domain/program';
 import { OLYMPIA_WEEKS } from './domain/olympia';
 import { JKK_WEEKS, generateJkk } from './domain/jkk';
+import { reviewProgram } from './domain/autoReview';
 import { groupHistory, suggestProgression } from './domain/progression';
 import { applyReadiness } from './domain/science';
 import type { DataStore } from './data/store';
 import { uuid } from './data/store';
 import type {
-  CheckinRow, OverrideRow, PlannedExercise, Profile, ProgramRow, SessionRow, SetLogRow, TargetRow,
+  CheckinRow, MetricRow, OverrideRow, PlannedExercise, Profile, ProgramRevision, ProgramRow, SessionRow, SetLogRow, TargetRow,
 } from './domain/types';
 
 export function overridesMap(rows: OverrideRow[]) {
@@ -170,4 +171,19 @@ export async function activateProtocol(store: DataStore, profile: Profile, proto
   const restored = { ...archived, status: 'active' as const };
   await store.upsert('programs', restored as unknown as Record<string, unknown>);
   return restored;
+}
+
+/**
+ * Depois de cada medição: reavalia o treino de 4 dias e troca exercícios só quando necessário
+ * (regras em domain/autoReview). Guarda o relatório no ciclo, mesmo quando nada muda.
+ */
+export async function reviewAfterMeasurement(store: DataStore, metricId: string | null, today = todayISO()): Promise<ProgramRevision | null> {
+  const program = (await store.list<ProgramRow>('programs', { eq: { status: 'active' } }))[0];
+  if (!program || program.config.protocol !== 'jkk4') return null;
+  const metrics = await store.list<MetricRow>('body_metrics');
+  const logs = await store.list<SetLogRow>('set_logs', { gte: { logged_at: addDays(today, -120) } });
+  const { config, revision } = reviewProgram({ config: program.config, metrics, logs, today, metricId });
+  const revisions = [...(program.config.revisions ?? []), revision].slice(-20);
+  await store.upsert('programs', { ...program, config: { ...config, revisions } } as unknown as Record<string, unknown>);
+  return revision;
 }

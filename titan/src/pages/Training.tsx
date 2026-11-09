@@ -9,6 +9,7 @@ import { nextSession, projectedEnd } from '../domain/schedule';
 import { weeklyVolume } from '../domain/volume';
 import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { activateProtocol, applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
+import { RevisionHistoryCard } from './RevisionCard';
 import { Jkk4Why, JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
 import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
 import { decliningExercises } from '../domain/progression';
@@ -214,8 +215,9 @@ export function Training() {
       {jkk ? (
         <>
           <JkkPhotos />
+          {jkk4 && <RevisionHistoryCard revisions={program.config.revisions ?? []} />}
           {jkk4 && <Jkk4Why />}
-          <JkkWorkouts four={jkk4} />
+          <JkkWorkouts four={jkk4} config={program.config} />
           <JkkHow />
           <JkkFlanks />
           <JkkSources />

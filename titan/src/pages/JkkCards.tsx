@@ -1,5 +1,5 @@
 import { JKK4_DAYS, JKK4_INTRO, JKK_DAYS, JKK_FLANKS, JKK_HOW, JKK_INTRO, JKK_PHOTOS, JKK_SOURCES, weeklyDirect } from '../domain/jkk';
-import { MUSCLE_LABEL, type Muscle } from '../domain/types';
+import { MUSCLE_LABEL, type Muscle, type ProgramConfig } from '../domain/types';
 import { Card } from '../ui/components';
 
 /** Cabeçalho do Protocolo JKK: resumo, etiquetas e semana — texto do documento. */
@@ -50,19 +50,26 @@ export function JkkPhotos() {
   );
 }
 
-export function JkkWorkouts({ four = false }: { four?: boolean }) {
+export function JkkWorkouts({ four = false, config }: { four?: boolean; config?: ProgramConfig }) {
+  // Com o ciclo ativo, mostra o plano atual (inclui trocas automáticas); senão, o texto do documento.
+  const days = config
+    ? config.days.map((d) => {
+      const [meta, ...intro] = d.focus.split(' — ');
+      return { name: d.name, meta, intro: intro.join(' — '), rows: d.slots.map((s) => ({ key: s.slotId, label: s.label ?? s.exerciseKey, sets: s.sets, range: s.repRange, restText: s.restText ?? `${s.restSec}s`, note: s.note ?? '', tag: s.tag ?? '', unit: s.unit })) };
+    })
+    : (four ? JKK4_DAYS : JKK_DAYS).map((d) => ({ name: d.name, meta: d.meta, intro: d.intro, rows: d.rows.map(([key, label, sets, range, , restText, note, tag, unit]) => ({ key: key + label, label, sets, range, restText, note, tag, unit })) }));
   return (
     <Card title="Treino">
-      {(four ? JKK4_DAYS : JKK_DAYS).map((d) => (
+      {days.map((d) => (
         <details key={d.name}>
           <summary><strong>{d.name}</strong> · <small>{d.meta}</small></summary>
           <p className="hint">{d.intro}</p>
           <ul className="list">
-            {d.rows.map(([key, label, sets, [a, b], , restText, note, tag, unit]) => (
-              <li key={key + label}>
-                <div className="row between"><strong>{label}</strong><span>{sets} × {a}–{b}{unit === 's' ? ' s' : ''}</span></div>
-                <small>{note}</small>
-                <div className="row between"><small className="muted">{tag}</small><small className="muted">{restText}</small></div>
+            {d.rows.map((r) => (
+              <li key={r.key}>
+                <div className="row between"><strong>{r.label}</strong><span>{r.sets} × {r.range[0]}–{r.range[1]}{r.unit === 's' ? ' s' : ''}</span></div>
+                <small>{r.note}</small>
+                <div className="row between"><small className={r.tag === 'TROCA AUTOMÁTICA' ? '' : 'muted'}>{r.tag === 'TROCA AUTOMÁTICA' ? <span className="tag accent">TROCA AUTOMÁTICA</span> : r.tag}</small><small className="muted">{r.restText}</small></div>
               </li>
             ))}
           </ul>

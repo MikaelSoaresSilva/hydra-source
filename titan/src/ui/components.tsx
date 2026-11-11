@@ -124,3 +124,33 @@ export function useToast() {
 
 export const fmt = (n: number | null | undefined, d = 1) =>
   n === null || n === undefined || Number.isNaN(n) ? '—' : n.toLocaleString('pt-BR', { maximumFractionDigits: d });
+
+/** Anel de progresso (ex.: missão do dia, calorias). */
+export function Ring({ value, max, size = 76, stroke = 8, label, sub, ariaLabel }: { value: number; max: number; size?: number; stroke?: number; label: ReactNode; sub?: ReactNode; ariaLabel: string }) {
+  const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="ring" role="progressbar" aria-label={ariaLabel} aria-valuenow={Math.round(pct * 100)} aria-valuemin={0} aria-valuemax={100} style={{ width: size, height: size }}>
+      <svg width={size} height={size} aria-hidden>
+        <defs><linearGradient id="ringg" x1="0" x2="1"><stop offset="0" stopColor="var(--accent)" /><stop offset="1" stopColor="var(--accent-2)" /></linearGradient></defs>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="url(#ringg)" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} style={{ transition: 'stroke-dashoffset .4s' }} />
+      </svg>
+      <span className="ring-label"><span><strong>{label}</strong>{sub && <><br /><small className="muted">{sub}</small></>}</span></span>
+    </div>
+  );
+}
+
+/** Seletor segmentado (2–3 opções grandes). */
+export function Segmented<T extends string>({ options, value, onChange, label }: { options: { value: T; label: string; sub?: string }[]; value: T; onChange: (v: T) => void; label: string }) {
+  return (
+    <div className="segmented" role="radiogroup" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.value} type="button" role="radio" aria-checked={value === o.value} className={value === o.value ? 'on' : ''} onClick={() => onChange(o.value)}>
+          {o.label}{o.sub && <small>{o.sub}</small>}
+        </button>
+      ))}
+    </div>
+  );
+}

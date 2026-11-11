@@ -96,7 +96,11 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
-## Treino ativo: Protocolo JKK — 4 dias (JKK de 5 dias guardado)
+## Treino: Protocolo JKK em 4 ou 5 dias (alternável)
+
+Em Treino → "Seu treino" (ou Perfil → Treino) o usuário alterna entre o JKK de 4 dias e o de 5 dias. Cada plano guarda o próprio ciclo: ao voltar para um deles, `activateProtocol` reativa o ciclo arquivado na mesma semana e com o histórico.
+
+### Versão 4 dias
 
 `JKK4_DAYS` em `src/domain/jkk.ts` reorganiza o Protocolo JKK em superior/inferior 2× (seg, ter, qui, sex) usando as mesmas linhas do PDF; o volume semanal e a frequência de cada músculo são ≥ aos do JKK de 5 dias (testado). A preferência `trainingProtocol` (padrão `jkk4`) escolhe o plano ativo; ao voltar para `jkk`, o ciclo arquivado é reativado na mesma semana, com o histórico.
 

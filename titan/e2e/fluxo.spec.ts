@@ -29,9 +29,12 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await expect(page.getByText(/Próxima sessão:/)).toBeVisible();
   await expect(page.getByText(/^Protocolo JKK — 4 dias · início/)).toBeVisible();
   await expect(page.getByText('Próxima sessão: Dia 1 · Superior A — Peito superior + Costas (largura) + Ombro + Tríceps')).toBeVisible();
-  await expect(page.getByText('Por que 4 dias dá o mesmo resultado (ou melhor)')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Revisões automáticas' })).toBeVisible();
   await expect(page.getByText('Supino inclinado com halteres (30°)').first()).toBeVisible();
+  await expect(page.getByRole('radio', { name: /4 dias/ })).toHaveAttribute('aria-checked', 'true');
+  // Conteúdo do protocolo fica recolhido em "Sobre o protocolo"
+  await page.getByText('Sobre o protocolo (avaliação, regras, flancos e fontes)').click();
+  await expect(page.getByText('Por que 4 dias dá o mesmo resultado (ou melhor)')).toBeVisible();
   await expect(page.getByText('FLANCOS: O QUE FUNCIONA DE VERDADE')).toBeVisible();
   await page.getByRole('button', { name: 'Iniciar treino' }).click();
   // Protocolo JKK: séries, faixas e orientações exatamente como no documento
@@ -237,4 +240,47 @@ test('bipe do descanso: botão "Testar som" toca o bipe alto no navegador real',
   await page.waitForTimeout(500);
   await page.getByRole('button', { name: 'Testar som' }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { __beeps: unknown[] }).__beeps)).toContain('arquivo:0.62');
+});
+
+test('alternar entre o treino de 4 e o de 5 dias, cada um guardando sua semana', async ({ page }) => {
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await page.getByRole('link', { name: 'Treino' }).first().click();
+  await expect(page.getByText(/^Protocolo JKK — 4 dias · início/)).toBeVisible();
+
+  await page.getByRole('radio', { name: /5 dias/ }).click();
+  await expect(page.getByText(/^Protocolo JKK · início/)).toBeVisible();
+  await expect(page.getByText('Próxima sessão: Dia 1 · Peito superior + Ombros + Tríceps')).toBeVisible();
+  await expect(page.getByRole('radio', { name: /5 dias/ })).toHaveAttribute('aria-checked', 'true');
+
+  await page.getByRole('radio', { name: /4 dias/ }).click();
+  await expect(page.getByText(/^Protocolo JKK — 4 dias · início/)).toBeVisible();
+  await expect(page.getByText('Próxima sessão: Dia 1 · Superior A — Peito superior + Costas (largura) + Ombro + Tríceps')).toBeVisible();
+});
+
+test('tela Hoje: registrar o peso rápido', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await expect(page.getByRole('region', { name: 'Treino de hoje' })).toBeVisible();
+  await page.getByLabel('Peso de hoje (kg)').fill('75,2');
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(page.getByText('Registrado: 75,2 kg — corrigir')).toBeVisible();
+  await expect(page.locator('.tile').filter({ hasText: 'Peso' }).getByText('75,2 kg')).toBeVisible();
 });

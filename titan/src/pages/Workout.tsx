@@ -6,7 +6,7 @@ import { alternativesFor, demoSearchUrl, getExercise } from '../domain/exercises
 import { adjustNextSet, groupHistory, isPersonalRecord, suggestProgression, type SetAdjustAction } from '../domain/progression';
 import { sessionLoad, sessionMinutes, tonnage } from '../domain/science';
 import { MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
-import { Card, ErrorBox, Field, Loading, NumberInput, Scale, fmt, useToast } from '../ui/components';
+import { Card, ErrorBox, Field, Loading, NumberInput, Progress, Scale, fmt, useToast } from '../ui/components';
 import { cancelRestAlert, ensureRestAlerts, keepScreenOn, playRestBeep, scheduleRestAlert, unlockAudio } from '../ui/sound';
 
 interface DraftSet { id?: string; load: number | null; reps: number | null; rir: number | null; done: boolean }
@@ -17,8 +17,10 @@ const draftKey = (id: string) => `titan-workout-draft-${id}`;
 
 export function RestTimer({ endsAt, onClear, sound }: { endsAt: number | null; onClear: () => void; sound: boolean }) {
   const [now, setNow] = useState(Date.now());
+  const [startedAt, setStartedAt] = useState(Date.now());
   useEffect(() => {
     if (!endsAt) return;
+    setStartedAt(Date.now());
     const t = setInterval(() => setNow(Date.now()), 250);
     const wait = endsAt - Date.now();
     // Segundo plano (APK): o sistema toca o bipe no fim do descanso, mesmo com a tela bloqueada.
@@ -43,10 +45,25 @@ export function RestTimer({ endsAt, onClear, sound }: { endsAt: number | null; o
   }, [endsAt, sound]);
   if (!endsAt) return null;
   const left = Math.max(0, Math.round((endsAt - now) / 1000));
+  const frac = endsAt > startedAt ? Math.max(0, Math.min(1, (endsAt - now) / (endsAt - startedAt))) : 0;
   return (
     <div className="timer" role="timer" aria-live="polite">
+      <span className="timer-fill" style={{ width: `${frac * 100}%` }} aria-hidden />
       <span>{left > 0 ? `Descanso ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Descanso concluído'}{sound ? ' 🔔' : ' 🔕'}</span>
       <button className="btn sm" onClick={onClear}>{left > 0 ? 'Pular' : 'OK'}</button>
+    </div>
+  );
+}
+
+/** Barra fixa do treino: séries feitas, progresso e tempo de sessão. */
+function WorkoutBar({ done, total, startedAt, finished }: { done: number; total: number; startedAt: string | null; finished: boolean }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { if (finished) return; const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, [finished]);
+  const min = startedAt ? Math.max(0, Math.round((now - Date.parse(startedAt)) / 60000)) : null;
+  return (
+    <div className="workout-bar">
+      <div className="row"><span>{done}/{total} séries</span>{min !== null && !finished && <span>⏱ {min} min</span>}</div>
+      <Progress value={done} max={total} label="Séries concluídas" />
     </div>
   );
 }
@@ -68,6 +85,7 @@ export function Workout() {
   const [swapIdx, setSwapIdx] = useState<number | null>(null);
   const [finish, setFinish] = useState({ fatigue: null as number | null, rpe: null as number | null, pain: '', notes: '' });
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<Record<number, boolean>>({});
   const { toast, node } = useToast();
   const readOnly = session?.status === 'done';
 
@@ -154,6 +172,10 @@ export function Workout() {
         return { ...d!, [i]: { ...cur, sets, feedback: { action: adj.action, message: `Série ${j + 1}: ${adj.message}`, pr } } };
       });
       if (pr) toast(`Novo recorde em ${ex.name}: ${fmt(s.load)} kg × ${s.reps}!`);
+      // Última série do exercício: rola até o próximo.
+      if (draft![i].sets.every((x, k) => k === j || x.done)) {
+        setTimeout(() => (document.querySelectorAll('.ex-card')[i + 1] as HTMLElement | undefined)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 400);
+      }
       // Bi-set (descanso 0): sem cronômetro, segue direto para o próximo exercício.
       if (ex.restSec > 0) setTimer(Date.now() + ex.restSec * 1000); else setTimer(null);
     } catch (e) {
@@ -202,21 +224,37 @@ export function Workout() {
     <div className="stack">
       {node}
       <RestTimer endsAt={timer} onClear={() => setTimer(null)} sound={profile?.preferences.restTimerSound !== false} />
-      <div className="row between">
+      <div className="page-head">
         <div>
+          <span className="kicker">Semana {session.week}{readOnly ? ' · concluído' : ''}</span>
           <h1>{program?.config.days[session.sequence % (program?.config.days.length || 1)]?.name ?? 'Treino'}</h1>
-          <p className="muted">Semana {session.week} · {doneSets}/{totalSets} séries {readOnly && '· concluído'}</p>
         </div>
         <Link to="/treino" className="btn ghost sm">Sair</Link>
       </div>
+      <WorkoutBar done={doneSets} total={totalSets} startedAt={session.started_at} finished={readOnly} />
       {session.readiness && <div className={`banner ${session.readiness.adjusted ? '' : 'info'}`} role="status">{session.readiness.note}</div>}
       <p className="hint">Cada série é salva ao tocar em ✓ — pode fechar o app ou ficar sem internet sem perder o que já registrou.</p>
 
       {session.exercises.map((ex, i) => {
         const meta = getExercise(ex.exerciseKey);
         const d = draft[i];
+        const allDone = d.sets.length > 0 && d.sets.every((x) => x.done);
+        if (allDone && !open[i]) {
+          return (
+            <Card key={i} className="ex-card done">
+              <div className="ex-head">
+                <div>
+                  <h2>{ex.name}</h2>
+                  <div className="ex-summary">{d.sets.map((x, j) => <span key={j} className="pill">{fmt(x.load)} kg × {x.reps}{ex.unit === 's' ? ' s' : ''}</span>)}</div>
+                </div>
+                <button className="btn ghost sm" onClick={() => setOpen((o) => ({ ...o, [i]: true }))}>Editar</button>
+              </div>
+              {d.feedback && <p className="hint" style={{ marginBottom: 0 }}>{d.feedback.pr && '🏆 '}{d.feedback.message}</p>}
+            </Card>
+          );
+        }
         return (
-          <Card key={i}>
+          <Card key={i} className="ex-card">
             <div className="ex-head">
               <div>
                 <h2>{ex.name}</h2>

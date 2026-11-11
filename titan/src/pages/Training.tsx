@@ -10,6 +10,7 @@ import { weeklyVolume } from '../domain/volume';
 import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { activateProtocol, applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
 import { RevisionHistoryCard } from './RevisionCard';
+import { ProtocolSwitch } from './ProtocolSwitch';
 import { Jkk4Why, JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
 import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
 import { decliningExercises } from '../domain/progression';
@@ -135,11 +136,19 @@ export function Training() {
     <div className="stack">
       {node}
       {flash && <div className="banner info" role="status">{flash}</div>}
-      {jkk && <JkkHeader four={jkk4} />}
-      <div>
-        <h1>Treino</h1>
-        <p className="muted">{program.name} · início {formatBR(program.start_date)} · fim previsto {info.end ? formatBR(info.end) : '—'}</p>
+      <div className="page-head">
+        <div>
+          <span className="kicker">Semana {Math.min(next.week, program.weeks)} de {program.weeks}</span>
+          <h1>Treino</h1>
+          <p className="muted" style={{ margin: 0 }}>{program.name} · início {formatBR(program.start_date)} · fim previsto {info.end ? formatBR(info.end) : '—'}</p>
+        </div>
       </div>
+
+      {jkk && (
+        <Card title="Seu treino">
+          <ProtocolSwitch onSwitched={() => toast('Trocando o treino…')} />
+        </Card>
+      )}
 
       <Card title="Semana" action={<span className="tag accent">Semana {Math.min(next.week, program.weeks)} de {program.weeks}</span>}>
         <div className="week">
@@ -214,13 +223,19 @@ export function Training() {
 
       {jkk ? (
         <>
-          <JkkPhotos />
           {jkk4 && <RevisionHistoryCard revisions={program.config.revisions ?? []} />}
-          {jkk4 && <Jkk4Why />}
           <JkkWorkouts four={jkk4} config={program.config} />
-          <JkkHow />
-          <JkkFlanks />
-          <JkkSources />
+          <details className="more">
+            <summary>Sobre o protocolo (avaliação, regras, flancos e fontes)</summary>
+            <div className="stack">
+              <JkkHeader four={jkk4} />
+              {jkk4 && <Jkk4Why />}
+              <JkkPhotos />
+              <JkkHow />
+              <JkkFlanks />
+              <JkkSources />
+            </div>
+          </details>
         </>
       ) : !olympia ? (
         <Card title="Protocolo Olympia — 60 dias (Classic Physique natural)">
@@ -247,6 +262,9 @@ export function Training() {
         </Card>
       )}
 
+      <details className="more">
+        <summary>Números do treino (volume, carga semanal, proporções e divisão)</summary>
+        <div className="stack">
       {ratios.length > 0 && (
         <Card title="Proporções (última medição)" action={<Link className="btn sm" to="/evolucao">Medir</Link>}>
           <div className="scroll-x"><table className="t"><tbody>{ratios.map((r) => <tr key={r.label}><td>{r.label}</td><td><strong>{r.value}</strong></td><td><small className="muted">{r.note}</small></td></tr>)}</tbody></table></div>
@@ -288,6 +306,9 @@ export function Training() {
         {locked ? <p className="hint">🔒 Plano fechado: você só registra o que fez. A carga de cada série é ajustada pelo app; trocas só acontecem por dor ou aparelho indisponível, dentro do próprio treino.</p>
           : <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!, undefined, program.config.protocol); }}>Regerar ciclo (ex.: mudei de academia)</button>}
       </Card>
+
+        </div>
+      </details>
 
       <Card title="Histórico">
         {mine.filter((s) => s.status !== 'in_progress').length === 0 ? <Empty>Nenhuma sessão registrada ainda.</Empty> : (

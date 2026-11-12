@@ -75,6 +75,11 @@ export function suggestProgression(
       return { action: 'hold_recovery', load, suggestSubstitution: false,
         reason: 'Você atingiu o topo da faixa, mas a recuperação recente está baixa: mantenha a carga até recuperar.' };
     }
+    if (!ex.increment) {
+      // Peso do corpo: não há carga para somar — progride pela variação/tempo do exercício.
+      return { action: 'increase', load, suggestSubstitution: false,
+        reason: `Topo da faixa (${max}) em todas as séries: deixe o exercício mais difícil (próxima variação indicada, descida mais lenta ou mochila com peso).` };
+    }
     const next = roundToStep(load + ex.increment, ex.increment || 0.5);
     const jump = load > 0 ? (next - load) / load : 0;
     return { action: 'increase', load: next, suggestSubstitution: false,
@@ -150,7 +155,9 @@ export function adjustNextSet(
     return { action: 'keep', load, message: `${reps} reps com RIR ${rir}: dentro do alvo (${min}–${max}, RIR ${rirTarget}). Mantenha ${fmtKg(load)}.` };
   }
   if (load <= 0) {
-    return { action: tooEasy ? 'up' : 'keep', load, message: tooEasy ? `Ficou fácil: acrescente carga (ou repetições, se for peso do corpo).` : 'Abaixo da faixa: diminua a amplitude de dificuldade ou use assistência.' };
+    return { action: tooEasy ? 'up' : 'keep', load, message: tooEasy
+      ? `${reps} com RIR ${rir}: ficou fácil. Na próxima série, desça mais devagar (4 s) ou use a variação mais difícil indicada.`
+      : `${reps} com RIR ${rir}: abaixo da faixa. Use a versão mais fácil (joelhos no chão, apoio mais alto ou ajuda das mãos) e mantenha a técnica.` };
   }
   const e1rm = load * (1 + (reps + rir) / 30);
   const target = e1rm / (1 + ((min + max) / 2 + rirTarget) / 30);

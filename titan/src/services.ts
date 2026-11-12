@@ -5,6 +5,7 @@ import { generateProgram, phaseFor, prescribeDay, warmupFor } from './domain/pro
 import { OLYMPIA_WEEKS } from './domain/olympia';
 import { JKK_WEEKS, generateJkk } from './domain/jkk';
 import { reviewProgram } from './domain/autoReview';
+import { hasHomeVersion, homeSession } from './domain/home';
 import { groupHistory, suggestProgression } from './domain/progression';
 import { applyReadiness } from './domain/science';
 import type { DataStore } from './data/store';
@@ -99,7 +100,26 @@ export function buildSessionPlan(
   });
 }
 
-export async function startSession(store: DataStore, program: ProgramRow, sequence: number, overrides: OverrideRow[], logs: SetLogRow[], recScore: number | null, tqr: number | null = null): Promise<SessionRow> {
+/** Sessão em casa (peso do corpo) equivalente ao dia do protocolo; null se o protocolo não tem versão em casa. */
+export function buildHomePlan(program: ProgramRow, week: number, dayPos: number, logs: SetLogRow[]): PlannedExercise[] | null {
+  const home = homeSession(program.config, dayPos);
+  if (!home) return null;
+  const deload = phaseFor(program.config, week, program.weeks).deload;
+  return home.slots.map((s, idx) => {
+    const ex = getExercise(s.exerciseKey);
+    const history = groupHistory(logs, ex.key);
+    const sug = suggestProgression(ex, s.rir, history);
+    const lastLoad = history[0] ? Math.max(0, ...history[0].sets.filter((x) => x.kind === 'working').map((x) => Number(x.load_kg))) : 0;
+    return {
+      ...s, sets: deload ? Math.max(1, Math.ceil(s.sets / 2)) : s.sets, name: ex.name, muscle: ex.primary,
+      loadSuggestion: lastLoad, // 0 = só o peso do corpo
+      suggestionReason: history.length ? sug.reason : `Primeira vez: faça ${s.repRange[0]}–${s.repRange[1]}${s.unit === 's' ? ' s' : ' repetições'} parando com ~1 sobrando. Se não chegar em ${s.repRange[0]}, use a versão mais fácil.`,
+      warmup: idx === 0 ? '5 min de aquecimento: polichinelos, círculos de braço, agachamentos leves e 1 série fácil do primeiro exercício.' : '',
+    };
+  });
+}
+
+export async function startSession(store: DataStore, program: ProgramRow, sequence: number, overrides: OverrideRow[], logs: SetLogRow[], recScore: number | null, tqr: number | null = null, place: 'gym' | 'home' = 'gym'): Promise<SessionRow> {
   const perWeek = program.config.days.length;
   const week = Math.floor(sequence / perWeek) + 1;
   const dayPos = sequence % perWeek;
@@ -109,8 +129,9 @@ export async function startSession(store: DataStore, program: ProgramRow, sequen
     id: uuid(), user_id: store.userId, program_id: program.id, week, day_index: program.config.days[dayPos].dayIndex, sequence,
     scheduled_date: todayISO(), status: 'in_progress', started_at: new Date().toISOString(), completed_at: null,
     fatigue: null, session_rpe: null, pain_notes: null, notes: null,
-    exercises: buildSessionPlan(program, week, dayPos, overrides, logs, recScore),
+    exercises: (place === 'home' ? buildHomePlan(program, week, dayPos, logs) : null) ?? buildSessionPlan(program, week, dayPos, overrides, logs, recScore),
     readiness: null,
+    location: place === 'home' && hasHomeVersion(program.config) ? 'home' : 'gym',
   };
   if (tqr !== null) {
     const adj = applyReadiness(row.exercises, tqr);
@@ -186,4 +207,41 @@ export async function reviewAfterMeasurement(store: DataStore, metricId: string 
   const revisions = [...(program.config.revisions ?? []), revision].slice(-20);
   await store.upsert('programs', { ...program, config: { ...config, revisions } } as unknown as Record<string, unknown>);
   return revision;
+}
+
+/**
+ * Fase da dieta (do Protocolo JKK, seção "Flancos"): recomposição = −300 a −400 kcal/dia por 8–12 semanas;
+ * ganho limpo = +200 a +300 kcal/dia. Proteína 1,8–2,2 g/kg. A meta continua sendo ajustada pela média de peso.
+ */
+export async function applyNutritionPhase(store: DataStore, p: Profile, phase: 'recomp' | 'lean_gain'): Promise<TargetRow> {
+  const t = calculateTargets({
+    weightKg: p.nutrition.weightKg!, heightCm: p.height_cm!, age: p.age!, sex: p.sex!,
+    activityLevel: p.nutrition.activityLevel ?? 'moderate', experienceMonths: p.training.experienceMonths,
+  });
+  const w = p.nutrition.weightKg!;
+  const delta = phase === 'recomp' ? -350 : 250;
+  const kcal = Math.round((t.tdee + delta) / 50) * 50;
+  const proteinG = Math.round(w * (phase === 'recomp' ? 2.0 : 1.8));
+  const fatG = Math.max(Math.round(w * 0.8), Math.round((kcal * 0.2) / 9));
+  const carbsG = Math.max(0, Math.round((kcal - proteinG * 4 - fatG * 9) / 4));
+  const weeklyGainKg = Math.round(((delta * 7) / 7700) * 100) / 100;
+  const rationale = phase === 'recomp'
+    ? [
+      `Fase 1 · Recomposição: gasto estimado ~${t.tdee} kcal − 350 = ${kcal} kcal (faixa do protocolo: −300 a −400 kcal/dia, por 8–12 semanas).`,
+      `Proteína ${proteinG} g (2,0 g/kg) para manter e ganhar músculo em déficit; gordura ${fatG} g; carboidratos ${carbsG} g, concentrados antes e depois do treino.`,
+      `Ritmo esperado: cerca de ${Math.abs(weeklyGainKg).toLocaleString('pt-BR')} kg a menos por semana. Mais rápido que o dobro disso por 2 semanas, o app sugere subir as calorias.`,
+      'Gordura não sai de um lugar escolhido: flanco e rosto afinam junto com o resto do corpo. Acompanhe a cintura a cada 2 semanas.',
+    ]
+    : [
+      `Fase 2 · Ganho limpo: gasto estimado ~${t.tdee} kcal + 250 = ${kcal} kcal (faixa do protocolo: +200 a +300 kcal/dia).`,
+      `Proteína ${proteinG} g (1,8 g/kg); gordura ${fatG} g; carboidratos ${carbsG} g.`,
+      'Se a cintura subir 1,5 cm em 4 semanas sem o braço crescer, reduza 100–150 kcal.',
+    ];
+  const row: TargetRow = {
+    id: uuid(), user_id: store.userId, effective_from: todayISO(), kcal, protein_g: proteinG, carbs_g: carbsG, fat_g: fatG,
+    rationale: rationale.join('\n'),
+    inputs: { weightKg: w, heightCm: p.height_cm, age: p.age, activity: p.nutrition.activityLevel ?? 'moderate', weeklyGainKg, tdee: t.tdee, tdeeRange: t.tdeeRange, surplus: delta, phase },
+  };
+  await store.upsert('nutrition_targets', row as unknown as Record<string, unknown>);
+  return row;
 }

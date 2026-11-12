@@ -45,6 +45,10 @@ export interface NutritionProfile {
   hasKitchen?: boolean;
   hasFridge?: boolean;
   supplements?: string;
+  /** Suplementos que o usuário decidiu usar (ids de domain/supplements) — entram no checklist da Missão. */
+  supplementPlan?: string[];
+  /** Fase da dieta: recomposição (déficit leve) ou ganho limpo (superávit leve). */
+  phase?: 'recomp' | 'lean_gain';
   conditions?: string;
   activityLevel?: ActivityLevel;
   excludedFoods?: string[];
@@ -186,6 +190,8 @@ export interface SessionRow extends Row {
   notes: string | null;
   exercises: PlannedExercise[];
   readiness?: Readiness | null;
+  /** Academia (padrão) ou em casa, só com o peso do corpo. */
+  location?: 'gym' | 'home';
 }
 
 /** Prontidão pré-treino pela escala TQR (6–20) de Kenttä & Hassmén. */

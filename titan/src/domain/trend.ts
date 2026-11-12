@@ -57,6 +57,20 @@ export function adjustCalories({ currentKcal, weekly, targetWeeklyGainKg, adhere
     return { ...base, action: 'improve_adherence',
       reason: `Adesão alimentar de ${Math.round(adherence * 100)}%: antes de mudar calorias, aproxime o consumo real da meta atual.` };
   }
+  if (targetWeeklyGainKg < 0) {
+    // Fase de perda (recomposição): alvo negativo. Rápido demais arrisca músculo; parado não tira gordura.
+    const fast = targetWeeklyGainKg * 2;
+    const slow = targetWeeklyGainKg * 0.5;
+    if (rates.every((r) => r < fast)) {
+      return { action: 'increase', deltaKcal: 100, newKcal: currentKcal + 100, rates,
+        reason: `Duas semanas seguidas perdendo rápido demais (${rates.map(fmt).join(' e ')} kg/sem vs alvo ${fmt(targetWeeklyGainKg)}): +100 kcal para proteger o músculo.` };
+    }
+    if (rates.every((r) => r > slow)) {
+      return { action: 'decrease', deltaKcal: -100, newKcal: currentKcal - 100, rates,
+        reason: `Duas semanas seguidas sem perder no ritmo-alvo (${rates.map(fmt).join(' e ')} kg/sem vs alvo ${fmt(targetWeeklyGainKg)}): −100 kcal.` };
+    }
+    return { ...base, action: 'maintain', reason: `Ritmo de perda dentro do esperado (${rates.map(fmt).join(' e ')} kg/sem): manter.` };
+  }
   const low = targetWeeklyGainKg * 0.5;
   const high = targetWeeklyGainKg * 2;
   if (rates.every((r) => r < low)) {

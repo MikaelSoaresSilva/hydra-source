@@ -145,7 +145,7 @@ export const ARTICLES: Article[] = [
     id: 'suplementos', module: 'nutricao', title: 'Suplementos', sources: ['aplic'],
     points: [
       'Suplementos podem vir contaminados ou com rótulo impreciso. Devem ser prescritos por nutricionista ou médico.',
-      'O Titan não recomenda suplementos; foca em comida de verdade e consistência.',
+      'Comida, treino e sono vêm primeiro. O que tem evidência (creatina, proteína em pó quando falta na comida, cafeína) está em Nutrição → Suplementos, com dose, efeito real e cuidados.',
     ],
   },
   // ------------------------------------------------------------------ pele

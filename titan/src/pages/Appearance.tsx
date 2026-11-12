@@ -12,8 +12,9 @@ import { PHOTO_KIND_LABEL, type PhotoKind } from '../../supabase/functions/_shar
 import { analyzeWithCloud, analyzeWithKey, apiKeyStore, looksLikeApiKey, toAppearanceImage } from '../appearanceClient';
 import { sanitizeImage } from '../services';
 import { Card, Empty, ErrorBox, Field, Loading, Tabs, useToast } from '../ui/components';
+import { FacePlan } from './FacePlan';
 
-type Tab = 'foto' | 'questionario' | 'historico';
+type Tab = 'rosto' | 'foto' | 'questionario' | 'historico';
 const KINDS: PhotoKind[] = ['face_front', 'face_profile', 'hair'];
 const CONF_LABEL = { baixa: 'baixa', media: 'média', alta: 'alta' } as const;
 const WHEN_LABEL = { manha: 'Manhã', noite: 'Noite', semanal: 'Semanal' } as const;
@@ -310,14 +311,15 @@ function History() {
 }
 
 export function Appearance() {
-  const [tab, setTab] = useState<Tab>('questionario');
+  const [tab, setTab] = useState<Tab>('rosto');
   return (
     <div className="stack">
       <div>
         <h1>Aparência</h1>
-        <p className="muted">Corte de cabelo, pele, barba, sobrancelhas e massagem facial: por questionário (sem IA) ou por foto (com IA, só se você autorizar).</p>
+        <p className="muted">Plano do rosto (gordura, treino facial, simetria e pele), corte de cabelo por questionário e análise por foto com IA, só se você autorizar.</p>
       </div>
-      <Tabs<Tab> value={tab} onChange={setTab} tabs={[{ value: 'questionario', label: 'Questionário' }, { value: 'foto', label: 'Foto + IA' }, { value: 'historico', label: 'Histórico' }]} />
+      <Tabs<Tab> value={tab} onChange={setTab} tabs={[{ value: 'rosto', label: 'Plano do rosto' }, { value: 'questionario', label: 'Corte' }, { value: 'foto', label: 'Foto + IA' }, { value: 'historico', label: 'Histórico' }]} />
+      {tab === 'rosto' && <FacePlan />}
       {tab === 'foto' && <PhotoAnalysis />}
       {tab === 'questionario' && <Questionnaire />}
       {tab === 'historico' && <History />}

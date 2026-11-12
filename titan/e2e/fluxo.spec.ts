@@ -127,6 +127,11 @@ test('aparência (questionário sem IA) + biblioteca/calculadora + IA desligada 
   await expect(page.getByRole('heading', { name: 'O que fazer hoje' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Aparência' }).click();
+  // Plano do rosto é a primeira aba: treino facial marcado conta na Missão
+  await expect(page.getByRole('heading', { name: '2. Treino facial (5–6 min por dia)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Marcar treino facial de hoje' }).click();
+  await expect(page.getByRole('button', { name: /Feito hoje/ })).toBeVisible();
+  await page.getByRole('tab', { name: 'Corte' }).click();
   await page.getByLabel('length').selectOption('similar');
   await page.getByLabel('widest').selectOption('equal');
   await page.getByLabel('jaw').selectOption('angular');
@@ -283,4 +288,57 @@ test('tela Hoje: registrar o peso rápido', async ({ page }) => {
   await page.getByRole('button', { name: 'Salvar', exact: true }).click();
   await expect(page.getByText('Registrado: 75,2 kg — corrigir')).toBeVisible();
   await expect(page.locator('.tile').filter({ hasText: 'Peso' }).getByText('75,2 kg')).toBeVisible();
+});
+
+test('treino em casa (peso do corpo), suplementos e fase de recomposição', async ({ page }, info) => {
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+
+  // Treino em casa: mesma sessão do ciclo, só com o peso do corpo
+  await page.getByRole('link', { name: 'Treino' }).first().click();
+  await page.getByRole('radio', { name: /Em casa/ }).click();
+  await expect(page.getByText('Próxima sessão: Em casa · Superior A — Peito superior + Costas + Ombro + Tríceps')).toBeVisible();
+  await expect(page.getByText('Flexão declinada (pés na cadeira)').first()).toBeVisible();
+  await page.screenshot({ path: `test-results/casa-${info.project.name}.png`, fullPage: true });
+  await page.getByRole('button', { name: 'Iniciar treino' }).click();
+  await expect(page.getByText(/Treino em casa, só com o peso do corpo/)).toBeVisible();
+  await expect(page.getByLabel('Carga série 1').first()).toHaveValue('0');
+  await page.getByLabel('Repetições série 1').first().fill('10');
+  await page.getByLabel('RIR série 1').first().fill('1');
+  await page.getByRole('button', { name: 'Concluir série 1' }).first().click();
+  await expect(page.getByText(/Série 1: 10 reps com RIR 1: dentro do alvo/)).toBeVisible();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Concluir treino' }).click();
+  await expect(page.getByText('Treino concluído e salvo!')).toBeVisible();
+  // a sessão em casa contou no ciclo: a próxima é o Dia 2
+  await expect(page.getByText(/Próxima sessão: Dia 2/)).toBeVisible();
+
+  // Suplementos: guia honesto + protocolo pessoal
+  await page.getByRole('link', { name: 'Nutrição' }).first().click();
+  await page.getByRole('tab', { name: 'Suplementos' }).click();
+  await expect(page.getByText(/Nenhum suplemento dá 1000%/)).toBeVisible();
+  await page.getByRole('checkbox', { name: /Creatina monohidratada/ }).check();
+  await expect(page.getByRole('checkbox', { name: /Creatina monohidratada/ })).toBeChecked();
+  await page.screenshot({ path: `test-results/suplementos-${info.project.name}.png`, fullPage: true });
+
+  // Fase de recomposição muda a meta
+  await page.getByRole('tab', { name: 'Metas' }).click();
+  await expect(page.locator('.stat-v').first()).toHaveText('3000');
+  await page.getByRole('radio', { name: /Recomposição/ }).click();
+  await expect(page.locator('.stat-v').first()).toHaveText('2500');
+  await expect(page.getByRole('radio', { name: /Recomposição/ })).toHaveAttribute('aria-checked', 'true');
+
+  // Creatina entrou na Missão
+  await page.getByRole('link', { name: 'Missão' }).click();
+  await page.getByRole('button', { name: 'Começar hoje' }).click();
+  await expect(page.getByLabel('Creatina do dia (3–5 g)')).toBeVisible();
 });

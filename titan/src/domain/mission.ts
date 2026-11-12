@@ -15,6 +15,8 @@ export interface MissionData {
   checkins: CheckinRow[];
   /** Rotina de pele cadastrada? Sem rotina, os itens de pele aparecem como pendentes de configuração. */
   hasSkinRoutine: boolean;
+  /** Suplementos que o usuário decidiu usar (Nutrição → Suplementos). */
+  supplementPlan?: string[];
 }
 
 export type HabitArea = 'corpo' | 'rosto' | 'base';
@@ -27,6 +29,8 @@ export interface Habit {
   to?: string;
   /** true/false = avaliado pelos registros; null = não se aplica no dia; undefined = item manual. */
   auto?: (d: MissionData, date: string) => boolean | null;
+  /** Hábito opcional: só aparece quando esta condição é verdadeira. */
+  enabled?: (d: MissionData) => boolean;
 }
 
 const checkinOf = (d: MissionData, date: string) => d.checkins.find((c) => c.date === date);
@@ -52,7 +56,7 @@ export const HABITS: Habit[] = [
   },
   {
     id: 'kcal', area: 'corpo', label: 'Calorias dentro da meta (±10%)', to: '/nutricao',
-    why: 'Superávit pequeno = músculo com pouca gordura. Comer muito acima engorda o rosto e a cintura.',
+    why: 'A meta da fase (recomposição ou ganho limpo) é o que controla a gordura do corpo — e a do rosto vai junto.',
     auto: (d, date) => {
       if (!d.target) return null;
       const k = d.foodLogs.filter((l) => l.date === date).reduce((s, l) => s + Number(l.kcal), 0);
@@ -87,8 +91,9 @@ export const HABITS: Habit[] = [
     auto: (d, date) => (d.hasSkinRoutine ? d.careLogs.some((l) => l.date === date && l.area === 'skin' && l.slot === 'pm' && l.completed && !l.product_id) : false),
   },
   { id: 'teeth', area: 'rosto', label: 'Dentes: escovar 2× + fio dental', why: 'Sorriso e hálito pesam muito na aparência e custam quase nada.' },
-  { id: 'posture', area: 'rosto', label: '5 min de postura (queixo recolhido + abertura de peito)', why: 'Cabeça projetada à frente deixa queixo e pescoço com aspecto pior nas fotos. Sem promessa de mudar osso: é postura.' },
+  { id: 'posture', area: 'rosto', label: 'Treino facial de 5 min (postura, pescoço e drenagem)', why: 'Cabeça projetada à frente deixa queixo e pescoço com aspecto pior nas fotos. Sem promessa de mudar osso: é postura.' },
   { id: 'hands_off', area: 'rosto', label: 'Não espremi espinhas nem mexi no rosto', why: 'Espremer inflama, mancha e deixa cicatriz — a marca dura bem mais que a espinha.' },
+  { id: 'creatine', area: 'corpo', label: 'Creatina do dia (3–5 g)', why: 'Só funciona tomando todo dia, inclusive nos dias sem treino.', enabled: (d) => !!d.supplementPlan?.includes('creatine') },
   { id: 'prep', area: 'base', label: 'Comida do dia planejada/preparada (marmita)', why: 'Cozinhar em casa é o jeito mais barato de bater proteína e calorias — e o que mais garante adesão.' },
 ];
 
@@ -96,7 +101,7 @@ export interface DayStatus { date: string; items: { habit: Habit; done: boolean 
 
 export function dayStatus(d: MissionData, date: string): DayStatus {
   const manual = checkinOf(d, date)?.habits ?? {};
-  const items = HABITS.map((h) => ({ habit: h, done: h.auto ? h.auto(d, date) : !!manual[h.id] }));
+  const items = HABITS.filter((h) => !h.enabled || h.enabled(d)).map((h) => ({ habit: h, done: h.auto ? h.auto(d, date) : !!manual[h.id] }));
   const applicable = items.filter((i) => i.done !== null);
   const done = applicable.filter((i) => i.done).length;
   return { date, items, done, total: applicable.length, score: applicable.length ? done / applicable.length : 0 };

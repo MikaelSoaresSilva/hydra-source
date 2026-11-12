@@ -163,6 +163,61 @@ export const EXERCISES: Exercise[] = [
     'Retroverta a pelve ao subir; evite balanço.', ['cable_crunch', 'crunch']),
   E('crunch', 'Abdominal no solo', 'abs', [], [], 'isolation', [12, 20], 0,
     'Movimento curto e controlado; segure carga no peito quando ficar fácil.', ['cable_crunch']),
+  // ---- Em casa, só com o peso do corpo (cadeira, mesa firme e toalha são o único "equipamento")
+  E('hb_decline_push_up', 'Flexão declinada (pés na cadeira)', 'chest', ['front_delts', 'triceps'], [], 'compound', [6, 15], 0,
+    'Pés elevados jogam o esforço para o peito superior. Corpo reto, desça em 3 s até o peito quase tocar o chão.', ['push_up', 'hb_pike_push_up']),
+  E('hb_pike_push_up', 'Flexão pike (quadril alto)', 'front_delts', ['side_delts', 'triceps'], [], 'compound', [6, 12], 0,
+    'Quadril bem alto, corpo em "V" invertido; a cabeça desce à frente das mãos. É o desenvolvimento de ombros sem peso.', ['hb_decline_push_up', 'push_up']),
+  E('hb_pause_push_up', 'Flexão com pausa de 2 s embaixo', 'chest', ['triceps', 'front_delts'], [], 'compound', [8, 20], 0,
+    'Mãos na largura dos ombros, desça em 3 s, pare 2 s com o peito perto do chão e suba.', ['push_up', 'hb_decline_push_up']),
+  E('hb_diamond_push_up', 'Flexão diamante (mãos juntas)', 'triceps', ['chest', 'front_delts'], [], 'compound', [6, 15], 0,
+    'Mãos juntas sob o peito, cotovelos rentes ao corpo. Se não sair, faça com os joelhos no chão.', ['hb_bw_triceps_extension', 'hb_chair_dip']),
+  E('hb_bw_triceps_extension', 'Tríceps testa com o peso do corpo (mãos na mesa ou cadeira)', 'triceps', [], [], 'isolation', [8, 15], 0,
+    'Mãos na borda de uma mesa firme, corpo reto; dobre só os cotovelos levando a testa às mãos e estenda. Quanto mais baixo o apoio, mais difícil.', ['hb_diamond_push_up', 'hb_chair_dip']),
+  E('hb_chair_dip', 'Mergulho na cadeira', 'triceps', ['chest', 'front_delts'], [], 'compound', [8, 20], 0,
+    'Mãos na borda da cadeira firme, desça até o cotovelo a 90° sem afundar os ombros. Dor no ombro: troque pela flexão diamante.', ['hb_diamond_push_up', 'hb_bw_triceps_extension']),
+  E('hb_table_row', 'Remada invertida embaixo da mesa', 'back', ['biceps', 'rear_delts'], [], 'compound', [6, 15], 0,
+    'Deite sob uma mesa FIRME e pesada, segure a borda e puxe o peito até ela com o corpo reto. Teste a mesa antes. Joelhos dobrados deixam mais fácil.', ['hb_floor_lat_pull', 'hb_prone_y_raise']),
+  E('hb_table_row_supinated', 'Remada invertida na mesa, palmas para você', 'biceps', ['back', 'brachialis'], [], 'compound', [6, 15], 0,
+    'Mesma remada sob a mesa firme, mas com as palmas viradas para o rosto e cotovelos junto ao corpo: o bíceps trabalha mais.', ['hb_towel_curl', 'hb_table_row']),
+  E('hb_floor_lat_pull', 'Puxada deslizando no chão (toalha)', 'back', [], [], 'isolation', [8, 15], 0,
+    'De bruços em piso liso, toalha sob o quadril/coxas, braços esticados à frente: puxe o corpo até as mãos chegarem ao peito usando as dorsais.', ['hb_table_row', 'hb_prone_y_raise']),
+  E('hb_prone_y_raise', 'Elevação em Y de bruços', 'rear_delts', ['back'], [], 'isolation', [12, 20], 0,
+    'De bruços, braços em "Y", polegares para cima; tire os braços do chão juntando as escápulas e segure 2 s.', ['hb_floor_lat_pull', 'hb_table_row']),
+  E('hb_towel_curl', 'Rosca com toalha (a perna faz a resistência)', 'biceps', ['brachialis'], [], 'isolation', [8, 15], 0,
+    'Sentado, passe a toalha sob o pé e segure as pontas; suba como uma rosca enquanto a perna empurra para baixo. Descida de 3–4 s, um braço por vez se preferir.', ['hb_table_row_supinated']),
+  E('hb_towel_hammer_curl', 'Rosca martelo com toalha (pegada neutra)', 'brachialis', ['biceps', 'forearms'], [], 'isolation', [8, 15], 0,
+    'Igual à rosca com toalha, mas com os polegares para cima. A perna controla a dificuldade.', ['hb_towel_curl']),
+  E('hb_towel_wring', 'Torcer a toalha (antebraço)', 'forearms', [], [], 'isolation', [20, 40], 0,
+    'Torça uma toalha grossa com força máxima, alternando o sentido. Conte os segundos.', ['hb_towel_hammer_curl']),
+  E('hb_door_lateral_iso', 'Elevação lateral isométrica no batente da porta', 'side_delts', [], [], 'isolation', [20, 40], 0,
+    'De pé dentro do batente, empurre o dorso das mãos contra as laterais como se abrisse os braços. Força alta e constante; conte os segundos.', ['hb_pike_push_up']),
+  E('hb_bulgarian_squat', 'Agachamento búlgaro (pé de trás na cadeira)', 'quads', ['glutes'], [], 'compound', [8, 15], 0,
+    'Tronco mais em pé pega mais quadríceps. Desça em 3 s até o joelho de trás quase tocar o chão. Comece pela perna mais fraca.', ['hb_tempo_squat', 'hb_step_up']),
+  E('hb_tempo_squat', 'Agachamento com descida de 4 s e pausa', 'quads', ['glutes'], [], 'compound', [12, 25], 0,
+    'Desça em 4 s, pare 2 s embaixo, suba sem travar o joelho no topo. Sem peso, o tempo sob tensão é o que deixa difícil.', ['hb_bulgarian_squat', 'hb_step_up']),
+  E('hb_step_up', 'Subida na cadeira (step-up) unilateral', 'quads', ['glutes'], [], 'compound', [8, 15], 0,
+    'Um pé na cadeira firme; suba empurrando só com essa perna e desça em 3 s. Não dê impulso com o pé do chão.', ['hb_bulgarian_squat', 'hb_tempo_squat']),
+  E('hb_sissy_squat', 'Agachamento sissy com apoio', 'quads', [], [], 'isolation', [8, 15], 0,
+    'Segure num apoio, suba nos dedos e leve os joelhos à frente inclinando o corpo para trás em linha reta. Faz o papel da cadeira extensora. Dor no joelho: troque pelo agachamento com pausa.', ['hb_tempo_squat']),
+  E('hb_nordic_curl', 'Flexão nórdica (pés presos no sofá)', 'hamstrings', [], [], 'isolation', [4, 10], 0,
+    'Ajoelhado em algo macio, pés presos sob o sofá; desça o corpo reto o mais devagar possível e volte empurrando o chão com as mãos. Muito forte para o posterior.', ['hb_sliding_leg_curl', 'hb_single_leg_bridge']),
+  E('hb_sliding_leg_curl', 'Flexora deslizando (calcanhares na toalha)', 'hamstrings', ['glutes'], [], 'isolation', [8, 15], 0,
+    'Deitado, quadril alto, calcanhares numa toalha em piso liso: estique e puxe os pés sem deixar o quadril cair. Uma perna por vez quando ficar fácil.', ['hb_nordic_curl', 'hb_single_leg_bridge']),
+  E('hb_single_leg_rdl', 'Stiff unilateral sem peso', 'hamstrings', ['glutes'], [], 'compound', [10, 15], 0,
+    'Quadril para trás, coluna reta, perna de trás sobe alinhada ao tronco. Desça em 3 s até alongar o posterior.', ['hb_sliding_leg_curl', 'hb_nordic_curl']),
+  E('hb_single_leg_hip_thrust', 'Elevação pélvica unilateral (costas no sofá)', 'glutes', ['hamstrings'], [], 'compound', [8, 15], 0,
+    'Costas apoiadas no sofá, um pé no chão; suba o quadril e segure 1 s em cima com o glúteo contraído.', ['hb_single_leg_bridge']),
+  E('hb_single_leg_bridge', 'Ponte de glúteo unilateral', 'glutes', ['hamstrings'], [], 'isolation', [10, 20], 0,
+    'Deitado, um pé no chão, suba o quadril até alinhar joelho, quadril e ombro; pausa de 1 s.', ['hb_single_leg_hip_thrust']),
+  E('hb_single_leg_calf_raise', 'Panturrilha unilateral no degrau', 'calves', [], [], 'isolation', [10, 20], 0,
+    'Num degrau, uma perna: pausa de 2 s embaixo bem alongado e suba ao máximo. Sem quicar.', ['hb_bent_knee_calf_raise']),
+  E('hb_bent_knee_calf_raise', 'Panturrilha unilateral com joelho dobrado', 'calves', [], [], 'isolation', [12, 25], 0,
+    'Joelho levemente dobrado o tempo todo: pega mais o sóleo, como a panturrilha sentado.', ['hb_single_leg_calf_raise']),
+  E('hb_lying_leg_raise', 'Elevação de pernas deitado', 'abs', [], [], 'isolation', [10, 20], 0,
+    'Lombar colada no chão; suba as pernas e tire o quadril do chão no fim. Desça em 3 s sem encostar os pés.', ['crunch', 'hb_reverse_crunch']),
+  E('hb_reverse_crunch', 'Abdominal reverso', 'abs', [], [], 'isolation', [10, 20], 0,
+    'Joelhos dobrados, enrole o quadril em direção ao peito sem impulso.', ['crunch', 'hb_lying_leg_raise']),
 ];
 
 export const EXERCISE_BY_KEY: Record<string, Exercise> = Object.fromEntries(EXERCISES.map((e) => [e.key, e]));
@@ -210,6 +265,17 @@ export function resolveExercise(
 }
 
 /** Alternativas compatíveis com o mesmo músculo principal, para a tela de substituição. */
+/** Exercício feito em casa só com o peso do corpo. */
+export const isBodyweight = (ex: Exercise) => ex.equipment.length === 0;
+
+/** Alternativas sem equipamento (treino em casa): substitutos diretos primeiro, depois o mesmo músculo. */
+export function bodyweightAlternativesFor(key: string): Exercise[] {
+  const base = getExercise(key);
+  const direct = base.substitutes.map((k) => EXERCISE_BY_KEY[k]).filter(Boolean);
+  const sameMuscle = EXERCISES.filter((e) => e.primary === base.primary && e.key !== key && !base.substitutes.includes(e.key));
+  return [...direct, ...sameMuscle].filter(isBodyweight);
+}
+
 export function alternativesFor(key: string, equipment: Equipment[] | undefined): Exercise[] {
   const base = getExercise(key);
   const direct = base.substitutes.map((k) => EXERCISE_BY_KEY[k]).filter(Boolean);

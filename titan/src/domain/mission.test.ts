@@ -25,7 +25,7 @@ describe('Missão Titan', () => {
   it('dia perfeito = 100%', () => {
     const st = dayStatus(merge(perfectDay('2026-10-20')), '2026-10-20');
     expect(st.score).toBe(1);
-    expect(st.total).toBe(HABITS.length);
+    expect(st.total).toBe(HABITS.filter((h) => !h.enabled).length); // hábitos opcionais (creatina) só entram se ativados
   });
   it('dia sem nada registrado = 0% e treino pendente', () => {
     const st = dayStatus(base, '2026-10-20');
@@ -56,5 +56,15 @@ describe('Missão Titan', () => {
   it('nota semanal', () => {
     const d = merge(...['2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16'].map((x) => perfectDay(x)));
     expect(weekScore(d, '2026-10-20')).toBe(57); // 4 de 7 dias perfeitos
+  });
+});
+
+describe('hábito opcional de creatina', () => {
+  it('só aparece na Missão quando o usuário marcou creatina no protocolo de suplementos', () => {
+    const off = dayStatus(base, '2026-10-20');
+    expect(off.items.some((i) => i.habit.id === 'creatine')).toBe(false);
+    const on = dayStatus({ ...base, supplementPlan: ['creatine'] }, '2026-10-20');
+    expect(on.items.find((i) => i.habit.id === 'creatine')?.done).toBe(false);
+    expect(on.total).toBe(off.total + 1);
   });
 });

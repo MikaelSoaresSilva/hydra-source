@@ -7,12 +7,13 @@ import { estimateCost, generateDayPlan, roundMacros, shoppingList, type DayPlan 
 import { adjustCalories, movingAverage, weeklyAverages } from '../domain/trend';
 import { foodAdherence } from '../domain/recommendations';
 import type { FoodLogRow, FoodPriceRow, MetricRow, TargetRow, UserFoodRow } from '../domain/types';
-import { createTargets, profileReadyForTargets } from '../services';
+import { applyNutritionPhase, createTargets, profileReadyForTargets } from '../services';
 import { TrendChart } from '../ui/charts';
-import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Progress, Tabs, fmt, useToast } from '../ui/components';
+import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Progress, Segmented, Tabs, fmt, useToast } from '../ui/components';
 import { mealsBelowProtein, proteinPerMealTarget } from '../domain/science';
+import { SUGGESTED_STACK, SUPPLEMENTS, SUPPLEMENT_TRUTH, TIER_LABEL, type Tier } from '../domain/supplements';
 
-type Tab = 'hoje' | 'plano' | 'compras' | 'metas';
+type Tab = 'hoje' | 'plano' | 'compras' | 'metas' | 'suplementos';
 
 const userFoodToFood = (u: UserFoodRow): Food => ({
   key: `user:${u.id}`, name: u.name, role: 'carb', kcal: Number(u.kcal_100g), protein: Number(u.protein_100g), carbs: Number(u.carbs_100g), fat: Number(u.fat_100g),
@@ -92,7 +93,7 @@ export function Nutrition() {
     <div className="stack">
       {node}
       <h1>Nutrição</h1>
-      <Tabs value={tab} onChange={setTab} tabs={[{ value: 'hoje', label: 'Hoje' }, { value: 'plano', label: 'Plano' }, { value: 'compras', label: 'Compras' }, { value: 'metas', label: 'Metas' }]} />
+      <Tabs value={tab} onChange={setTab} tabs={[{ value: 'hoje', label: 'Hoje' }, { value: 'plano', label: 'Plano' }, { value: 'compras', label: 'Compras' }, { value: 'metas', label: 'Metas' }, { value: 'suplementos', label: 'Suplementos' }]} />
       <ErrorBox error={error} />
 
       {!target && (
@@ -253,8 +254,24 @@ export function Nutrition() {
         );
       })()}
 
+      {tab === 'suplementos' && <SupplementsTab />}
+
       {tab === 'metas' && target && (
         <>
+          <Card title="Fase da dieta">
+            <Segmented<'recomp' | 'lean_gain'> label="Fase da dieta" value={(target.inputs as { phase?: 'recomp' | 'lean_gain' }).phase ?? 'lean_gain'}
+              onChange={async (ph) => {
+                if (missing.length > 0) { toast(`Complete o perfil: ${missing.join(', ')}.`); return; }
+                if (!confirm(ph === 'recomp'
+                  ? 'Ativar a recomposição (cerca de −350 kcal/dia, proteína 2,0 g/kg)? Indicada para tirar gordura do flanco e do rosto mantendo o músculo.'
+                  : 'Ativar o ganho limpo (cerca de +250 kcal/dia)? Indicado depois que a cintura estiver onde você quer.')) return;
+                await save({ nutrition: { ...profile!.nutrition, phase: ph } });
+                const t = await applyNutritionPhase(store, profile!, ph);
+                toast(`Nova meta: ${t.kcal} kcal e ${t.protein_g} g de proteína.`);
+              }}
+              options={[{ value: 'recomp', label: 'Recomposição', sub: 'perder gordura · −350 kcal' }, { value: 'lean_gain', label: 'Ganho limpo', sub: 'crescer · +250 kcal' }]} />
+            <p className="hint">Do Protocolo JKK: fase 1, recomposição por 8–12 semanas (−300 a −400 kcal/dia) para tirar o flanco mantendo o músculo; depois, fase 2, ganho limpo (+200 a +300 kcal/dia). É também o que afina o rosto: gordura não sai de um lugar só.{(target.inputs as { phase?: string }).phase ? '' : ' Sua meta atual ainda é a de superávit pequeno calculada antes; toque numa fase para aplicar.'}</p>
+          </Card>
           <Card title="Meta atual" action={<span className="tag">desde {formatBR(target.effective_from)}</span>}>
             <div className="stats">
               <div className="stat"><span className="stat-l">Calorias</span><strong className="stat-v">{target.kcal}</strong></div>
@@ -285,5 +302,50 @@ export function Nutrition() {
         </>
       )}
     </div>
+  );
+}
+
+function SupplementsTab() {
+  const { profile, save } = useProfile();
+  const [local, setLocal] = useState<string[] | null>(null);
+  if (!profile) return null;
+  const w = profile.nutrition.weightKg ?? null;
+  const plan = local ?? profile.nutrition.supplementPlan ?? [];
+  const toggle = (id: string, on: boolean) => {
+    const next = on ? [...new Set([...plan, id])] : plan.filter((x) => x !== id);
+    setLocal(next); // marca na hora; o perfil salva em seguida
+    return save({ nutrition: { ...profile.nutrition, supplementPlan: next } });
+  };
+  return (
+    <>
+      <Card title="A verdade sobre suplementos" className="accent">
+        <ul>{SUPPLEMENT_TRUTH.map((t) => <li key={t}><small>{t}</small></li>)}</ul>
+      </Card>
+      <Card title="Meu protocolo">
+        <p className="hint" style={{ marginTop: 0 }}>O básico que faz sentido para ganhar massa gastando pouco. Marque o que você decidiu usar; a creatina entra no checklist da Missão. Confirme com nutricionista ou médico antes de começar.</p>
+        {SUPPLEMENTS.filter((s) => s.trackable).map((s) => (
+          <label key={s.id} className="check">
+            <input type="checkbox" checked={plan.includes(s.id)} onChange={(e) => void toggle(s.id, e.target.checked)} />
+            <span><strong>{s.name}</strong>{SUGGESTED_STACK.includes(s.id) && <> <span className="tag accent">básico</span></>}<br /><small className="muted">{s.dose(w)}</small></span>
+          </label>
+        ))}
+      </Card>
+      {(['A', 'B', 'C'] as Tier[]).map((tier) => (
+        <Card key={tier} title={TIER_LABEL[tier]}>
+          <ul className="list">
+            {SUPPLEMENTS.filter((s) => s.tier === tier).map((s) => (
+              <li key={s.id}>
+                <strong>{s.name}</strong>
+                <p style={{ margin: '4px 0' }}><small>{s.effect}</small></p>
+                {tier !== 'C' && <p style={{ margin: '4px 0' }}><small><strong>Dose:</strong> {s.dose(w)}{s.when !== '—' ? <> <strong>Quando:</strong> {s.when}</> : null}</small></p>}
+                {s.cautions.length > 0 && <ul style={{ margin: '4px 0', paddingLeft: 18 }}>{s.cautions.map((c) => <li key={c} style={{ background: 'none', padding: 0 }}><small className="muted">{c}</small></li>)}</ul>}
+                <small className="muted">Fonte: {s.evidence}</small>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ))}
+      <p className="hint">Doses de referência para adultos saudáveis, não uma prescrição. O app não indica marcas nem preços.</p>
+    </>
   );
 }

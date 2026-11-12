@@ -22,6 +22,7 @@ export function useMissionData(): { data: MissionData; loading: boolean } {
   const care = useRows<CareLogRow>('care_logs', { gte: { date: since } });
   const checkins = useRows<CheckinRow>('daily_checkins', { gte: { date: since } });
   const routine = useRows<RoutineItemRow>('routine_items');
+  const { profile } = useProfile();
   const data = useMemo<MissionData>(() => ({
     program: programs.data[0] ?? null,
     sessions: sessions.data,
@@ -30,7 +31,8 @@ export function useMissionData(): { data: MissionData; loading: boolean } {
     careLogs: care.data,
     checkins: checkins.data,
     hasSkinRoutine: routine.data.some((r) => r.area === 'skin' && r.enabled),
-  }), [programs.data, sessions.data, food.data, targets.data, care.data, checkins.data, routine.data]);
+    supplementPlan: profile?.nutrition.supplementPlan,
+  }), [programs.data, sessions.data, food.data, targets.data, care.data, checkins.data, routine.data, profile?.nutrition.supplementPlan]);
   return { data, loading: programs.loading || sessions.loading || checkins.loading };
 }
 
@@ -121,6 +123,7 @@ export function Mission() {
                   <br /><small className="muted">{done === null ? 'Não se aplica hoje. ' : ''}{habit.why}</small>
                 </span>
                 {habit.auto && habit.to && done === false && <Link className="btn sm" to={habit.to}>Fazer</Link>}
+                {habit.id === 'posture' && <Link className="btn sm" to="/aparencia">Ver treino</Link>}
               </li>
             ))}
           </ul>

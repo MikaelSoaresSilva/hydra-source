@@ -53,7 +53,7 @@ npx vite build && npm run test:e2e   # fluxo completo no Chromium (celular e des
 ## Configurar o Supabase (conta, banco e fotos)
 
 1. Crie um projeto gratuito em <https://supabase.com> (região São Paulo, `sa-east-1`).
-2. **SQL Editor →** execute, na ordem, `supabase/migrations/20261014000001_schema.sql`, `20261014000002_storage.sql` e `20261015000003_knowledge_appearance.sql` , `20261020000004_metrics_detail.sql` e `20261020000005_habits.sql`.
+2. **SQL Editor →** execute, na ordem, `supabase/migrations/20261014000001_schema.sql`, `20261014000002_storage.sql` e `20261015000003_knowledge_appearance.sql` , `20261020000004_metrics_detail.sql`, `20261020000005_habits.sql` e `20261112000006_session_location.sql`.
    (Ou, com a CLI: `supabase link --project-ref SEU_REF && supabase db push`.)
 3. **Authentication → Providers → Email:** habilitado. Recomendado: "Confirm email" ligado e senha mínima de 8 caracteres.
 4. **Authentication → URL Configuration:** em *Site URL* e *Redirect URLs* coloque a URL onde o app será publicado (ex.: `https://SEU-USUARIO.github.io/hydra-source/`) e `http://localhost:5173` para desenvolvimento.
@@ -99,6 +99,12 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 ## Treino: Protocolo JKK em 4 ou 5 dias (alternável)
 
 Em Treino → "Seu treino" (ou Perfil → Treino) o usuário alterna entre o JKK de 4 dias e o de 5 dias. Cada plano guarda o próprio ciclo: ao voltar para um deles, `activateProtocol` reativa o ciclo arquivado na mesma semana e com o histórico.
+
+**Treino em casa** (`src/domain/home.ts`): para cada dia dos dois planos existe uma sessão equivalente só com o peso do corpo (cadeira, mesa firme e toalha). Em Treino → "Onde vai ser a próxima sessão?" o usuário escolhe Academia ou Em casa; a sessão em casa conta no ciclo (`workout_sessions.location`, migração 6). Progressão por repetições, tempo de descida e variação, não por carga.
+
+**Suplementos** (`src/domain/supplements.ts`, Nutrição → Suplementos): níveis de evidência A/B/C com efeito real, dose pelo peso, cuidados e fonte; "Meu protocolo" (creatina/proteína) entra na Missão. **Fase da dieta** (Nutrição → Metas): recomposição (−350 kcal, proteína 2,0 g/kg) ou ganho limpo (+250 kcal), com o ajuste pela tendência de peso funcionando também para alvo de perda.
+
+**Plano do rosto** (`src/domain/facePlan.ts`, Aparência → Plano do rosto): gordura facial via gordura corporal (sem promessa de perda localizada), treino facial diário de postura/pescoço/drenagem, o que não fazer, simetria percebida e pele limpa.
 
 ### Versão 4 dias
 

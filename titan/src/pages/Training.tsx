@@ -11,11 +11,12 @@ import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type Overri
 import { activateProtocol, applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
 import { RevisionHistoryCard } from './RevisionCard';
 import { ProtocolSwitch } from './ProtocolSwitch';
+import { HOME_HONEST, HOME_RULES, homeSession } from '../domain/home';
 import { Jkk4Why, JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
 import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
 import { decliningExercises } from '../domain/progression';
 import { recentRecovery } from '../domain/recommendations';
-import { Card, Empty, ErrorBox, Loading, fmt, useToast } from '../ui/components';
+import { Card, Empty, ErrorBox, Loading, Segmented, fmt, useToast } from '../ui/components';
 import { TrendChart } from '../ui/charts';
 import { tqrLabel, weeklyLoads } from '../domain/science';
 
@@ -35,6 +36,7 @@ export function Training() {
   const [swapFor, setSwapFor] = useState<string | null>(null);
   const [askTqr, setAskTqr] = useState(false);
   const [tqr, setTqr] = useState<number | null>(null);
+  const [place, setPlace] = useState<'gym' | 'home'>('gym');
   const { toast, node } = useToast();
   const program = programs.data[0];
   const today = todayISO();
@@ -84,6 +86,10 @@ export function Training() {
   const olympia = program.config.protocol === 'olympia';
   const jkk = program.config.protocol === 'jkk' || program.config.protocol === 'jkk4';
   const jkk4 = program.config.protocol === 'jkk4';
+  // Versão em casa (peso do corpo) da próxima sessão; com deload, metade das séries como na academia.
+  const homeBase = next.finished ? null : homeSession(program.config, next.dayPos);
+  const home = homeBase && phase.deload ? { ...homeBase, slots: homeBase.slots.map((x) => ({ ...x, sets: Math.max(1, Math.ceil(x.sets / 2)) })) } : homeBase;
+  const atHome = place === 'home' && !!home && !inProgress;
   const declining = decliningExercises(logs.data.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -28)));
   const rec = recentRecovery(checkins.data, today);
   const lastTqrs = [...mine].filter((x) => x.readiness).sort((a, b) => ((a.started_at ?? '') < (b.started_at ?? '') ? -1 : 1)).map((x) => x.readiness!.tqr);
@@ -109,7 +115,7 @@ export function Training() {
         program.config.deloadWeeks = [...(program.config.deloadWeeks ?? []), next.week];
         toast(jkk ? 'Fadiga alta na janela de deload: esta semana é de deload (metade das séries, mesmas cargas).' : 'Critério de deload atingido: esta semana é de deload (metade das séries, ~85% da carga).');
       }
-      const s = inProgress ?? await startSession(store, program, next.sequence, overrides.data, logs.data, recoveryScore(checkins.data), withTqr);
+      const s = inProgress ?? await startSession(store, program, next.sequence, overrides.data, logs.data, recoveryScore(checkins.data), withTqr, atHome ? 'home' : 'gym');
       nav(`/treino/sessao/${s.id}`);
     } catch (e) { setError((e as Error).message); setBusy(false); }
   }
@@ -147,6 +153,14 @@ export function Training() {
       {jkk && (
         <Card title="Seu treino">
           <ProtocolSwitch onSwitched={() => toast('Trocando o treino…')} />
+          {!next.finished && !inProgress && (
+            <>
+              <p className="section-title">Onde vai ser a próxima sessão?</p>
+              <Segmented<'gym' | 'home'> label="Local da próxima sessão" value={place} onChange={setPlace}
+                options={[{ value: 'gym', label: 'Academia', sub: 'treino do plano' }, { value: 'home', label: 'Em casa', sub: 'só peso do corpo' }]} />
+              {place === 'home' && <p className="hint" style={{ margin: 0 }}>{HOME_HONEST}</p>}
+            </>
+          )}
         </Card>
       )}
 
@@ -172,10 +186,11 @@ export function Training() {
           <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); await createProgram(store, profile!, undefined, program.config.protocol); setBusy(false); }}>Gerar novo ciclo</button>
         </Card>
       ) : (
-        <Card className="accent" title={`Próxima sessão: ${day.name}`} action={jkk ? undefined : <span className="tag">~{estimateMinutes(presc)} min</span>}>
-          <p className="muted">{day.focus}</p>
+        <Card className="accent" title={`Próxima sessão: ${atHome ? home!.name : day.name}`} action={jkk ? undefined : <span className="tag">~{estimateMinutes(presc)} min</span>}>
+          <p className="muted">{atHome ? `${home!.intro} Vale como o "${day.name}" do ciclo.` : day.focus}</p>
+          {atHome && <details><summary>Como treinar em casa</summary><ul>{HOME_RULES.map((r) => <li key={r}><small>{r}</small></li>)}</ul></details>}
           <ul className="list">
-            {presc.map((s) => {
+            {(atHome ? home!.slots : presc).map((s) => {
               const ex = resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked);
               return (
                 <li key={s.slotId} className="row between">

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useProfile, useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
-import { alternativesFor, demoSearchUrl, getExercise } from '../domain/exercises';
+import { alternativesFor, bodyweightAlternativesFor, demoSearchUrl, getExercise } from '../domain/exercises';
 import { adjustNextSet, groupHistory, isPersonalRecord, suggestProgression, type SetAdjustAction } from '../domain/progression';
 import { sessionLoad, sessionMinutes, tonnage } from '../domain/science';
 import { MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
@@ -113,7 +113,7 @@ export function Workout() {
     const out: Record<string, string> = {};
     session?.exercises.forEach((ex) => {
       const h = groupHistory(allLogs.data.filter((l) => l.session_id !== id), ex.exerciseKey)[0];
-      if (h) out[ex.exerciseKey] = `${h.date.slice(8, 10)}/${h.date.slice(5, 7)}: ` + h.sets.filter((s) => s.kind === 'working').map((s) => `${fmt(Number(s.load_kg))}×${s.reps}`).join(', ');
+      if (h) out[ex.exerciseKey] = `${h.date.slice(8, 10)}/${h.date.slice(5, 7)}: ` + h.sets.filter((s) => s.kind === 'working').map((s) => (Number(s.load_kg) ? `${fmt(Number(s.load_kg))}×${s.reps}` : `${s.reps}`)).join(', ');
     });
     return out;
   }, [session, allLogs.data, id]);
@@ -137,6 +137,7 @@ export function Workout() {
   if (!session) return <Card><p>Sessão não encontrada.</p><Link to="/treino">Voltar</Link></Card>;
   const program = programs.data.find((p) => p.id === session.program_id);
   const locked = !!program?.config.locked;
+  const atHome = session.location === 'home';
 
   function update(i: number, patch: Partial<Draft[number]>) { setDraft((d) => ({ ...d!, [i]: { ...d![i], ...patch } })); }
   function updateSet(i: number, j: number, patch: Partial<DraftSet>) {
@@ -190,15 +191,16 @@ export function Workout() {
     const history = groupHistory(allLogs.data, key);
     const sug = suggestProgression(ex, old.rir, history);
     const exercises: PlannedExercise[] = session.exercises.map((e, k) => k === i
-      ? { ...e, exerciseKey: key, name: ex.name, muscle: ex.primary, repRange: e.label ? e.repRange : ex.repRange, loadSuggestion: sug.load, suggestionReason: sug.reason, note: e.label ? `Substituindo "${e.label}" só hoje.` : e.note } : e);
+      ? { ...e, exerciseKey: key, name: ex.name, muscle: ex.primary, repRange: e.label && !atHome ? e.repRange : ex.repRange, loadSuggestion: atHome ? (sug.load ?? 0) : sug.load, suggestionReason: sug.reason,
+        note: atHome ? `${ex.cues} (No lugar de "${e.name}", só hoje.)` : e.label ? `Substituindo "${e.label}" só hoje.` : e.note } : e);
     await store.upsert('workout_sessions', { ...session, exercises } as unknown as Record<string, unknown>);
-    update(i, { sets: draft![i].sets.map(() => ({ load: sug.load, reps: null, rir: null, done: false })) });
+    update(i, { sets: draft![i].sets.map(() => ({ load: atHome ? (sug.load ?? 0) : sug.load, reps: null, rir: null, done: false })) });
     setSwapIdx(null);
   }
 
   /** Protocolo travado: troca só por dor ou aparelho indisponível, sempre pela 1ª alternativa definida no plano. */
   async function forcedSwap(i: number, reason: string) {
-    const alt = alternativesFor(session.exercises[i].exerciseKey, program?.config.equipment)[0];
+    const alt = (atHome ? bodyweightAlternativesFor(session.exercises[i].exerciseKey) : alternativesFor(session.exercises[i].exerciseKey, program?.config.equipment))[0];
     if (!alt) { toast('Sem alternativa compatível: pule este exercício hoje.'); return; }
     if (!confirm(`${reason}: trocar por ${alt.name} só nesta sessão?`)) return;
     await swapExercise(i, alt.key);
@@ -232,6 +234,7 @@ export function Workout() {
         <Link to="/treino" className="btn ghost sm">Sair</Link>
       </div>
       <WorkoutBar done={doneSets} total={totalSets} startedAt={session.started_at} finished={readOnly} />
+      {atHome && <div className="banner info" role="status">🏠 Treino em casa, só com o peso do corpo. No campo "Peso extra" deixe 0; se usar mochila com peso, anote os kg. Vá até sobrar 1 repetição e desça sempre em 3 s.</div>}
       {session.readiness && <div className={`banner ${session.readiness.adjusted ? '' : 'info'}`} role="status">{session.readiness.note}</div>}
       <p className="hint">Cada série é salva ao tocar em ✓ — pode fechar o app ou ficar sem internet sem perder o que já registrou.</p>
 
@@ -245,7 +248,7 @@ export function Workout() {
               <div className="ex-head">
                 <div>
                   <h2>{ex.name}</h2>
-                  <div className="ex-summary">{d.sets.map((x, j) => <span key={j} className="pill">{fmt(x.load)} kg × {x.reps}{ex.unit === 's' ? ' s' : ''}</span>)}</div>
+                  <div className="ex-summary">{d.sets.map((x, j) => <span key={j} className="pill">{x.load ? `${fmt(x.load)} kg × ` : ''}{x.reps}{ex.unit === 's' ? ' s' : x.load ? '' : ' reps'}</span>)}</div>
                 </div>
                 <button className="btn ghost sm" onClick={() => setOpen((o) => ({ ...o, [i]: true }))}>Editar</button>
               </div>
@@ -263,7 +266,7 @@ export function Workout() {
                 {ex.tag && <small className="muted">{ex.tag}</small>}
               </div>
               {!readOnly && !locked && <button className="btn ghost sm" onClick={() => setSwapIdx(swapIdx === i ? null : i)}>Trocar</button>}
-              {!readOnly && locked && <button className="btn ghost sm" onClick={() => void forcedSwap(i, 'Aparelho ocupado ou inexistente')}>Aparelho indisponível</button>}
+              {!readOnly && locked && <button className="btn ghost sm" onClick={() => void forcedSwap(i, atHome ? 'Não dá para fazer este em casa' : 'Aparelho ocupado ou inexistente')}>{atHome ? 'Não consigo fazer' : 'Aparelho indisponível'}</button>}
             </div>
             {swapIdx === i && !locked && (
               <div className="stack" style={{ margin: '8px 0' }}>
@@ -286,7 +289,7 @@ export function Workout() {
               <p className="hint">Prefira canais de profissionais de educação física; o link é uma busca, não um vídeo verificado.</p>
             </details>
             <div className="stack" style={{ marginTop: 8 }}>
-              <div className="set-row hint"><span>#</span><span>Peso (kg)</span><span>{ex.unit === 's' ? 'Segundos' : 'Reps feitas'}</span><span>RIR</span><span /></div>
+              <div className="set-row hint"><span>#</span><span>{atHome ? 'Peso extra (kg)' : 'Peso (kg)'}</span><span>{ex.unit === 's' ? 'Segundos' : 'Reps feitas'}</span><span>RIR</span><span /></div>
               {d.sets.map((s, j) => (
                 <div className="set-row" key={j}>
                   <span className="idx">{j + 1}</span>

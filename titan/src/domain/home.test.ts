@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_BY_KEY, bodyweightAlternativesFor, isBodyweight } from './exercises';
 import { HOME_PROGRESSION, HOME_SESSIONS, homeSession } from './home';
-import { JKK4_DAYS, JKK_DAYS, JKK_WEEKS, generateJkk } from './jkk';
+import { JKK3_DAYS, JKK4_DAYS, JKK_DAYS, JKK_WEEKS, generateJkk } from './jkk';
 import { adjustNextSet, suggestProgression } from './progression';
 import { buildHomePlan } from '../services';
 import type { Muscle } from './types';
@@ -10,9 +10,10 @@ describe('treino em casa (peso do corpo)', () => {
   it('existe uma sessão em casa para cada dia dos dois planos', () => {
     expect(HOME_SESSIONS.jkk).toHaveLength(JKK_DAYS.length);
     expect(HOME_SESSIONS.jkk4).toHaveLength(JKK4_DAYS.length);
+    expect(HOME_SESSIONS.jkk3).toHaveLength(JKK3_DAYS.length);
   });
   it('todo exercício é sem equipamento, existe na biblioteca e tem como progredir', () => {
-    for (const s of [...HOME_SESSIONS.jkk, ...HOME_SESSIONS.jkk4]) {
+    for (const s of [...HOME_SESSIONS.jkk, ...HOME_SESSIONS.jkk4, ...HOME_SESSIONS.jkk3]) {
       for (const [key] of s.rows) {
         expect(EXERCISE_BY_KEY[key], key).toBeDefined();
         expect(isBodyweight(EXERCISE_BY_KEY[key]), key).toBe(true);
@@ -24,7 +25,7 @@ describe('treino em casa (peso do corpo)', () => {
     const main = (keys: string[]) => new Set(keys.map((k) => EXERCISE_BY_KEY[k].primary));
     // músculos que só dá para treinar de forma indireta/isométrica sem equipamento
     const same: Partial<Record<Muscle, Muscle>> = { side_delts: 'side_delts', forearms: 'forearms' };
-    for (const [protocol, days] of [['jkk', JKK_DAYS], ['jkk4', JKK4_DAYS]] as const) {
+    for (const [protocol, days] of [['jkk', JKK_DAYS], ['jkk4', JKK4_DAYS], ['jkk3', JKK3_DAYS]] as const) {
       days.forEach((d, i) => {
         const gym = main(d.rows.map((r) => r[0]));
         const home = main(HOME_SESSIONS[protocol][i].rows.map((r) => r[0]));
@@ -33,7 +34,7 @@ describe('treino em casa (peso do corpo)', () => {
     }
   });
   it('volume em casa perto do dia da academia (≥ 85% das séries)', () => {
-    for (const [protocol, days] of [['jkk', JKK_DAYS], ['jkk4', JKK4_DAYS]] as const) {
+    for (const [protocol, days] of [['jkk', JKK_DAYS], ['jkk4', JKK4_DAYS], ['jkk3', JKK3_DAYS]] as const) {
       days.forEach((d, i) => {
         const gym = d.rows.reduce((t, r) => t + r[2], 0);
         const home = HOME_SESSIONS[protocol][i].rows.reduce((t, r) => t + r[1], 0);

@@ -7,12 +7,12 @@ import { alternativesFor, getExercise, resolveExercise } from '../domain/exercis
 import { estimateMinutes, plannedWeeklyVolume, phaseFor, prescribeDay } from '../domain/program';
 import { nextSession, projectedEnd } from '../domain/schedule';
 import { weeklyVolume } from '../domain/volume';
-import { MUSCLE_LABEL, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
+import { isJkk, MUSCLE_LABEL, type JkkProtocol, type CheckinRow, type MetricRow, type Muscle, type OverrideRow, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { activateProtocol, applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
 import { RevisionHistoryCard } from './RevisionCard';
-import { ProtocolSwitch } from './ProtocolSwitch';
+import { PROTOCOL_LABEL, ProtocolSwitch } from './ProtocolSwitch';
 import { HOME_HONEST, HOME_RULES, homeSession } from '../domain/home';
-import { Jkk4Why, JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
+import { JkkWhy, JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
 import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
 import { decliningExercises } from '../domain/progression';
 import { recentRecovery } from '../domain/recommendations';
@@ -50,9 +50,7 @@ export function Training() {
     switching.current = true;
     void activateProtocol(store, profile!, target).then(() => {
       switching.current = false;
-      toast(target === 'jkk4'
-        ? 'Protocolo JKK — 4 dias ativado. O JKK de 5 dias ficou guardado (com sua semana e histórico) para quando quiser voltar.'
-        : 'Protocolo JKK (5 dias) reativado de onde você parou.');
+      toast(`Treino de ${PROTOCOL_LABEL[target].label} ativado. Os outros ficam guardados, cada um na sua semana.`);
     });
   }, [needsJkk, profile, store, toast, target]);
 
@@ -84,8 +82,10 @@ export function Training() {
   const muscles = (Object.keys(planned) as Muscle[]).filter((m) => (planned[m] ?? 0) >= 2);
   const loads = weeklyLoads(mine, logs.data).slice(-8);
   const olympia = program.config.protocol === 'olympia';
-  const jkk = program.config.protocol === 'jkk' || program.config.protocol === 'jkk4';
-  const jkk4 = program.config.protocol === 'jkk4';
+  const jkk = isJkk(program.config.protocol);
+  const variant: JkkProtocol = isJkk(program.config.protocol) ? program.config.protocol : 'jkk';
+  // Versões montadas pelo app (4 e 3 dias): têm revisão automática e comparação com o plano de 5 dias.
+  const custom = variant === 'jkk4' || variant === 'jkk3' ? variant : null;
   // Versão em casa (peso do corpo) da próxima sessão; com deload, metade das séries como na academia.
   const homeBase = next.finished ? null : homeSession(program.config, next.dayPos);
   const home = homeBase && phase.deload ? { ...homeBase, slots: homeBase.slots.map((x) => ({ ...x, sets: Math.max(1, Math.ceil(x.sets / 2)) })) } : homeBase;
@@ -152,7 +152,7 @@ export function Training() {
 
       {jkk && (
         <Card title="Seu treino">
-          <ProtocolSwitch onSwitched={() => toast('Trocando o treino…')} />
+          <ProtocolSwitch onSwitched={() => { setPlace('gym'); toast('Trocando o treino…'); }} />
           {!next.finished && !inProgress && (
             <>
               <p className="section-title">Onde vai ser a próxima sessão?</p>
@@ -238,13 +238,13 @@ export function Training() {
 
       {jkk ? (
         <>
-          {jkk4 && <RevisionHistoryCard revisions={program.config.revisions ?? []} />}
-          <JkkWorkouts four={jkk4} config={program.config} />
+          {custom && <RevisionHistoryCard revisions={program.config.revisions ?? []} />}
+          <JkkWorkouts variant={variant} config={program.config} />
           <details className="more">
             <summary>Sobre o protocolo (avaliação, regras, flancos e fontes)</summary>
             <div className="stack">
-              <JkkHeader four={jkk4} />
-              {jkk4 && <Jkk4Why />}
+              <JkkHeader variant={variant} />
+              {custom && <JkkWhy variant={custom} />}
               <JkkPhotos />
               <JkkHow />
               <JkkFlanks />
@@ -317,7 +317,7 @@ export function Training() {
           </details>
         ))}
         {program.config.notes.map((n, i) => <p key={i} className="hint">• {n}</p>)}
-        {jkk ? <p className="hint">{jkk4 ? 'Versão 4 dias (seg, ter, qui, sex) com o mesmo volume semanal do JKK de 5 dias. ' : ''}Ciclo de 8 semanas. Intensidade: 1 a 2 repetições sobrando; nos isolados, a última série até a falha. Deload a cada 6 a 8 semanas: metade das séries e as mesmas cargas (na semana 8, ou antes, nas semanas 6–7, se a fadiga pedir). Depois, um novo ciclo igual começa com as cargas atuais.</p> : olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
+        {jkk ? <p className="hint">{variant === 'jkk4' ? 'Versão 4 dias (seg, ter, qui, sex) com o mesmo volume semanal do JKK de 5 dias. ' : variant === 'jkk3' ? 'Versão 3 dias (seg, qua, sex), corpo inteiro: prioridades com o mesmo volume do JKK de 5 dias, pernas com um pouco menos. ' : ''}Ciclo de 8 semanas. Intensidade: 1 a 2 repetições sobrando; nos isolados, a última série até a falha. Deload a cada 6 a 8 semanas: metade das séries e as mesmas cargas (na semana 8, ou antes, nas semanas 6–7, se a fadiga pedir). Depois, um novo ciclo igual começa com as cargas atuais.</p> : olympia ? <p className="hint">Semana 1 (dias 1–7): linha de base, RIR 3 nos compostos e 2 nos isolados, foco em técnica e cargas iniciais. Semana 2: RIR 2. Semanas 3–4 (dias 15–30): progressão, RIR 2/1. Semanas 5–9 (dias 31–60): RIR 1/1, ajustes de volume só nas revisões dos dias 14, 30 e 45. Sem deload automático.</p> : <p className="hint">Semanas 1–7: progressão gradual de esforço; +1 série/semana nos músculos ★ a partir da semana 4; semana 8: deload (metade das séries, ~85% da carga) e reavaliação. Se o app detectar queda de desempenho com recuperação ruim, ele recomenda antecipar o deload.</p>}
         {locked ? <p className="hint">🔒 Plano fechado: você só registra o que fez. A carga de cada série é ajustada pelo app; trocas só acontecem por dor ou aparelho indisponível, dentro do próprio treino.</p>
           : <button className="btn ghost sm" onClick={async () => { if (confirm('Arquivar o ciclo atual e gerar um novo a partir do perfil?')) await createProgram(store, profile!, undefined, program.config.protocol); }}>Regerar ciclo (ex.: mudei de academia)</button>}
       </Card>

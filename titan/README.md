@@ -96,9 +96,12 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
-## Treino: Protocolo JKK em 4 ou 5 dias (alternável)
+## Treino: Protocolo JKK em 3, 4 ou 5 dias (alternável)
 
-Em Treino → "Seu treino" (ou Perfil → Treino) o usuário alterna entre o JKK de 4 dias e o de 5 dias. Cada plano guarda o próprio ciclo: ao voltar para um deles, `activateProtocol` reativa o ciclo arquivado na mesma semana e com o histórico.
+**Versão 3 dias** (`JKK3_DAYS`): corpo inteiro em seg/qua/sex, 28 séries e ~95 min por treino. Braços, braquial, elevação lateral e peito superior mantêm as séries semanais do plano de 5 dias (bíceps 9, tríceps 12, braquial 5, lateral 8, peito superior 10), com frequência 3×; pernas, costas e abdômen cedem volume. Tem revisão automática após medições e sessão em casa para cada dia.
+
+
+Em Treino → "Seu treino" (ou Perfil → Treino) o usuário alterna entre os treinos de 3, 4 e 5 dias. Cada plano guarda o próprio ciclo: ao voltar para um deles, `activateProtocol` reativa o ciclo arquivado na mesma semana e com o histórico.
 
 **Treino em casa** (`src/domain/home.ts`): para cada dia dos dois planos existe uma sessão equivalente só com o peso do corpo (cadeira, mesa firme e toalha). Em Treino → "Onde vai ser a próxima sessão?" o usuário escolhe Academia ou Em casa; a sessão em casa conta no ciclo (`workout_sessions.location`, migração 6). Progressão por repetições, tempo de descida e variação, não por carga.
 

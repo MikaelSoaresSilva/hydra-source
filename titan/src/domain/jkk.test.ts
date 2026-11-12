@@ -110,3 +110,72 @@ describe('guardar e voltar ao JKK de 5 dias', () => {
     expect(active.map((p) => p.id)).toEqual([five.id]);
   });
 });
+
+describe('JKK em 3 dias (corpo inteiro)', () => {
+  test('seg, qua, sex; travado; 28 séries e ~95 min por treino; texto do PDF em cada exercício', async () => {
+    const { JKK3_DAYS, JKK3_TRAINING_DAYS } = await import('./jkk');
+    const c = generateJkk('jkk3');
+    expect([c.protocol, c.locked, c.sessionMinutes]).toEqual(['jkk3', true, 95]);
+    expect(c.days.map((d) => d.dayIndex)).toEqual(JKK3_TRAINING_DAYS);
+    expect(JKK3_TRAINING_DAYS).toEqual([1, 3, 5]);
+    expect(c.days.map((d) => d.slots.reduce((t, s) => t + s.sets, 0))).toEqual([28, 28, 28]);
+    JKK3_DAYS.forEach((d) => expect(d.meta).toMatch(/~95 min · 28 séries/));
+    const original = new Map(JKK_DAYS.flatMap((d) => d.rows).map((r) => [r[0], r]));
+    JKK3_DAYS.flatMap((d) => d.rows).forEach((r) => {
+      const o = original.get(r[0])!;
+      expect([r[1], r[3], r[5], r[6], r[7]]).toEqual([o[1], o[3], o[5], o[6], o[7]]);
+    });
+    // nenhum exercício repetido no mesmo dia
+    c.days.forEach((d) => expect(new Set(d.slots.map((s) => s.exerciseKey)).size).toBe(d.slots.length));
+  });
+  test('prioridades (braços, ombro, peito superior) com o mesmo volume do plano de 5 dias e mais frequência', async () => {
+    const { JKK3_DAYS, weeklyDirect } = await import('./jkk');
+    const five = weeklyDirect(JKK_DAYS);
+    const three = weeklyDirect(JKK3_DAYS);
+    for (const m of ['biceps', 'triceps', 'brachialis', 'side_delts']) {
+      expect(three[m].sets, m).toBeGreaterThanOrEqual(five[m].sets);
+    }
+    for (const m of ['biceps', 'triceps', 'chest', 'back', 'quads']) expect(three[m].days, m).toBe(3);
+    // peito superior: inclinado halteres + inclinado Smith + crucifixo de baixo para cima = 10 séries, como no PDF
+    const upper = JKK3_DAYS.flatMap((d) => d.rows).filter((r) => ['incline_db_press', 'incline_smith_press', 'low_high_cable_fly'].includes(r[0])).reduce((t, r) => t + r[2], 0);
+    expect(upper).toBe(10);
+    // pernas continuam com volume útil (≥ 10 séries de quadríceps)
+    expect(three.quads.sets).toBeGreaterThanOrEqual(10);
+  });
+  test('bíceps em 3 posições (alongado, Scott, Bayesian) e tríceps acima da cabeça em 2 dias', async () => {
+    const { JKK3_DAYS } = await import('./jkk');
+    const keys = JKK3_DAYS.map((d) => d.rows.map((r) => r[0]));
+    expect(keys[0]).toContain('incline_db_curl');
+    expect(keys[1]).toContain('preacher_curl_machine');
+    expect(keys[2]).toContain('bayesian_cable_curl');
+    expect(keys.filter((k) => k.includes('overhead_cable_extension') || k.includes('db_overhead_extension'))).toHaveLength(2);
+  });
+  test('mesmas regras do PDF e treino em casa para cada dia', async () => {
+    const { HOME_SESSIONS } = await import('./home');
+    const c = generateJkk('jkk3');
+    expect(phaseFor(c, 8, JKK_WEEKS).deload).toBe(true);
+    expect(HOME_SESSIONS.jkk3).toHaveLength(3);
+    const plan = buildSessionPlan({ id: 'p', weeks: JKK_WEEKS, config: c } as never, 1, 2, [], [], null);
+    expect(plan[0].name).toBe('Rosca Bayesian no cabo');
+    expect(plan[0].warmup).toMatch(/2 séries leves/);
+  });
+});
+
+describe('alternar entre 3, 4 e 5 dias', () => {
+  test('cada plano guarda o próprio ciclo; a revisão automática vale para 3 e 4 dias', async () => {
+    const { LocalStore } = await import('../data/store');
+    const { activateProtocol, reviewAfterMeasurement } = await import('../services');
+    const { EMPTY_PROFILE } = await import('../data/AppContext');
+    const store = await LocalStore.open(`t3-${Math.random()}`);
+    const profile = EMPTY_PROFILE(store.userId);
+    const four = await activateProtocol(store, profile, 'jkk4');
+    const three = await activateProtocol(store, profile, 'jkk3');
+    expect(three.name).toBe('Protocolo JKK — 3 dias');
+    expect(await reviewAfterMeasurement(store, null, '2026-11-12')).not.toBeNull();
+    const five = await activateProtocol(store, profile, 'jkk');
+    expect(await reviewAfterMeasurement(store, null, '2026-11-12')).toBeNull();
+    expect((await activateProtocol(store, profile, 'jkk3')).id).toBe(three.id);
+    expect((await activateProtocol(store, profile, 'jkk4')).id).toBe(four.id);
+    expect((await activateProtocol(store, profile, 'jkk')).id).toBe(five.id);
+  });
+});

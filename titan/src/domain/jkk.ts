@@ -1,7 +1,7 @@
 // Protocolo JKK — transcrição fiel do PDF "Protocolo JKK" (plano de hipertrofia, 5 dias, out/2026).
 // Textos, séries, repetições, descansos e ordem dos exercícios são os do documento.
 import { EXERCISE_BY_KEY } from './exercises';
-import type { Equipment, Muscle, ProgramConfig, ProgramDay, SlotPrescription } from './types';
+import type { Equipment, JkkProtocol, Muscle, ProgramConfig, ProgramDay, SlotPrescription } from './types';
 import type { WeekPhase } from './program';
 
 export const JKK_WEEKS = 8;
@@ -154,19 +154,19 @@ const rirFor = (key: string) => (EXERCISE_BY_KEY[key]?.kind === 'isolation' ? 1 
 
 const ALL_EQUIPMENT: Equipment[] = ['barbell', 'ez_bar', 'dumbbell', 'bench', 'rack', 'cable', 'machine', 'smith', 'pullup_bar', 'dip_station', 'leg_press', 'hack_squat'];
 
-export function generateJkk(variant: 'jkk' | 'jkk4' = 'jkk'): ProgramConfig {
-  const source = variant === 'jkk4' ? JKK4_DAYS : JKK_DAYS;
+export function generateJkk(variant: JkkProtocol = 'jkk'): ProgramConfig {
+  const source = variant === 'jkk4' ? JKK4_DAYS : variant === 'jkk3' ? JKK3_DAYS : JKK_DAYS;
   const days: ProgramDay[] = source.map((d, i) => ({
     dayIndex: d.dayIndex,
     name: d.name,
     focus: `${d.meta} — ${d.intro}`,
     slots: d.rows.map(([key, label, sets, range, restSec, restText, note, tag, unit], j): SlotPrescription => ({
-      slotId: `${variant === 'jkk4' ? 'k' : 'j'}${i}s${j}`, exerciseKey: key, sets, repRange: range, restSec, rir: rirFor(key), label, note, tag, restText, unit: unit ?? 'reps',
+      slotId: `${variant === 'jkk4' ? 'k' : variant === 'jkk3' ? 't' : 'j'}${i}s${j}`, exerciseKey: key, sets, repRange: range, restSec, rir: rirFor(key), label, note, tag, restText, unit: unit ?? 'reps',
     })),
   }));
   const priorities: Muscle[] = ['biceps', 'triceps', 'brachialis', 'chest', 'quads', 'hamstrings', 'calves'];
   return {
-    version: 1, trainingDays: variant === 'jkk4' ? JKK4_TRAINING_DAYS : JKK_TRAINING_DAYS, sessionMinutes: variant === 'jkk4' ? 95 : 75,
+    version: 1, trainingDays: variant === 'jkk4' ? JKK4_TRAINING_DAYS : variant === 'jkk3' ? JKK3_TRAINING_DAYS : JKK_TRAINING_DAYS, sessionMinutes: variant === 'jkk' ? 75 : 95,
     priorities, equipment: ALL_EQUIPMENT, days, notes: [], protocol: variant, deloadWeeks: [], locked: true,
   };
 }
@@ -199,8 +199,9 @@ function jkkRow(key: string, sets?: number): Row {
   return copy;
 }
 const totalSets = (rows: Row[]) => rows.reduce((t, r) => t + r[2], 0);
-const day4 = (dayIndex: number, name: string, dow: string, minutes: number, intro: string, rows: Row[]): JkkDay =>
-  ({ dayIndex, name, meta: `${dow} · ~${minutes} min · ${totalSets(rows)} séries`, intro, rows });
+function day4(dayIndex: number, name: string, dow: string, minutes: number, intro: string, rows: Row[]): JkkDay {
+  return { dayIndex, name, meta: `${dow} · ~${minutes} min · ${totalSets(rows)} séries`, intro, rows };
+}
 
 export const JKK4_DAYS: JkkDay[] = [
   day4(1, 'Dia 1 · Superior A — Peito superior + Costas (largura) + Ombro + Tríceps', 'SEG', 95,
@@ -258,3 +259,50 @@ export function weeklyDirect(days: JkkDay[]): Record<string, { sets: number; day
   }
   return out;
 }
+
+// ------------------------------------------------------------------ JKK-3: corpo inteiro em 3 dias
+// Para as semanas em que só dá para ir 3 vezes. Com 3 treinos, o que mais rende é treinar o corpo
+// inteiro em cada um: braços, peito superior e ombros (as prioridades) recebem o MESMO volume semanal
+// do plano de 5 dias, só que em 3 estímulos; as pernas ficam com volume de manutenção-plus.
+// Cada sessão: 28 séries, ~95 min (dentro de 1h30–1h40).
+
+export const JKK3_TRAINING_DAYS = [1, 3, 5]; // seg, qua, sex
+
+export const JKK3_DAYS: JkkDay[] = [
+  day4(1, 'Dia 1 · Corpo inteiro A — Peito superior + Costas (largura) + Quadríceps + Braços', 'SEG', 95,
+    'Comece pelo peito superior, quando você está mais forte. Empurrar, puxar e perna se alternam para um descansar enquanto o outro trabalha.', [
+      jkkRow('incline_db_press'), jkkRow('lat_pulldown'), jkkRow('back_squat', 3), jkkRow('cable_lateral_raise'),
+      jkkRow('leg_extension'), jkkRow('incline_db_curl'), jkkRow('overhead_cable_extension'), jkkRow('seated_leg_curl'),
+      jkkRow('standing_calf_raise', 3),
+    ]),
+  day4(3, 'Dia 2 · Corpo inteiro B — Posterior + Peito superior + Costas (espessura) + Braços', 'QUA', 95,
+    'Posterior de coxa primeiro, depois peito superior e remada. Bíceps, tríceps e braquial fecham com você ainda forte.', [
+      jkkRow('romanian_deadlift', 3), jkkRow('incline_smith_press'), jkkRow('chest_supported_row'), jkkRow('leg_press'),
+      jkkRow('db_lateral_raise', 4), jkkRow('preacher_curl_machine'), jkkRow('skull_crusher_ez'), jkkRow('reverse_curl_ez'),
+      jkkRow('cable_crunch', 3),
+    ]),
+  day4(5, 'Dia 3 · Corpo inteiro C — Braços primeiro + Peito + Costas + Pernas', 'SEX', 95,
+    'Braço é a sua prioridade nº 1, então ele vem primeiro, com você descansado. Depois peito central e superior, remada e um segundo estímulo de pernas.', [
+      jkkRow('bayesian_cable_curl'), jkkRow('db_overhead_extension'), jkkRow('db_bench_press'), jkkRow('seated_cable_row'),
+      jkkRow('hack_squat'), jkkRow('low_high_cable_fly'), jkkRow('hammer_curl'), jkkRow('rope_pushdown'),
+      jkkRow('standing_leg_curl', 2), jkkRow('seated_calf_raise', 3),
+    ]),
+];
+
+export const JKK3_INTRO = {
+  kicker: 'PROTOCOLO JKK · VERSÃO 3 DIAS',
+  title: 'PROTOCOLO JKK — 3 DIAS',
+  text: 'Para as semanas em que só dá para treinar 3 vezes. Corpo inteiro em cada treino, com os exercícios do Protocolo JKK: braços, peito superior e ombros mantêm o volume do plano de 5 dias; as pernas ficam com um pouco menos. Cada treino tem 28 séries e leva de 1h30 a 1h40.',
+  week: [
+    ['SEG', 'Corpo inteiro A'], ['TER', 'Descanso'], ['QUA', 'Corpo inteiro B'], ['QUI', 'Descanso'],
+    ['SEX', 'Corpo inteiro C'], ['SÁB', 'Descanso'], ['DOM', 'Descanso'],
+  ] as [string, string][],
+  why: [
+    'Pelas suas fotos, as prioridades são braços, pico do bíceps, peito superior e ombros (para o V). No plano de 3 dias, esses músculos têm as mesmas séries semanais do plano de 5 dias: bíceps 9, tríceps 12, braquial 5, peito superior 10, elevação lateral 8.',
+    'Com só 3 treinos, o corpo inteiro em cada sessão é o que mais rende: bíceps, tríceps, peito e costas são treinados nos 3 dias, em vez de 1 ou 2 vezes.',
+    'Cada treino tem um exercício de bíceps em posição diferente (alongado no banco inclinado, Scott e Bayesian) e um de tríceps acima da cabeça ou testa — o mesmo foco no pico do bíceps e na cabeça longa do tríceps.',
+    'O que cede: pernas (quadríceps 12 séries em vez de 16, posterior 7 em vez de 9), costas (9 em vez de 11) e abdômen. É o suficiente para continuar evoluindo por algumas semanas; se ficar muitas semanas seguidas em 3 dias, as pernas avançam mais devagar.',
+    'Deixe pelo menos um dia de descanso entre os treinos (seg, qua, sex ou equivalente): o corpo inteiro precisa de 48 h.',
+    'Descanso, repetições e técnica continuam iguais aos do Protocolo JKK. Não encurte o descanso para caber: os treinos já foram montados para 1h30–1h40.',
+  ],
+};

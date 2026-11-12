@@ -10,8 +10,9 @@ import { groupHistory, suggestProgression } from './domain/progression';
 import { applyReadiness } from './domain/science';
 import type { DataStore } from './data/store';
 import { uuid } from './data/store';
+import { isJkk } from './domain/types';
 import type {
-  CheckinRow, MetricRow, OverrideRow, PlannedExercise, Profile, ProgramRevision, ProgramRow, SessionRow, SetLogRow, TargetRow,
+  CheckinRow, JkkProtocol, MetricRow, OverrideRow, PlannedExercise, Profile, ProgramRevision, ProgramRow, SessionRow, SetLogRow, TargetRow,
 } from './domain/types';
 
 export function overridesMap(rows: OverrideRow[]) {
@@ -21,12 +22,12 @@ export function overridesMap(rows: OverrideRow[]) {
   return { map, blocked };
 }
 
-export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia' | 'jkk' | 'jkk4'): Promise<ProgramRow> {
+export async function createProgram(store: DataStore, profile: Profile, startDate = todayISO(), protocol?: 'olympia' | JkkProtocol): Promise<ProgramRow> {
   const old = await store.list<ProgramRow>('programs', { eq: { status: 'active' } });
   for (const p of old) await store.upsert('programs', { ...p, status: 'archived' });
   let row: ProgramRow;
-  if (protocol === 'jkk' || protocol === 'jkk4') {
-    row = { id: uuid(), user_id: store.userId, name: protocol === 'jkk4' ? 'Protocolo JKK — 4 dias' : 'Protocolo JKK', start_date: startDate, weeks: JKK_WEEKS, config: generateJkk(protocol), status: 'active' };
+  if (isJkk(protocol)) {
+    row = { id: uuid(), user_id: store.userId, name: protocol === 'jkk4' ? 'Protocolo JKK — 4 dias' : protocol === 'jkk3' ? 'Protocolo JKK — 3 dias' : 'Protocolo JKK', start_date: startDate, weeks: JKK_WEEKS, config: generateJkk(protocol), status: 'active' };
   } else {
     // Protocolo travado: trocas pessoais antigas não entram no plano.
     const ov = protocol === 'olympia' ? { map: {}, blocked: new Set<string>() } : overridesMap(await store.list<OverrideRow>('exercise_overrides'));
@@ -78,7 +79,7 @@ export function buildSessionPlan(
 ): PlannedExercise[] {
   const ov = program.config.locked ? { map: {}, blocked: new Set<string>() } : overridesMap(overrides);
   let firstCompound = true;
-  const jkk = program.config.protocol === 'jkk' || program.config.protocol === 'jkk4';
+  const jkk = isJkk(program.config.protocol);
   return prescribeDay(program.config, dayPos, week, program.weeks).map((s, idx) => {
     const ex = resolveExercise(s.exerciseKey, program.config.equipment, ov.map, ov.blocked);
     // Protocolo importado: a faixa de repetições é a do documento, não a padrão do exercício.
@@ -182,7 +183,7 @@ export async function upgradeOlympia(store: DataStore, program: ProgramRow, prof
  * Troca o treino ativo. Se esse protocolo já foi usado antes (ciclo arquivado), ele volta de onde
  * parou — mesma semana e histórico; senão, um ciclo novo começa hoje.
  */
-export async function activateProtocol(store: DataStore, profile: Profile, protocol: 'jkk' | 'jkk4'): Promise<ProgramRow> {
+export async function activateProtocol(store: DataStore, profile: Profile, protocol: JkkProtocol): Promise<ProgramRow> {
   const archived = (await store.list<ProgramRow>('programs', { eq: { status: 'archived' } }))
     .filter((p) => p.config.protocol === protocol)
     .sort((a, b) => ((a.updated_at ?? a.created_at ?? '') < (b.updated_at ?? b.created_at ?? '') ? 1 : -1))[0];
@@ -200,7 +201,8 @@ export async function activateProtocol(store: DataStore, profile: Profile, proto
  */
 export async function reviewAfterMeasurement(store: DataStore, metricId: string | null, today = todayISO()): Promise<ProgramRevision | null> {
   const program = (await store.list<ProgramRow>('programs', { eq: { status: 'active' } }))[0];
-  if (!program || program.config.protocol !== 'jkk4') return null;
+  // Só as versões montadas pelo app (4 e 3 dias) são ajustadas; o JKK de 5 dias fica fiel ao PDF.
+  if (!program || (program.config.protocol !== 'jkk4' && program.config.protocol !== 'jkk3')) return null;
   const metrics = await store.list<MetricRow>('body_metrics');
   const logs = await store.list<SetLogRow>('set_logs', { gte: { logged_at: addDays(today, -120) } });
   const { config, revision } = reviewProgram({ config: program.config, metrics, logs, today, metricId });

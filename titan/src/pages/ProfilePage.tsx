@@ -6,7 +6,7 @@ import type { Profile } from '../domain/types';
 import { createTargets, downloadJSON, profileReadyForTargets } from '../services';
 import { Card, ErrorBox, Field, Loading, NumberInput, useToast } from '../ui/components';
 import { apiKeyStore } from '../appearanceClient';
-import { ProtocolSwitch } from './ProtocolSwitch';
+import { PROTOCOL_LABEL, ProtocolSwitch } from './ProtocolSwitch';
 import { ensureRestAlerts, playRestBeep, scheduleRestAlert, unlockAudio } from '../ui/sound';
 import { Capacitor } from '@capacitor/core';
 
@@ -60,7 +60,7 @@ export function ProfilePage() {
       </Card>
 
       <Card title="Treino">
-        <ProtocolSwitch onSwitched={(p) => toast(p === 'jkk' ? 'JKK de 5 dias ativado (abra a aba Treino).' : 'JKK de 4 dias ativado (abra a aba Treino).')} />
+        <ProtocolSwitch onSwitched={(p) => toast(`Treino de ${PROTOCOL_LABEL[p].label} ativado (abra a aba Treino).`)} />
         <label className="check"><input type="checkbox" checked={p.preferences.restTimerSound !== false} onChange={(e) => void save({ preferences: { ...p.preferences, restTimerSound: e.target.checked } })} /> Tocar bipe quando o descanso acabar</label>
         <div className="row">
           <button className="btn sm" onClick={() => { unlockAudio(); setTimeout(() => { if (!playRestBeep()) toast('Este aparelho não suporta áudio no app.'); }, 150); }}>Testar som</button>

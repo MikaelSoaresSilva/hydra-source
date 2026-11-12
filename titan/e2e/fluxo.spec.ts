@@ -247,7 +247,7 @@ test('bipe do descanso: botão "Testar som" toca o bipe alto no navegador real',
   await expect.poll(() => page.evaluate(() => (window as unknown as { __beeps: unknown[] }).__beeps)).toContain('arquivo:0.62');
 });
 
-test('alternar entre o treino de 4 e o de 5 dias, cada um guardando sua semana', async ({ page }) => {
+test('alternar entre os treinos de 3, 4 e 5 dias, cada um guardando sua semana', async ({ page }) => {
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
   await page.getByRole('button', { name: 'Usar em modo local' }).click();
@@ -266,6 +266,19 @@ test('alternar entre o treino de 4 e o de 5 dias, cada um guardando sua semana',
   await expect(page.getByText(/^Protocolo JKK · início/)).toBeVisible();
   await expect(page.getByText('Próxima sessão: Dia 1 · Peito superior + Ombros + Tríceps')).toBeVisible();
   await expect(page.getByRole('radio', { name: /5 dias/ })).toHaveAttribute('aria-checked', 'true');
+
+  // 3 dias: corpo inteiro, 28 séries por treino, com a explicação e a comparação
+  await page.getByRole('radio', { name: /3 dias/ }).click();
+  await expect(page.getByText(/^Protocolo JKK — 3 dias · início/)).toBeVisible();
+  await expect(page.getByText('Próxima sessão: Dia 1 · Corpo inteiro A — Peito superior + Costas (largura) + Quadríceps + Braços')).toBeVisible();
+  await expect(page.getByText(/SEG · ~95 min · 28 séries/).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Revisões automáticas' })).toBeVisible();
+  await page.getByText('Sobre o protocolo (avaliação, regras, flancos e fontes)').click();
+  await expect(page.getByText('Por que o treino de 3 dias foi montado assim')).toBeVisible();
+  await page.screenshot({ path: `test-results/tresdias-${test.info().project.name}.png`, fullPage: true });
+  // em casa também existe para o plano de 3 dias
+  await page.getByRole('radio', { name: /Em casa/ }).click();
+  await expect(page.getByText('Próxima sessão: Em casa · Corpo inteiro A — Peito superior + Costas + Quadríceps + Braços')).toBeVisible();
 
   await page.getByRole('radio', { name: /4 dias/ }).click();
   await expect(page.getByText(/^Protocolo JKK — 4 dias · início/)).toBeVisible();

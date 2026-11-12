@@ -5,7 +5,7 @@
 // "Intensidade, falha e amplitude"). Por isso aqui o que progride é repetição, tempo de descida e
 // a variação do exercício — não o peso.
 import { EXERCISE_BY_KEY } from './exercises';
-import type { ProgramConfig, SlotPrescription } from './types';
+import { isJkk, type JkkProtocol, type ProgramConfig, type SlotPrescription } from './types';
 
 type HomeRow = [exerciseKey: string, sets: number, restSec: number];
 interface HomeSession { name: string; intro: string; rows: HomeRow[] }
@@ -89,10 +89,27 @@ const legsB4: HomeSession = {
   rows: [...legsB.rows, ['hb_towel_hammer_curl', 3, 60]],
 };
 
+const fullA: HomeSession = {
+  name: 'Em casa · Corpo inteiro A — Peito superior + Costas + Quadríceps + Braços',
+  intro: 'Empurrar, puxar e perna se alternam: um descansa enquanto o outro trabalha.',
+  rows: [['hb_decline_push_up', 4, 90], ['hb_table_row', 3, 90], ['hb_bulgarian_squat', 3, 90], ['hb_door_lateral_iso', 4, 45], ['hb_sissy_squat', 3, 75], ['hb_towel_curl', 3, 60], ['hb_bw_triceps_extension', 3, 75], ['hb_sliding_leg_curl', 2, 75], ['hb_single_leg_calf_raise', 3, 45]],
+};
+const fullB: HomeSession = {
+  name: 'Em casa · Corpo inteiro B — Posterior + Peito superior + Costas + Braços',
+  intro: 'Posterior de coxa primeiro (flexão nórdica), depois peito superior e remada.',
+  rows: [['hb_nordic_curl', 3, 90], ['hb_decline_push_up', 3, 90], ['hb_table_row', 3, 90], ['hb_tempo_squat', 3, 90], ['hb_door_lateral_iso', 4, 45], ['hb_table_row_supinated', 3, 90], ['hb_diamond_push_up', 3, 75], ['hb_towel_hammer_curl', 3, 60], ['hb_reverse_crunch', 3, 45]],
+};
+const fullC: HomeSession = {
+  name: 'Em casa · Corpo inteiro C — Braços primeiro + Peito + Costas + Pernas',
+  intro: arms.intro,
+  rows: [['hb_towel_curl', 3, 60], ['hb_bw_triceps_extension', 3, 60], ['hb_pause_push_up', 3, 75], ['hb_table_row', 3, 90], ['hb_step_up', 3, 75], ['push_up', 3, 75], ['hb_towel_hammer_curl', 2, 60], ['hb_chair_dip', 3, 75], ['hb_sliding_leg_curl', 2, 75], ['hb_bent_knee_calf_raise', 3, 45]],
+};
+
 /** Sessão em casa equivalente a cada dia do protocolo, na mesma ordem dos dias. */
-export const HOME_SESSIONS: Record<'jkk' | 'jkk4', HomeSession[]> = {
+export const HOME_SESSIONS: Record<JkkProtocol, HomeSession[]> = {
   jkk: [push, legsA, pull, legsB, arms],
   jkk4: [upperA, legsA4, upperB, legsB4],
+  jkk3: [fullA, fullB, fullC],
 };
 
 /** Exercícios contados por tempo (segundos) em vez de repetições. */
@@ -108,8 +125,8 @@ export const HOME_RULES = [
 ];
 export const HOME_HONEST = 'Em casa dá para manter e até ganhar músculo em peito, ombros, tríceps e pernas. Costas e bíceps são mais limitados sem barra ou peso, então use como plano B — para o seu objetivo, a academia continua sendo o plano A.';
 
-export function hasHomeVersion(config: ProgramConfig): config is ProgramConfig & { protocol: 'jkk' | 'jkk4' } {
-  return config.protocol === 'jkk' || config.protocol === 'jkk4';
+export function hasHomeVersion(config: ProgramConfig): config is ProgramConfig & { protocol: JkkProtocol } {
+  return isJkk(config.protocol);
 }
 
 export function homeSession(config: ProgramConfig, dayPos: number): { name: string; intro: string; slots: SlotPrescription[] } | null {

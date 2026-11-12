@@ -1,40 +1,45 @@
-import { JKK4_DAYS, JKK4_INTRO, JKK_DAYS, JKK_FLANKS, JKK_HOW, JKK_INTRO, JKK_PHOTOS, JKK_SOURCES, weeklyDirect } from '../domain/jkk';
-import { MUSCLE_LABEL, type Muscle, type ProgramConfig } from '../domain/types';
+import { JKK3_DAYS, JKK3_INTRO, JKK4_DAYS, JKK4_INTRO, JKK_DAYS, JKK_FLANKS, JKK_HOW, JKK_INTRO, JKK_PHOTOS, JKK_SOURCES, weeklyDirect } from '../domain/jkk';
+import { MUSCLE_LABEL, type JkkProtocol, type Muscle, type ProgramConfig } from '../domain/types';
 import { Card } from '../ui/components';
 
-/** Cabeçalho do Protocolo JKK: resumo, etiquetas e semana — texto do documento. */
-export function JkkHeader({ four = false }: { four?: boolean }) {
-  const intro = four ? { ...JKK_INTRO, ...JKK4_INTRO } : JKK_INTRO;
+const DAYS_OF: Record<JkkProtocol, typeof JKK_DAYS> = { jkk: JKK_DAYS, jkk4: JKK4_DAYS, jkk3: JKK3_DAYS };
+
+/** Cabeçalho do Protocolo JKK: resumo, etiquetas e semana — texto do documento (ou da versão de 4/3 dias). */
+export function JkkHeader({ variant = 'jkk' }: { variant?: JkkProtocol }) {
+  const intro = variant === 'jkk4' ? { ...JKK_INTRO, ...JKK4_INTRO } : variant === 'jkk3' ? { ...JKK_INTRO, ...JKK3_INTRO } : JKK_INTRO;
+  const perWeek = variant === 'jkk4' ? '4 dias / semana' : variant === 'jkk3' ? '3 dias / semana' : '5 dias / semana';
   return (
     <Card title={intro.title} className="accent">
       <p className="hint" style={{ marginTop: 0 }}>{intro.kicker}</p>
       <p>{intro.text}</p>
-      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>{JKK_INTRO.tags.map((t) => <span key={t} className="tag">{four && t === '5 dias / semana' ? '4 dias / semana' : t}</span>)}</div>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>{JKK_INTRO.tags.map((t) => <span key={t} className="tag">{t === '5 dias / semana' ? perWeek : t}</span>)}</div>
       <div className="scroll-x" style={{ marginTop: 10 }}><table className="t">
         <thead><tr>{intro.week.map(([d]) => <th key={d}>{d}</th>)}</tr></thead>
         <tbody><tr>{intro.week.map(([d, w]) => <td key={d}><small>{w}</small></td>)}</tr></tbody>
       </table></div>
-      {!four && <p className="hint">{JKK_INTRO.weekNote}</p>}
+      {variant === 'jkk' && <p className="hint">{JKK_INTRO.weekNote}</p>}
     </Card>
   );
 }
 
-/** Por que a versão de 4 dias entrega o mesmo resultado (ou melhor): comparação calculada dos dois planos. */
-export function Jkk4Why() {
+/** Por que a versão de 4 ou 3 dias foi montada assim: razões + comparação calculada com o plano de 5 dias. */
+export function JkkWhy({ variant }: { variant: 'jkk4' | 'jkk3' }) {
   const five = weeklyDirect(JKK_DAYS);
-  const four = weeklyDirect(JKK4_DAYS);
+  const mine = weeklyDirect(DAYS_OF[variant]);
   const muscles = Object.keys(five) as Muscle[];
+  const n = variant === 'jkk4' ? 4 : 3;
   return (
-    <Card title="Por que 4 dias dá o mesmo resultado (ou melhor)">
-      <ul className="list">{JKK4_INTRO.why.map((w) => <li key={w}><small>{w}</small></li>)}</ul>
+    <Card title={variant === 'jkk4' ? 'Por que 4 dias dá o mesmo resultado (ou melhor)' : 'Por que o treino de 3 dias foi montado assim'}>
+      <ul className="list">{(variant === 'jkk4' ? JKK4_INTRO : JKK3_INTRO).why.map((w) => <li key={w}><small>{w}</small></li>)}</ul>
       <div className="scroll-x"><table className="t">
-        <thead><tr><th>Músculo</th><th>JKK 5 dias</th><th>JKK 4 dias</th></tr></thead>
-        <tbody>{muscles.map((m) => (
-          <tr key={m}><td>{MUSCLE_LABEL[m]}</td><td>{five[m].sets} séries · {five[m].days}x</td>
-            <td><strong>{four[m]?.sets ?? 0} séries · {four[m]?.days ?? 0}x</strong>{(four[m]?.sets ?? 0) > five[m].sets || (four[m]?.days ?? 0) > five[m].days ? ' ↑' : ''}</td></tr>
-        ))}</tbody>
+        <thead><tr><th>Músculo</th><th>JKK 5 dias</th><th>JKK {n} dias</th></tr></thead>
+        <tbody>{muscles.map((m) => {
+          const a = five[m]; const b = mine[m] ?? { sets: 0, days: 0 };
+          const mark = b.sets > a.sets || (b.sets === a.sets && b.days > a.days) ? ' ↑' : b.sets < a.sets ? ' ↓' : '';
+          return <tr key={m}><td>{MUSCLE_LABEL[m]}</td><td>{a.sets} séries · {a.days}x</td><td><strong>{b.sets} séries · {b.days}x</strong>{mark}</td></tr>;
+        })}</tbody>
       </table></div>
-      <p className="hint">Séries diretas por semana (exercício em que o músculo é o alvo principal) e quantos dias ele é treinado.</p>
+      <p className="hint">Séries diretas por semana (exercício em que o músculo é o alvo principal) e quantos dias ele é treinado. ↑ = mais que no plano de 5 dias; ↓ = menos.</p>
     </Card>
   );
 }
@@ -50,14 +55,14 @@ export function JkkPhotos() {
   );
 }
 
-export function JkkWorkouts({ four = false, config }: { four?: boolean; config?: ProgramConfig }) {
+export function JkkWorkouts({ variant = 'jkk', config }: { variant?: JkkProtocol; config?: ProgramConfig }) {
   // Com o ciclo ativo, mostra o plano atual (inclui trocas automáticas); senão, o texto do documento.
   const days = config
     ? config.days.map((d) => {
       const [meta, ...intro] = d.focus.split(' — ');
       return { name: d.name, meta, intro: intro.join(' — '), rows: d.slots.map((s) => ({ key: s.slotId, label: s.label ?? s.exerciseKey, sets: s.sets, range: s.repRange, restText: s.restText ?? `${s.restSec}s`, note: s.note ?? '', tag: s.tag ?? '', unit: s.unit })) };
     })
-    : (four ? JKK4_DAYS : JKK_DAYS).map((d) => ({ name: d.name, meta: d.meta, intro: d.intro, rows: d.rows.map(([key, label, sets, range, , restText, note, tag, unit]) => ({ key: key + label, label, sets, range, restText, note, tag, unit })) }));
+    : DAYS_OF[variant].map((d) => ({ name: d.name, meta: d.meta, intro: d.intro, rows: d.rows.map(([key, label, sets, range, , restText, note, tag, unit]) => ({ key: key + label, label, sets, range, restText, note, tag, unit })) }));
   return (
     <Card title="Treino">
       {days.map((d) => (

@@ -9,7 +9,7 @@ android {
     namespace = "com.titan.transformacao"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.titan.app"  // id novo (a chave da 1ª geração foi perdida): instala ao lado do app antigo
+        applicationId "com.titan.transformacao"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 30

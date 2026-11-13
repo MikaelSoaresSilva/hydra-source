@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.titan.transformacao',
-  appName: 'Titan 3',
+  appName: 'Titan',
   webDir: 'dist',
   android: { allowMixedContent: false },
 };

@@ -94,7 +94,7 @@ npm run apk     # → android/app/build/outputs/apk/release/app-release.apk
 
 Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.jks`) e `TITAN_KEYSTORE_PASSWORD`, e rode o workflow manualmente; o APK sai como artefato.
 
-**Histórico da chave:** a chave da 1ª geração (app `com.titan.transformacao`, versões 1.0–2.3) foi perdida junto com o ambiente de build. A partir da 3.0 o app usa o id `com.titan.app` e uma chave nova, e instala ao lado do antigo; os dados migram por Perfil → Backup (exportar no antigo, restaurar no novo). O backup no APK usa Filesystem + Share, porque o download por link não funciona dentro do app.
+**Histórico da chave:** a chave da 1ª geração (versões 1.0–2.3) foi perdida junto com o ambiente de build. A partir da 3.0 o app volta ao id `com.titan.transformacao` com uma chave nova: para trocar, é preciso desinstalar uma única vez a versão antiga (o Android recusa atualizar com outra assinatura); daí em diante as atualizações instalam por cima. Os dados migram por Perfil → Backup.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 

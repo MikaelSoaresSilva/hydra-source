@@ -93,7 +93,7 @@ export function Training() {
   const home = homeBase && phase.deload ? { ...homeBase, slots: homeBase.slots.map((x) => ({ ...x, sets: Math.max(1, Math.ceil(x.sets / 2)) })) } : homeBase;
   const atHome = place === 'home' && !!home && !inProgress;
   const recomp = currentGoal(profile) === 'recomp';
-  const finisher = recomp && jkk && !next.finished ? finisherFor(variant, next.dayPos, phase.deload) : null;
+  const finisher = recomp && jkk && !next.finished ? finisherFor(variant, next.dayPos, phase.deload, next.week) : null;
   const declining = decliningExercises(logs.data.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -28)));
   const rec = recentRecovery(checkins.data, today);
   const lastTqrs = [...mine].filter((x) => x.readiness).sort((a, b) => ((a.started_at ?? '') < (b.started_at ?? '') ? -1 : 1)).map((x) => x.readiness!.tqr);
@@ -269,7 +269,7 @@ export function Training() {
             })}
           </ul>
           <p className="hint">{variant === 'jkk' ? 'No plano de 5 dias o sábado já tem treino, então a corda fica só no domingo. ' : ''}A progressão sobe a cada 2 semanas (semana {Math.min(next.week, 8)} de 8). Técnica, aquecimento e cuidados estão na tela do cronômetro.</p>
-          <details><summary>Regras do finalizador funcional</summary><ul>{FINISHER_RULES.map((t) => <li key={t}><small>{t}</small></li>)}</ul></details>
+          <details><summary>Regras do cardio depois do treino (esteira ou bike)</summary><ul>{FINISHER_RULES.map((t) => <li key={t}><small>{t}</small></li>)}</ul></details>
         </Card>
       )}
 

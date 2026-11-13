@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FINISHERS, finisherFor, ropeFor, ropeSession } from './recomp';
+import { cardioMinutes, finisherFor, postWorkoutCardio, ropeFor, ropeSession } from './recomp';
 import { JKK3_DAYS, JKK4_DAYS, JKK_DAYS, generateJkk } from './jkk';
 import { EXERCISE_BY_KEY } from './exercises';
 import { dayStatus, type MissionData } from './mission';
 import type { CheckinRow, ProgramRow } from './types';
 
-describe('finalizador funcional (modo recomposição)', () => {
+describe('cardio depois do treino (modo recomposição)', () => {
   it('no máximo 3 por semana e nunca em dia de perna', () => {
     const legs = new Set(['quads', 'hamstrings', 'glutes', 'calves']);
     for (const [p, days] of [['jkk', JKK_DAYS], ['jkk4', JKK4_DAYS]] as const) {
@@ -19,10 +19,19 @@ describe('finalizador funcional (modo recomposição)', () => {
     }
     expect(JKK3_DAYS.map((_, i) => finisherFor('jkk3', i)).filter(Boolean)).toHaveLength(3);
   });
-  it('some em semana de deload e dura 8 minutos', () => {
+  it('some em semana de deload e em dia de perna', () => {
     expect(finisherFor('jkk4', 0, true)).toBeNull();
     expect(finisherFor('jkk4', 1)).toBeNull(); // Inferior A
-    FINISHERS.forEach((f) => { expect(f.minutes).toBe(8); expect(f.moves.length).toBeGreaterThanOrEqual(3); });
+  });
+  it('é esteira inclinada ou bike, em ritmo constante, e o tempo sobe aos poucos (12 → 20 min)', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8].map(cardioMinutes)).toEqual([12, 12, 15, 15, 18, 18, 20, 20]);
+    const c = postWorkoutCardio(3);
+    expect(c.minutes).toBe(15);
+    expect(c.name).toMatch(/esteira inclinada \(ou bike\)/);
+    expect(c.moves.join(' ')).toMatch(/Esteira.*inclinação de 8–10%/);
+    expect(c.moves.join(' ')).toMatch(/Bike.*15 min/);
+    expect(c.moves.join(' ')).not.toMatch(/burpee|swing/i);
+    expect(finisherFor('jkk3', 0, false, 7)?.minutes).toBe(20);
   });
 });
 

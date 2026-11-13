@@ -10,7 +10,7 @@ export function currentGoal(p: Profile | null): Goal {
 
 /**
  * Objetivo do momento, o mesmo no Treino e na Nutrição. Trocar o objetivo muda a meta de calorias
- * (déficit leve ou superávit leve) e liga/desliga o finalizador funcional e a corda do fim de semana.
+ * (déficit leve ou superávit leve) e liga/desliga o cardio depois do treino (esteira ou bike) e a corda do fim de semana.
  */
 export function GoalSwitch() {
   const store = useStore();
@@ -27,8 +27,8 @@ export function GoalSwitch() {
         onChange={async (g) => {
           if (g === goal && profile.preferences.goal) return;
           if (!confirm(g === 'recomp'
-            ? 'Ativar "Perder gordura e ganhar massa"? A meta passa para cerca de −350 kcal/dia com proteína de 2,0 g/kg, e o treino ganha finalizador funcional e corda no fim de semana.'
-            : 'Ativar "Ganhar massa"? A meta passa para cerca de +250 kcal/dia e saem o finalizador e a corda.')) return;
+            ? 'Ativar "Perder gordura e ganhar massa"? A meta passa para cerca de −350 kcal/dia com proteína de 2,0 g/kg, e o treino ganha cardio de esteira ou bike no fim e corda no fim de semana.'
+            : 'Ativar "Ganhar massa"? A meta passa para cerca de +250 kcal/dia e saem o cardio pós-treino e a corda.')) return;
           const phase = g === 'recomp' ? 'recomp' as const : 'lean_gain' as const;
           const next = { ...profile, preferences: { ...profile.preferences, goal: g }, nutrition: { ...profile.nutrition, phase } };
           await save({ preferences: next.preferences, nutrition: next.nutrition });

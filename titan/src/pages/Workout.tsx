@@ -143,7 +143,7 @@ export function Workout() {
   const atHome = session.location === 'home';
   const pcfg = program?.config;
   const finisher = pcfg && isJkk(pcfg.protocol) && currentGoal(profile) === 'recomp' && !atHome
-    ? finisherFor(pcfg.protocol, session.sequence % pcfg.days.length, phaseFor(pcfg, session.week, program!.weeks).deload) : null;
+    ? finisherFor(pcfg.protocol, session.sequence % pcfg.days.length, phaseFor(pcfg, session.week, program!.weeks).deload, session.week) : null;
 
   function update(i: number, patch: Partial<Draft[number]>) { setDraft((d) => ({ ...d!, [i]: { ...d![i], ...patch } })); }
   function updateSet(i: number, j: number, patch: Partial<DraftSet>) {

@@ -33,6 +33,8 @@ export interface DataStore {
   pendingCount(): Promise<number>;
   flush(): Promise<void>;
   exportAll(): Promise<Record<string, unknown[]>>;
+  /** Restaura um backup exportado (mescla por id; registros passam a pertencer ao usuário atual). */
+  importAll(data: Record<string, unknown>): Promise<{ rows: number; tables: number }>;
   deleteEverything(): Promise<void>;
   subscribe(fn: (table: Table) => void): () => void;
 }
@@ -115,6 +117,16 @@ export class LocalStore implements DataStore {
     const out: Record<string, unknown[]> = {};
     for (const t of TABLES) out[t] = await this.list(t);
     return out;
+  }
+  async importAll(data: Record<string, unknown>) {
+    const groups = backupRows(data);
+    let n = 0;
+    for (const [t, rows] of groups) {
+      // O perfil do backup substitui o do aparelho; a chave dele é o usuário atual.
+      await this.upsert(t, t === 'profiles' ? rows.slice(0, 1).map((r) => ({ ...r, user_id: this.userId })) : rows);
+      n += t === 'profiles' ? 1 : rows.length;
+    }
+    return { rows: n, tables: groups.length };
   }
   async deleteEverything() {
     this.db.close();
@@ -248,6 +260,17 @@ export class CloudStore implements DataStore {
     for (const t of TABLES) out[t] = await this.list(t);
     return out;
   }
+  async importAll(data: Record<string, unknown>) {
+    const groups = backupRows(data);
+    let n = 0;
+    for (const [t, rows] of groups) {
+      const list = t === 'profiles' ? rows.slice(0, 1) : rows;
+      // sem created_at/updated_at: o servidor define; user_id é sempre o da conta atual
+      await this.upsert(t, list.map(({ created_at: _c, updated_at: _u, ...r }) => r));
+      n += list.length;
+    }
+    return { rows: n, tables: groups.length };
+  }
   async deleteEverything() {
     // 1) arquivos do Storage (não são apagados pela cascata do banco)
     const { data: files } = await this.sb.storage.from(PHOTO_BUCKET).list(this.userId, { limit: 1000 });
@@ -262,3 +285,17 @@ export class CloudStore implements DataStore {
 }
 
 export const uuid = () => crypto.randomUUID();
+
+/** Linhas válidas de um backup, na ordem das tabelas (pais antes de filhos). */
+export function backupRows(data: Record<string, unknown>): [Table, AnyRow[]][] {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Arquivo de backup inválido.');
+  const out: [Table, AnyRow[]][] = [];
+  for (const t of TABLES) {
+    const rows = (data as Record<string, unknown>)[t];
+    if (!Array.isArray(rows)) continue;
+    const ok = rows.filter((r): r is AnyRow => !!r && typeof r === 'object' && typeof (r as AnyRow)[keyOf(t)] === 'string');
+    if (ok.length) out.push([t, ok]);
+  }
+  if (!out.length) throw new Error('Este arquivo não é um backup do Titan (nenhuma tabela reconhecida).');
+  return out;
+}

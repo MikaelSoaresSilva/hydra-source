@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useApp, useProfile, useStore } from '../data/AppContext';
 import { ACTIVITY_LABEL } from '../domain/nutrition';
 import type { Profile } from '../domain/types';
-import { createTargets, downloadJSON, profileReadyForTargets } from '../services';
+import { createTargets, exportBackup, profileReadyForTargets } from '../services';
 import { Card, ErrorBox, Field, Loading, NumberInput, useToast } from '../ui/components';
 import { apiKeyStore } from '../appearanceClient';
 import { PROTOCOL_LABEL, ProtocolSwitch } from './ProtocolSwitch';
@@ -92,9 +92,31 @@ export function ProfilePage() {
         </ul>
       </Card>
 
-      <Card title="Exportar dados">
-        <p className="hint">Baixa um arquivo JSON com todos os seus registros (sem as imagens, que podem ser baixadas pela galeria).</p>
-        <button className="btn" onClick={async () => downloadJSON(await store.exportAll(), `titan-export-${new Date().toISOString().slice(0, 10)}.json`)}>Exportar JSON</button>
+      <Card title="Backup dos dados">
+        <p className="hint" style={{ marginTop: 0 }}>O backup é um arquivo com todos os seus registros (treinos, cargas, medidas, metas, rotina). As fotos não entram: elas ficam na galeria do celular. Faça um backup de vez em quando e guarde fora do aparelho (Drive, e-mail ou WhatsApp para você mesmo).</p>
+        <div className="row">
+          <button className="btn primary" onClick={async () => {
+            try {
+              const how = await exportBackup(await store.exportAll(), `titan-backup-${new Date().toISOString().slice(0, 10)}.json`);
+              toast(how === 'shared' ? 'Escolha onde salvar o backup.' : 'Backup baixado.');
+            } catch (e) { setError(`Não foi possível exportar: ${(e as Error).message}`); }
+          }}>Fazer backup</button>
+          <label className="btn">
+            Restaurar backup
+            <input type="file" accept="application/json,.json,text/plain" className="sr-only" aria-label="Arquivo de backup" onChange={async (e) => {
+              const f = e.target.files?.[0]; e.target.value = '';
+              if (!f) return;
+              setError(null);
+              try {
+                const data = JSON.parse(await f.text()) as Record<string, unknown>;
+                if (!confirm('Restaurar este backup? Os registros do arquivo são somados aos deste aparelho, e o perfil do arquivo substitui o atual.')) return;
+                const r = await store.importAll(data);
+                toast(`Backup restaurado: ${r.rows} registros.`);
+                setTimeout(() => location.reload(), 1200);
+              } catch (err) { setError(`Não foi possível restaurar: ${(err as Error).message}`); }
+            }} />
+          </label>
+        </div>
       </Card>
 
       <Card title="Excluir conta e dados">

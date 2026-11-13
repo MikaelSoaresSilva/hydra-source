@@ -96,3 +96,30 @@ describe('CloudStore com fila offline', () => {
     err.mockRestore();
   });
 });
+
+describe('backup: exportar de um aparelho e restaurar em outro', () => {
+  it('leva todos os registros para o novo usuário, mantendo ids e vínculos', async () => {
+    const a = await LocalStore.open(`bk-a-${Math.random()}`);
+    await a.upsert('profiles', { user_id: a.userId, display_name: 'Eu', age: 19, preferences: { trainingProtocol: 'jkk3' } });
+    await a.upsert('programs', { id: 'p1', name: 'Protocolo JKK — 3 dias', status: 'active', config: { protocol: 'jkk3' } });
+    await a.upsert('workout_sessions', { id: 's1', program_id: 'p1', sequence: 0, status: 'done' });
+    await a.upsert('set_logs', [{ id: 'l1', session_id: 's1', exercise_key: 'incline_db_press', load_kg: 24, reps: 8 }, { id: 'l2', session_id: 's1', exercise_key: 'incline_db_press', load_kg: 24, reps: 7 }]);
+    await a.upsert('body_metrics', { id: 'm1', date: '2026-11-13', weight_kg: 75, shoulders_cm: 118 });
+    const backup = JSON.parse(JSON.stringify(await a.exportAll()));
+
+    const b = await LocalStore.open(`bk-b-${Math.random()}`);
+    const r = await b.importAll(backup);
+    expect(r).toEqual({ rows: 6, tables: 5 });
+    expect((await b.list<{ display_name: string; user_id: string }>('profiles'))[0]).toMatchObject({ display_name: 'Eu', user_id: b.userId });
+    expect((await b.list<{ id: string }>('set_logs', { eq: { session_id: 's1' } })).map((x) => x.id).sort()).toEqual(['l1', 'l2']);
+    expect((await b.list<{ weight_kg: number }>('body_metrics'))[0].weight_kg).toBe(75);
+    // restaurar duas vezes não duplica
+    await b.importAll(backup);
+    expect(await b.list('set_logs')).toHaveLength(2);
+  });
+  it('recusa arquivo que não é backup do Titan', async () => {
+    const b = await LocalStore.open(`bk-c-${Math.random()}`);
+    await expect(b.importAll({ qualquer: [1, 2] })).rejects.toThrow(/não é um backup do Titan/);
+    await expect(b.importAll([] as never)).rejects.toThrow(/inválido/);
+  });
+});

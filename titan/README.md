@@ -94,6 +94,8 @@ npm run apk     # → android/app/build/outputs/apk/release/app-release.apk
 
 Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.jks`) e `TITAN_KEYSTORE_PASSWORD`, e rode o workflow manualmente; o APK sai como artefato.
 
+**Histórico da chave:** a chave da 1ª geração (app `com.titan.transformacao`, versões 1.0–2.3) foi perdida junto com o ambiente de build. A partir da 3.0 o app usa o id `com.titan.app` e uma chave nova, e instala ao lado do antigo; os dados migram por Perfil → Backup (exportar no antigo, restaurar no novo). O backup no APK usa Filesystem + Share, porque o download por link não funciona dentro do app.
+
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
 ## Treino: Protocolo JKK em 3, 4 ou 5 dias (alternável)
@@ -103,7 +105,7 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 Em Treino → "Seu treino" (ou Perfil → Treino) o usuário alterna entre os treinos de 3, 4 e 5 dias. Cada plano guarda o próprio ciclo: ao voltar para um deles, `activateProtocol` reativa o ciclo arquivado na mesma semana e com o histórico.
 
-**Objetivo "Perder gordura e ganhar massa"** (`src/domain/recomp.ts`, seletor em Treino e Nutrição): aplica a meta de recomposição (−350 kcal, proteína 2,0 g/kg) e acrescenta ao plano de 3/4/5 dias um finalizador funcional de 8 min (até 3 por semana, nunca em dia de perna nem em deload) e pular corda no fim de semana (sáb intervalada + dom contínua; no plano de 5 dias só domingo), com progressão de 8 semanas e cronômetro com bipe em `/cardio`. A corda entra na Missão nos dias previstos.
+**Objetivo "Perder gordura e ganhar massa"** (`src/domain/recomp.ts`, seletor em Treino e Nutrição): aplica a meta de recomposição (−350 kcal, proteína 2,0 g/kg) e acrescenta ao plano de 3/4/5 dias cardio leve depois do treino — esteira inclinada ou bike, 12 a 20 min conforme a semana (até 3 por semana, nunca em dia de perna nem em deload) e pular corda no fim de semana (sáb intervalada + dom contínua; no plano de 5 dias só domingo), com progressão de 8 semanas e cronômetro com bipe em `/cardio`. A corda entra na Missão nos dias previstos.
 
 **Treino em casa** (`src/domain/home.ts`): para cada dia dos dois planos existe uma sessão equivalente só com o peso do corpo (cadeira, mesa firme e toalha). Em Treino → "Onde vai ser a próxima sessão?" o usuário escolhe Academia ou Em casa; a sessão em casa conta no ciclo (`workout_sessions.location`, migração 6). Progressão por repetições, tempo de descida e variação, não por carga.
 

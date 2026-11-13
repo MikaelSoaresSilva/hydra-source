@@ -3,7 +3,7 @@
 // manter e construir músculo; (2) déficit leve de calorias com proteína alta; (3) gasto extra com
 // passos e cardio curto, sem roubar a recuperação do treino de força.
 // Por isso o treino de força continua o Protocolo JKK (3, 4 ou 5 dias) e o modo acrescenta:
-// um finalizador funcional curto em alguns treinos e pular corda no fim de semana.
+// cardio leve (esteira inclinada ou bike) depois de alguns treinos e pular corda no fim de semana.
 import { weekday } from './dates';
 import type { JkkProtocol } from './types';
 
@@ -19,53 +19,58 @@ export const RECOMP_TRUTH = [
   'Não corte calorias além da meta nem some cardio por conta própria: déficit grande demais faz perder músculo junto.',
 ];
 
-// ------------------------------------------------------------------ finalizador funcional
+// ------------------------------------------------------------------ cardio depois do treino
 
 export interface Finisher { name: string; format: string; minutes: number; moves: string[]; note: string }
 
-/** Circuitos curtos, intensos e funcionais, feitos DEPOIS da musculação (nunca antes). */
-export const FINISHERS: Finisher[] = [
-  {
-    name: 'Circuito funcional A — corpo todo',
-    format: '8 minutos sem parar: repita a sequência quantas vezes conseguir (AMRAP)',
-    minutes: 8,
-    moves: ['10 swings com kettlebell ou halter', '8 burpees', '10 mountain climbers por perna', '30 s de caminhada do fazendeiro (halteres pesados nas mãos)'],
-    note: 'Anote quantas voltas fez e tente meia volta a mais na semana seguinte.',
-  },
-  {
-    name: 'Circuito funcional B — 40 s forte / 20 s descanso',
-    format: '2 voltas de 4 exercícios: 40 s de esforço, 20 s para trocar (8 minutos)',
-    minutes: 8,
-    moves: ['Corda naval ou polichinelo acelerado', 'Arremesso de medicine ball no chão (ou burpee sem flexão)', 'Prancha com toque no ombro', 'Agachamento com salto (leve, aterrisse macio)'],
-    note: 'Ritmo forte mas com técnica: se a execução desmontar, diminua a velocidade.',
-  },
-  {
-    name: 'Circuito funcional C — carregar e empurrar',
-    format: 'A cada minuto, por 8 minutos (EMOM): minutos ímpares e pares alternados',
-    minutes: 8,
-    moves: ['Minutos ímpares: 40 s de caminhada do fazendeiro ou empurrar o trenó', 'Minutos pares: 12 swings + 6 burpees', 'O que sobrar do minuto é descanso'],
-    note: 'Se sobrar menos de 10 s de descanso, reduza as repetições.',
-  },
-];
+/** Minutos por semana do ciclo: sobe aos poucos (12 → 15 → 18 → 20). */
+export function cardioMinutes(week: number): number {
+  const w = Math.max(1, Math.round(week));
+  return w <= 2 ? 12 : w <= 4 ? 15 : w <= 6 ? 18 : 20;
+}
+
+/**
+ * Cardio leve e de baixo impacto, feito DEPOIS da musculação (nunca antes).
+ * Padrão: caminhada na esteira inclinada. A bike é a alternativa equivalente — e a escolha certa
+ * quando a canela ou o joelho estiverem sentindo a corda do fim de semana.
+ */
+export function postWorkoutCardio(week: number): Finisher {
+  const min = cardioMinutes(week);
+  return {
+    name: 'Cardio: esteira inclinada (ou bike)',
+    format: `${min} minutos em ritmo constante, esforço 5–6 de 10: respiração acelerada, mas ainda dá para falar frases curtas`,
+    minutes: min,
+    moves: [
+      `Esteira (padrão): caminhada a 5–6 km/h com inclinação de 8–10%, sem segurar no apoio. Comece com 2 min a 5 km/h e 4% para aquecer; os ${min} min contam a partir daí.`,
+      `Bike (alternativa): ${min} min pedalando a 80–90 rotações por minuto, com carga que deixe a respiração acelerada. Banco na altura do quadril.`,
+      'Para subir a dificuldade, aumente a inclinação (esteira) ou a carga (bike) — não corra: correr depois do treino rouba recuperação das pernas.',
+      'Termine com 1–2 min bem leves até a respiração baixar.',
+    ],
+    note: 'Pode alternar: esteira num dia, bike no outro. Os dois valem igual; escolha o que você consegue manter.',
+  };
+}
+
+/** Uma sessão de referência (semana 1), para listagens e testes. */
+export const FINISHERS: Finisher[] = [postWorkoutCardio(1)];
 
 export const FINISHER_RULES = [
-  'Sempre depois da musculação. O treino de força é a prioridade: não poupe energia para o circuito.',
-  'Esforço 8 de 10: ofegante, mas com técnica. Pare se a execução desmontar.',
-  'Pule o finalizador em semana de deload, se dormiu mal ou se a recuperação estiver baixa.',
-  'Não coloque finalizador nos dias de perna: eles já são os mais pesados da semana.',
+  'Sempre depois da musculação. O treino de força é a prioridade: não poupe energia para o cardio.',
+  'Ritmo constante e confortável (5–6 de 10). Não é tiro nem corrida: o objetivo é gastar calorias sem atrapalhar a recuperação.',
+  'O tempo sobe aos poucos: 12 min nas semanas 1–2, 15 nas 3–4, 18 nas 5–6 e 20 nas 7–8.',
+  'Não entra nos dias de perna (já são os mais pesados) nem em semana de deload. Dormiu mal? Faça metade ou pule.',
+  'Canela, tendão ou joelho doloridos por causa da corda: vá de bike nesse dia.',
 ];
 
-/** Em quais dias do plano entra o finalizador (posição do dia no ciclo). Máximo de 3 por semana. */
+/** Em quais dias do plano entra o cardio pós-treino (posição do dia no ciclo). Máximo de 3 por semana. */
 const FINISHER_DAYS: Record<JkkProtocol, number[]> = {
-  jkk3: [0, 1, 2], // corpo inteiro: os três dias, circuito curto
+  jkk3: [0, 1, 2], // corpo inteiro: os três dias
   jkk4: [0, 2], // Superior A e Superior B
   jkk: [0, 2, 4], // peito/tríceps, costas/bíceps, braços
 };
 
-export function finisherFor(protocol: JkkProtocol, dayPos: number, deload = false): Finisher | null {
+export function finisherFor(protocol: JkkProtocol, dayPos: number, deload = false, week = 1): Finisher | null {
   if (deload) return null;
-  const i = FINISHER_DAYS[protocol].indexOf(dayPos);
-  return i < 0 ? null : FINISHERS[i % FINISHERS.length];
+  return FINISHER_DAYS[protocol].includes(dayPos) ? postWorkoutCardio(week) : null;
 }
 
 // ------------------------------------------------------------------ pular corda (fim de semana)
@@ -143,7 +148,7 @@ export const RECOMP_DIET = [
 
 export const RECOMP_WEEK = [
   'Musculação do plano (3, 4 ou 5 dias), com as mesmas cargas e a mesma progressão.',
-  'Finalizador funcional de 8 min em 2–3 treinos por semana (nunca em dia de perna).',
+  'Cardio leve depois de 2–3 treinos por semana: esteira inclinada ou bike, de 12 a 20 min (nunca em dia de perna).',
   'Pular corda no fim de semana, seguindo a progressão de 8 semanas.',
   '8 a 10 mil passos por dia.',
   'Sono de 7 a 9 horas: dormir pouco aumenta a fome e reduz a perda de gordura.',
@@ -152,6 +157,6 @@ export const RECOMP_WEEK = [
 export const RECOMP_ADJUST = [
   'Peso caindo mais de 0,6 kg por semana por 2 semanas: o app sugere +100 kcal (para proteger o músculo).',
   'Peso parado por 2 semanas com a cintura igual: o app sugere −100 kcal.',
-  'Cargas caindo em vários exercícios por 2 treinos seguidos: tire o finalizador da semana e durma mais antes de mexer nas calorias.',
+  'Cargas caindo em vários exercícios por 2 treinos seguidos: tire o cardio pós-treino da semana e durma mais antes de mexer nas calorias.',
   'Depois de 8–12 semanas, ou quando a cintura estiver onde você quer: mude o objetivo para "Ganhar massa".',
 ];

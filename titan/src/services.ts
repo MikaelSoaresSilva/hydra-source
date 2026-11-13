@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { addDays, todayISO } from './domain/dates';
 import { getExercise, resolveExercise } from './domain/exercises';
 import { calculateTargets } from './domain/nutrition';
@@ -165,6 +166,19 @@ export function downloadJSON(data: unknown, filename: string) {
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/**
+ * Exporta o backup. No APK, o download por link não funciona dentro do app: o arquivo é gravado
+ * e aberto na folha de compartilhamento do Android (salvar em Arquivos, Drive, WhatsApp…).
+ */
+export async function exportBackup(data: unknown, filename: string): Promise<'shared' | 'downloaded'> {
+  if (!Capacitor.isNativePlatform()) { downloadJSON(data, filename); return 'downloaded'; }
+  const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+  const { Share } = await import('@capacitor/share');
+  const res = await Filesystem.writeFile({ path: filename, data: JSON.stringify(data), directory: Directory.Cache, encoding: Encoding.UTF8 });
+  await Share.share({ title: 'Backup do Titan', text: 'Backup dos seus dados do Titan', files: [res.uri], dialogTitle: 'Salvar o backup em…' });
+  return 'shared';
 }
 
 /** Marca a semana como deload (decisão baseada em fadiga/desempenho, não no calendário). */

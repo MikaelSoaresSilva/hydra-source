@@ -374,3 +374,31 @@ test('treino em casa (peso do corpo), suplementos e fase de recomposição', asy
   await page.getByRole('button', { name: 'Começar hoje' }).click();
   await expect(page.getByLabel('Creatina do dia (3–5 g)')).toBeVisible();
 });
+
+test('backup: exportar e restaurar os dados', async ({ page }) => {
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await page.getByLabel('Peso de hoje (kg)').fill('75,2');
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(page.getByText('Registrado: 75,2 kg — corrigir')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Perfil e configurações' }).click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Fazer backup' }).click()]);
+  const path = await download.path();
+  const fs = await import('node:fs');
+  const backup = JSON.parse(fs.readFileSync(path, 'utf8'));
+  expect(backup.body_metrics[0].weight_kg).toBe(75.2);
+  expect(backup.programs[0].name).toBe('Protocolo JKK — 4 dias');
+
+  await page.getByLabel('Arquivo de backup').setInputFiles({ name: 'titan-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await expect(page.getByText(/Backup restaurado: \d+ registros/)).toBeVisible();
+});

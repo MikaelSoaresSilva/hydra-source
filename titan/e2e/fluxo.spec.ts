@@ -346,9 +346,28 @@ test('treino em casa (peso do corpo), suplementos e fase de recomposição', asy
   // Fase de recomposição muda a meta
   await page.getByRole('tab', { name: 'Metas' }).click();
   await expect(page.locator('.stat-v').first()).toHaveText('3000');
-  await page.getByRole('radio', { name: /Recomposição/ }).click();
+  await page.getByRole('radio', { name: /Perder gordura e ganhar massa/ }).click();
   await expect(page.locator('.stat-v').first()).toHaveText('2500');
-  await expect(page.getByRole('radio', { name: /Recomposição/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('radio', { name: /Perder gordura e ganhar massa/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('Como é a dieta para perder gordura e ganhar massa')).toBeVisible();
+
+  // No Treino: mesmo objetivo, com finalizador funcional e corda no fim de semana
+  await page.getByRole('link', { name: 'Treino' }).first().click();
+  await expect(page.getByRole('radio', { name: /Perder gordura e ganhar massa/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('heading', { name: 'Cardio do fim de semana: pular corda' })).toBeVisible();
+  await expect(page.getByText(/Sábado · Corda intervalada \(forte\)/)).toBeVisible();
+  await expect(page.getByText(/8 séries de 30 s pulando, 60 s de descanso/)).toBeVisible();
+  await page.screenshot({ path: `test-results/recomp-${info.project.name}.png`, fullPage: true });
+  // Cronômetro da corda
+  await page.getByRole('link', { name: 'Abrir cronômetro' }).click();
+  await expect(page.getByRole('heading', { name: 'Pular corda' })).toBeVisible();
+  await page.getByRole('button', { name: /Iniciar cronômetro \(8 × 30 s\)/ }).click();
+  await expect(page.getByRole('timer')).toContainText('PULE');
+  await expect(page.getByRole('timer')).toContainText('Série 1/8');
+  await page.getByRole('button', { name: 'Parar' }).click();
+  await page.getByRole('button', { name: /marcar como feito/ }).click();
+  await expect(page.getByText(/feito ✓/)).toBeVisible();
+  await page.screenshot({ path: `test-results/corda-${info.project.name}.png`, fullPage: true });
 
   // Creatina entrou na Missão
   await page.getByRole('link', { name: 'Missão' }).click();

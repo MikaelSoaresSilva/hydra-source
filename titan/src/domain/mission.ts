@@ -2,6 +2,8 @@
 // Princípio: poucos hábitos de alto impacto, feitos todo dia, medidos pelo próprio app.
 import { addDays } from './dates';
 import { isTrainingDay } from './schedule';
+import { ropeFor } from './recomp';
+import { isJkk } from './types';
 import type { CareLogRow, CheckinRow, FoodLogRow, ProgramRow, SessionRow, TargetRow } from './types';
 
 export const MISSION_WEEKS = 12;
@@ -17,6 +19,8 @@ export interface MissionData {
   hasSkinRoutine: boolean;
   /** Suplementos que o usuário decidiu usar (Nutrição → Suplementos). */
   supplementPlan?: string[];
+  /** Objetivo atual (modo recomposição acrescenta o cardio de corda). */
+  goal?: 'recomp' | 'gain';
 }
 
 export type HabitArea = 'corpo' | 'rosto' | 'base';
@@ -93,6 +97,16 @@ export const HABITS: Habit[] = [
   { id: 'teeth', area: 'rosto', label: 'Dentes: escovar 2× + fio dental', why: 'Sorriso e hálito pesam muito na aparência e custam quase nada.' },
   { id: 'posture', area: 'rosto', label: 'Treino facial de 5 min (postura, pescoço e drenagem)', why: 'Cabeça projetada à frente deixa queixo e pescoço com aspecto pior nas fotos. Sem promessa de mudar osso: é postura.' },
   { id: 'hands_off', area: 'rosto', label: 'Não espremi espinhas nem mexi no rosto', why: 'Espremer inflama, mancha e deixa cicatriz — a marca dura bem mais que a espinha.' },
+  {
+    id: 'rope', area: 'corpo', label: 'Pular corda (cardio do fim de semana)', to: '/cardio',
+    why: 'Gasto extra sem roubar a recuperação da musculação. Só conta nos dias de corda do seu plano.',
+    enabled: (d) => d.goal === 'recomp',
+    auto: (d, date) => {
+      const p = d.program?.config.protocol;
+      if (!isJkk(p) || !ropeFor(p, date)) return null;
+      return !!checkinOf(d, date)?.habits?.rope;
+    },
+  },
   { id: 'creatine', area: 'corpo', label: 'Creatina do dia (3–5 g)', why: 'Só funciona tomando todo dia, inclusive nos dias sem treino.', enabled: (d) => !!d.supplementPlan?.includes('creatine') },
   { id: 'prep', area: 'base', label: 'Comida do dia planejada/preparada (marmita)', why: 'Cozinhar em casa é o jeito mais barato de bater proteína e calorias — e o que mais garante adesão.' },
 ];

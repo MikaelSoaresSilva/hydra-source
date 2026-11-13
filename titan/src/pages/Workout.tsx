@@ -5,8 +5,11 @@ import { uuid } from '../data/store';
 import { alternativesFor, bodyweightAlternativesFor, demoSearchUrl, getExercise } from '../domain/exercises';
 import { adjustNextSet, groupHistory, isPersonalRecord, suggestProgression, type SetAdjustAction } from '../domain/progression';
 import { sessionLoad, sessionMinutes, tonnage } from '../domain/science';
-import { MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
+import { isJkk, MUSCLE_LABEL, type PlannedExercise, type ProgramRow, type SessionRow, type SetLogRow } from '../domain/types';
 import { Card, ErrorBox, Field, Loading, NumberInput, Progress, Scale, fmt, useToast } from '../ui/components';
+import { finisherFor } from '../domain/recomp';
+import { phaseFor } from '../domain/program';
+import { currentGoal } from './GoalSwitch';
 import { cancelRestAlert, ensureRestAlerts, keepScreenOn, playRestBeep, scheduleRestAlert, unlockAudio } from '../ui/sound';
 
 interface DraftSet { id?: string; load: number | null; reps: number | null; rir: number | null; done: boolean }
@@ -138,6 +141,9 @@ export function Workout() {
   const program = programs.data.find((p) => p.id === session.program_id);
   const locked = !!program?.config.locked;
   const atHome = session.location === 'home';
+  const pcfg = program?.config;
+  const finisher = pcfg && isJkk(pcfg.protocol) && currentGoal(profile) === 'recomp' && !atHome
+    ? finisherFor(pcfg.protocol, session.sequence % pcfg.days.length, phaseFor(pcfg, session.week, program!.weeks).deload) : null;
 
   function update(i: number, patch: Partial<Draft[number]>) { setDraft((d) => ({ ...d!, [i]: { ...d![i], ...patch } })); }
   function updateSet(i: number, j: number, patch: Partial<DraftSet>) {
@@ -319,6 +325,14 @@ export function Workout() {
           </Card>
         );
       })}
+
+      {finisher && !readOnly && (
+        <Card title={`Para fechar: ${finisher.name}`} className="accent" action={<span className="tag">{finisher.minutes} min</span>}>
+          <p style={{ marginTop: 0 }}><small>{finisher.format}</small></p>
+          <ul>{finisher.moves.map((m) => <li key={m}><small>{m}</small></li>)}</ul>
+          <p className="hint">{finisher.note} Só depois de terminar a musculação. Dormiu mal ou está sem energia? Pule hoje.</p>
+        </Card>
+      )}
 
       {nextChanges.length > 0 && (
         <Card title="O que muda no próximo treino">

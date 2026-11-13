@@ -17,6 +17,8 @@ import { buildSessionPlan, recoveryScore, reviewAfterMeasurement } from '../serv
 import { Card, Field, Loading, NumberInput, Progress, Ring, fmt, useToast } from '../ui/components';
 import { CheckinForm } from './Evolution';
 import { usePlan } from './Nutrition';
+import { currentGoal } from './GoalSwitch';
+import { ropeFor } from '../domain/recomp';
 import { useMissionData } from './Mission';
 import { DAY_PASS, dayStatus, streak } from '../domain/mission';
 
@@ -132,6 +134,8 @@ export function Today() {
     ...(plan ? [{ label: `Refeições (${plan.meals.length - mealsLeft.length}/${plan.meals.length})`, done: mealsLeft.length === 0, to: '/nutricao' }] : []),
     ...skinSlots.map((s) => ({ label: `Pele — rotina da ${s === 'am' ? 'manhã' : 'noite'}`, done: skinDone(s), to: '/cuidados' })),
     ...(wash ? [{ label: 'Lavar e finalizar o cabelo', done: hairDone, to: '/cuidados' }] : []),
+    ...(currentGoal(profile) === 'recomp' && program && isJkk(program.config.protocol) && ropeFor(program.config.protocol, today)
+      ? [{ label: 'Pular corda (cardio do fim de semana)', done: !!checkins.data.find((c) => c.date === today)?.habits?.rope, to: '/cardio' }] : []),
   ];
 
   async function goTrain() {

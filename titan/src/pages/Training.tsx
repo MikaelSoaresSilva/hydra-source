@@ -11,6 +11,8 @@ import { isJkk, MUSCLE_LABEL, type JkkProtocol, type CheckinRow, type MetricRow,
 import { activateProtocol, applyDeload, createProgram, overridesMap, recoveryScore, startSession } from '../services';
 import { RevisionHistoryCard } from './RevisionCard';
 import { PROTOCOL_LABEL, ProtocolSwitch } from './ProtocolSwitch';
+import { GoalSwitch, currentGoal } from './GoalSwitch';
+import { FINISHER_RULES, RECOMP_TRUTH, RECOMP_WEEK, finisherFor, ropeSession } from '../domain/recomp';
 import { HOME_HONEST, HOME_RULES, homeSession } from '../domain/home';
 import { JkkWhy, JkkFlanks, JkkHeader, JkkHow, JkkPhotos, JkkSources, JkkWorkouts } from './JkkCards';
 import { anthropometry, deloadCriteria, OLYMPIA_RULES, OLYMPIA_VOLUME } from '../domain/olympia';
@@ -90,6 +92,8 @@ export function Training() {
   const homeBase = next.finished ? null : homeSession(program.config, next.dayPos);
   const home = homeBase && phase.deload ? { ...homeBase, slots: homeBase.slots.map((x) => ({ ...x, sets: Math.max(1, Math.ceil(x.sets / 2)) })) } : homeBase;
   const atHome = place === 'home' && !!home && !inProgress;
+  const recomp = currentGoal(profile) === 'recomp';
+  const finisher = recomp && jkk && !next.finished ? finisherFor(variant, next.dayPos, phase.deload) : null;
   const declining = decliningExercises(logs.data.filter((l) => l.logged_at.slice(0, 10) >= addDays(today, -28)));
   const rec = recentRecovery(checkins.data, today);
   const lastTqrs = [...mine].filter((x) => x.readiness).sort((a, b) => ((a.started_at ?? '') < (b.started_at ?? '') ? -1 : 1)).map((x) => x.readiness!.tqr);
@@ -149,6 +153,18 @@ export function Training() {
           <p className="muted" style={{ margin: 0 }}>{program.name} · início {formatBR(program.start_date)} · fim previsto {info.end ? formatBR(info.end) : '—'}</p>
         </div>
       </div>
+
+      {jkk && (
+        <Card title="Objetivo">
+          <GoalSwitch />
+          {recomp && (
+            <>
+              <ul>{RECOMP_TRUTH.map((t) => <li key={t}><small>{t}</small></li>)}</ul>
+              <details><summary>Como fica a sua semana</summary><ul>{RECOMP_WEEK.map((t) => <li key={t}><small>{t}</small></li>)}</ul></details>
+            </>
+          )}
+        </Card>
+      )}
 
       {jkk && (
         <Card title="Seu treino">
@@ -213,6 +229,14 @@ export function Training() {
               );
             })}
           </ul>
+          {finisher && !atHome && (
+            <div className="adjust up" style={{ marginTop: 8 }}>
+              <strong>Depois da musculação: {finisher.name}</strong> <span className="tag">{finisher.minutes} min</span>
+              <br /><small>{finisher.format}</small>
+              <ul style={{ margin: '6px 0' }}>{finisher.moves.map((m) => <li key={m}><small>{m}</small></li>)}</ul>
+              <small className="muted">{finisher.note}</small>
+            </div>
+          )}
           <ErrorBox error={error} />
           <div className="stack" style={{ marginTop: 10 }}>
             {askTqr && !inProgress ? (
@@ -233,6 +257,19 @@ export function Training() {
             )}
             {!inProgress && !askTqr && <button className="btn ghost sm" onClick={() => void skip()}>Não vou treinar esta sessão</button>}
           </div>
+        </Card>
+      )}
+
+      {jkk && recomp && (
+        <Card title="Cardio do fim de semana: pular corda" action={<Link className="btn sm" to="/cardio">Abrir cronômetro</Link>}>
+          <ul className="list">
+            {(variant === 'jkk' ? [['Domingo', 'interval']] as const : [['Sábado', 'interval'], ['Domingo', 'steady']] as const).map(([dia, kind]) => {
+              const r = ropeSession(kind, next.week);
+              return <li key={dia}><strong>{dia} · {r.title}</strong><br /><small>{r.rounds} séries de {r.workSec >= 60 ? `${r.workSec / 60} min` : `${r.workSec} s`} pulando, {r.restSec} s de descanso · ~{r.mainMinutes + 7} min com aquecimento · esforço {r.effort}</small></li>;
+            })}
+          </ul>
+          <p className="hint">{variant === 'jkk' ? 'No plano de 5 dias o sábado já tem treino, então a corda fica só no domingo. ' : ''}A progressão sobe a cada 2 semanas (semana {Math.min(next.week, 8)} de 8). Técnica, aquecimento e cuidados estão na tela do cronômetro.</p>
+          <details><summary>Regras do finalizador funcional</summary><ul>{FINISHER_RULES.map((t) => <li key={t}><small>{t}</small></li>)}</ul></details>
         </Card>
       )}
 

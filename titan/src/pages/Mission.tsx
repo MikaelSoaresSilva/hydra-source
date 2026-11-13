@@ -32,7 +32,8 @@ export function useMissionData(): { data: MissionData; loading: boolean } {
     checkins: checkins.data,
     hasSkinRoutine: routine.data.some((r) => r.area === 'skin' && r.enabled),
     supplementPlan: profile?.nutrition.supplementPlan,
-  }), [programs.data, sessions.data, food.data, targets.data, care.data, checkins.data, routine.data, profile?.nutrition.supplementPlan]);
+    goal: profile?.preferences.goal,
+  }), [programs.data, sessions.data, food.data, targets.data, care.data, checkins.data, routine.data, profile?.nutrition.supplementPlan, profile?.preferences.goal]);
   return { data, loading: programs.loading || sessions.loading || checkins.loading };
 }
 

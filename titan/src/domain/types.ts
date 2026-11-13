@@ -94,6 +94,8 @@ export interface Preferences {
   aiAppearance?: boolean;
   /** Data de início da Missão Titan (12 semanas). */
   missionStart?: string;
+  /** Objetivo atual: recomposição (perder gordura e ganhar massa) ou ganho de massa. */
+  goal?: 'recomp' | 'gain';
   /** Treino ativo escolhido (o JKK de 5 dias fica guardado para voltar quando pedir). */
   trainingProtocol?: JkkProtocol;
 }

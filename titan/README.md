@@ -103,6 +103,8 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 Em Treino → "Seu treino" (ou Perfil → Treino) o usuário alterna entre os treinos de 3, 4 e 5 dias. Cada plano guarda o próprio ciclo: ao voltar para um deles, `activateProtocol` reativa o ciclo arquivado na mesma semana e com o histórico.
 
+**Objetivo "Perder gordura e ganhar massa"** (`src/domain/recomp.ts`, seletor em Treino e Nutrição): aplica a meta de recomposição (−350 kcal, proteína 2,0 g/kg) e acrescenta ao plano de 3/4/5 dias um finalizador funcional de 8 min (até 3 por semana, nunca em dia de perna nem em deload) e pular corda no fim de semana (sáb intervalada + dom contínua; no plano de 5 dias só domingo), com progressão de 8 semanas e cronômetro com bipe em `/cardio`. A corda entra na Missão nos dias previstos.
+
 **Treino em casa** (`src/domain/home.ts`): para cada dia dos dois planos existe uma sessão equivalente só com o peso do corpo (cadeira, mesa firme e toalha). Em Treino → "Onde vai ser a próxima sessão?" o usuário escolhe Academia ou Em casa; a sessão em casa conta no ciclo (`workout_sessions.location`, migração 6). Progressão por repetições, tempo de descida e variação, não por carga.
 
 **Suplementos** (`src/domain/supplements.ts`, Nutrição → Suplementos): níveis de evidência A/B/C com efeito real, dose pelo peso, cuidados e fonte; "Meu protocolo" (creatina/proteína) entra na Missão. **Fase da dieta** (Nutrição → Metas): recomposição (−350 kcal, proteína 2,0 g/kg) ou ganho limpo (+250 kcal), com o ajuste pela tendência de peso funcionando também para alvo de perda.

@@ -16,6 +16,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { Library } from './pages/Library';
 import { Appearance } from './pages/Appearance';
 import { Mission } from './pages/Mission';
+import { Cardio } from './pages/Cardio';
 
 function Shell() {
   const { profile, loading } = useProfile();
@@ -73,6 +74,7 @@ function Shell() {
           <Route path="/biblioteca" element={<Library />} />
           <Route path="/aparencia" element={<Appearance />} />
           <Route path="/missao" element={<Mission />} />
+          <Route path="/cardio" element={<Cardio />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

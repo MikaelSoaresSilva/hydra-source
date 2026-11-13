@@ -7,10 +7,12 @@ import { estimateCost, generateDayPlan, roundMacros, shoppingList, type DayPlan 
 import { adjustCalories, movingAverage, weeklyAverages } from '../domain/trend';
 import { foodAdherence } from '../domain/recommendations';
 import type { FoodLogRow, FoodPriceRow, MetricRow, TargetRow, UserFoodRow } from '../domain/types';
-import { applyNutritionPhase, createTargets, profileReadyForTargets } from '../services';
+import { createTargets, profileReadyForTargets } from '../services';
 import { TrendChart } from '../ui/charts';
-import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Progress, Segmented, Tabs, fmt, useToast } from '../ui/components';
+import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Progress, Tabs, fmt, useToast } from '../ui/components';
 import { mealsBelowProtein, proteinPerMealTarget } from '../domain/science';
+import { GoalSwitch, currentGoal } from './GoalSwitch';
+import { RECOMP_ADJUST, RECOMP_DIET } from '../domain/recomp';
 import { SUGGESTED_STACK, SUPPLEMENTS, SUPPLEMENT_TRUTH, TIER_LABEL, type Tier } from '../domain/supplements';
 
 type Tab = 'hoje' | 'plano' | 'compras' | 'metas' | 'suplementos';
@@ -46,6 +48,7 @@ export function Nutrition() {
   const store = useStore();
   const { profile, save } = useProfile();
   const [tab, setTab] = useState<Tab>('hoje');
+  const goal = currentGoal(profile);
   const targets = useRows<TargetRow>('nutrition_targets', { order: { col: 'effective_from', asc: false } });
   const today = todayISO();
   const logs = useRows<FoodLogRow>('food_logs', { gte: { date: addDays(today, -21) } });
@@ -93,6 +96,19 @@ export function Nutrition() {
     <div className="stack">
       {node}
       <h1>Nutrição</h1>
+      <Card title="Objetivo">
+        <GoalSwitch />
+        {goal === 'recomp' ? (
+          <details open={!target || (target.inputs as { phase?: string }).phase !== 'recomp'}>
+            <summary>Como é a dieta para perder gordura e ganhar massa</summary>
+            <ul className="list">{RECOMP_DIET.map((d) => <li key={d.title}><small><strong>{d.title}:</strong> {d.text}</small></li>)}</ul>
+            <p><strong>Quando o app ajusta</strong></p>
+            <ul>{RECOMP_ADJUST.map((t) => <li key={t}><small>{t}</small></li>)}</ul>
+          </details>
+        ) : <p className="hint" style={{ margin: 0 }}>Ganho limpo: cerca de +250 kcal por dia, para crescer com a cintura sob controle. Para tirar gordura ao mesmo tempo, escolha "Perder gordura e ganhar massa".</p>}
+        {target && goal === 'recomp' && (target.inputs as { phase?: string }).phase !== 'recomp' && <div className="banner">Sua meta de calorias ainda é a anterior. Toque de novo em "Perder gordura e ganhar massa" e confirme para aplicar a meta de recomposição.</div>}
+      </Card>
+
       <Tabs value={tab} onChange={setTab} tabs={[{ value: 'hoje', label: 'Hoje' }, { value: 'plano', label: 'Plano' }, { value: 'compras', label: 'Compras' }, { value: 'metas', label: 'Metas' }, { value: 'suplementos', label: 'Suplementos' }]} />
       <ErrorBox error={error} />
 
@@ -258,20 +274,6 @@ export function Nutrition() {
 
       {tab === 'metas' && target && (
         <>
-          <Card title="Fase da dieta">
-            <Segmented<'recomp' | 'lean_gain'> label="Fase da dieta" value={(target.inputs as { phase?: 'recomp' | 'lean_gain' }).phase ?? 'lean_gain'}
-              onChange={async (ph) => {
-                if (missing.length > 0) { toast(`Complete o perfil: ${missing.join(', ')}.`); return; }
-                if (!confirm(ph === 'recomp'
-                  ? 'Ativar a recomposição (cerca de −350 kcal/dia, proteína 2,0 g/kg)? Indicada para tirar gordura do flanco e do rosto mantendo o músculo.'
-                  : 'Ativar o ganho limpo (cerca de +250 kcal/dia)? Indicado depois que a cintura estiver onde você quer.')) return;
-                await save({ nutrition: { ...profile!.nutrition, phase: ph } });
-                const t = await applyNutritionPhase(store, profile!, ph);
-                toast(`Nova meta: ${t.kcal} kcal e ${t.protein_g} g de proteína.`);
-              }}
-              options={[{ value: 'recomp', label: 'Recomposição', sub: 'perder gordura · −350 kcal' }, { value: 'lean_gain', label: 'Ganho limpo', sub: 'crescer · +250 kcal' }]} />
-            <p className="hint">Do Protocolo JKK: fase 1, recomposição por 8–12 semanas (−300 a −400 kcal/dia) para tirar o flanco mantendo o músculo; depois, fase 2, ganho limpo (+200 a +300 kcal/dia). É também o que afina o rosto: gordura não sai de um lugar só.{(target.inputs as { phase?: string }).phase ? '' : ' Sua meta atual ainda é a de superávit pequeno calculada antes; toque numa fase para aplicar.'}</p>
-          </Card>
           <Card title="Meta atual" action={<span className="tag">desde {formatBR(target.effective_from)}</span>}>
             <div className="stats">
               <div className="stat"><span className="stat-l">Calorias</span><strong className="stat-v">{target.kcal}</strong></div>

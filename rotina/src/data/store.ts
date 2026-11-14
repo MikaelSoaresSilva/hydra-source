@@ -2,7 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { openDB, type IDBPDatabase } from 'idb';
 import { defaultState } from '../domain/defaults';
-import { migrateToV2 } from '../domain/migrate';
+import { migrateAll } from '../domain/migrate';
 import type { State } from '../domain/types';
 
 const DB = 'titan-rotina';
@@ -25,7 +25,7 @@ export function migrate(raw: Partial<State>): State {
   s.categories = raw.categories?.length ? raw.categories : base.categories;
   s.activities = raw.activities ?? base.activities;
   s.version = raw.version ?? 1;
-  return migrateToV2(s);
+  return migrateAll(s);
 }
 
 export async function loadState(): Promise<State> {

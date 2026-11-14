@@ -14,6 +14,8 @@ export interface PlanItem {
   todayOnly: boolean;
   /** Acontece dentro desta atividade (não ocupa horário próprio). */
   parentId?: string;
+  /** Duração original quando foi encurtada para caber. */
+  shortenedFrom?: number;
 }
 
 export interface DayPlan {
@@ -27,6 +29,8 @@ export interface DayPlan {
   unplaced: { activity: Activity; reason: string }[];
   skipped: Activity[];
   conflicts: string[];
+  /** Opcionais que não couberam hoje (sem aviso). */
+  optionalOut: Activity[];
 }
 
 /** Normaliza bed para ficar depois de wake (00:30 → 24:30). */
@@ -133,19 +137,47 @@ export function buildDay(state: State, date: string): DayPlan {
   }
 
   // 3) Flexíveis: essenciais primeiro, depois importantes, depois flexíveis; dentro de cada, pelo horário.
-  const flex = normal.filter((a) => !isFixed(a)).sort((a, b) => a.priority - b.priority || pref(a) - pref(b));
-  for (const a of flex) {
-    const d = dur(a);
-    const p = Math.max(wake, Math.min(pref(a), bed - d));
+  const nearest = (p: number, d: number): number | null => {
     let best: number | null = null;
     for (const [s, e] of freeSlots(busy, wake, bed)) {
       if (e - s < d) continue;
       const cand = Math.max(s, Math.min(p, e - d));
       if (best === null || Math.abs(cand - p) < Math.abs(best - p) || (Math.abs(cand - p) === Math.abs(best - p) && cand < best)) best = cand;
     }
-    if (best === null) { unplaced.push({ activity: a, reason: 'não há espaço livre suficiente entre acordar e dormir' }); continue; }
-    items.push({ activity: a, start: best, end: best + d, preferred: pref(a), fixed: false, todayOnly: todayOnly(a) });
-    busy.push([best, best + d]);
+    return best;
+  };
+  /** Maior espaço livre ≥ mínimo: devolve início e duração (encurtada, múltiplo de 5). */
+  const largest = (p: number, d: number, min: number): { start: number; d: number } | null => {
+    let best: { start: number; d: number } | null = null;
+    for (const [s, e] of freeSlots(busy, wake, bed)) {
+      const dd = Math.min(d, Math.floor((e - s) / 5) * 5);
+      if (dd < min) continue;
+      const start = Math.max(s, Math.min(p, e - dd));
+      if (!best || dd > best.d || (dd === best.d && Math.abs(start - p) < Math.abs(best.start - p))) best = { start, d: dd };
+    }
+    return best;
+  };
+  const place = (a: Activity): boolean => {
+    const d = dur(a);
+    const p = Math.max(wake, Math.min(pref(a), bed - d));
+    const at = nearest(p, d);
+    if (at !== null) { items.push({ activity: a, start: at, end: at + d, preferred: pref(a), fixed: false, todayOnly: todayOnly(a) }); busy.push([at, at + d]); return true; }
+    const min = a.minDuration && a.minDuration < d ? a.minDuration : null;
+    const sh = min ? largest(p, d, min) : null;
+    if (!sh) return false;
+    items.push({ activity: a, start: sh.start, end: sh.start + sh.d, preferred: pref(a), fixed: false, todayOnly: todayOnly(a), shortenedFrom: d });
+    busy.push([sh.start, sh.start + sh.d]);
+    return true;
+  };
+  // Opcional fica logo depois da sua prioridade (ex.: estudos opcionais depois das refeições/treino,
+  // mas antes do lazer). Se nem a duração mínima couber, fica de fora sem aviso.
+  const rank = (a: Activity) => a.priority + (a.optional ? 0.5 : 0);
+  const optionalOut: Activity[] = [];
+  const flex = normal.filter((a) => !isFixed(a)).sort((a, b) => rank(a) - rank(b) || pref(a) - pref(b));
+  for (const a of flex) {
+    if (place(a)) continue;
+    if (a.optional) optionalOut.push(a);
+    else unplaced.push({ activity: a, reason: 'não há espaço livre suficiente entre acordar e dormir' });
   }
 
   // 4) Dentro da atividade-mãe.
@@ -161,7 +193,7 @@ export function buildDay(state: State, date: string): DayPlan {
   }
 
   items.sort((a, b) => a.start - b.start || (a.activity.kind === 'bed' ? 1 : 0) - (b.activity.kind === 'bed' ? 1 : 0));
-  return { date, wake, bed, sleepMinutes: sleepMinutes(bed, nextWin.wake), items, unplaced, skipped, conflicts };
+  return { date, wake, bed, sleepMinutes: sleepMinutes(bed, nextWin.wake), items, unplaced, skipped, conflicts, optionalOut };
 }
 
 function nextDate(iso: string): string {

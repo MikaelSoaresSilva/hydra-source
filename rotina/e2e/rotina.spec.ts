@@ -83,8 +83,8 @@ test('rotina: adicionar atividade personalizada, pausar e mudar o sono', async (
   await page.getByLabel('Horário de início').fill('14:00');
   await expect(page.getByLabel(/Horário fixo: começa e termina/)).toBeChecked(); // definir o início já fixa o horário
   await expect(page.getByLabel('Horário de término')).toHaveValue('14:45');
-  await page.getByRole('button', { name: 'Fim de semana' }).click();
-  await page.getByRole('button', { name: 'Seg–Sex' }).click();
+  await page.getByRole('button', { name: 'Fim de semana', exact: true }).click();
+  await page.getByRole('button', { name: 'Seg–Sex', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByText(/Inglês/).first()).toBeVisible();
   await page.getByRole('button', { name: 'Pausar Leitura' }).click();
@@ -189,7 +189,7 @@ test('trabalho com almoço junto (11:30–12:50), juntar e unir atividades', asy
   await page.getByLabel('Categoria').selectOption('work');
   await page.getByLabel('Horário de início').fill('08:00');
   await page.getByLabel('Horário de término').fill('17:00');
-  await page.getByRole('button', { name: 'Seg–Sex' }).click();
+  await page.getByRole('button', { name: 'Seg–Sex', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByTestId('work-lunch-status')).toContainText('Almoço junto com Trabalho');
   await expect(page.getByTestId('work-lunch-status')).toContainText('11:30–12:50');
@@ -236,4 +236,28 @@ test('trabalho com almoço junto (11:30–12:50), juntar e unir atividades', asy
   const reading = page.getByTestId('tl-item').filter({ hasText: 'Leitura' });
   await expect(reading).toContainText('20:10');
   await expect(reading).toContainText('junto com Tempo livre');
+});
+
+test('estudos: semana encaixa se der; fim de semana sempre tem', async ({ page }) => {
+  await start(page, '2026-11-16T07:30:00');
+  await nav(page, 'IA').click();
+  await page.getByLabel('Descreva sua necessidade').fill('Vou trabalhar das 8h às 17h');
+  await page.getByRole('button', { name: '✨ Reorganizar' }).click();
+  await page.getByRole('button', { name: 'Aplicar mudanças' }).click();
+  await nav(page, 'Hoje').click();
+  // segunda com trabalho: estudos entram depois do jantar, sem aviso de "não coube" para estudos
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos' })).toContainText('20:00');
+  await expect(page.locator('.banner.warn', { hasText: 'Não couberam' })).not.toContainText('Estudos');
+  // sábado: estudos do fim de semana
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Próximo dia' }).click();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos (fim de semana)' })).toContainText('14:00');
+  await page.getByRole('button', { name: 'Próximo dia' }).click();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos (fim de semana)' })).toContainText('15:30');
+  // Rotina mostra opcional / encurta
+  await nav(page, 'Rotina').click();
+  await expect(page.locator('.list li').filter({ has: page.getByRole('button', { name: 'Editar Estudos', exact: true }) })).toContainText('Opcional');
+  await expect(page.locator('.list li', { hasText: 'Estudos (fim de semana)' })).toContainText('encurta até 45 min');
+  await page.getByRole('button', { name: 'Editar Estudos', exact: true }).click();
+  await expect(page.getByLabel(/Opcional: encaixar só se der/)).toBeChecked();
+  await expect(page.getByLabel('Pode encurtar até')).toHaveValue('30');
 });

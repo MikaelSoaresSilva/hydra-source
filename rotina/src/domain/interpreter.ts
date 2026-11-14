@@ -2,7 +2,7 @@
 // e transforma em operações. O que ele não entender pode ir para o Claude (se você ativar).
 import { uid } from './defaults';
 import type { Op, Scope } from './ops';
-import { addDays, isWeekend, spanMinutes } from './time';
+import { addDays, isWeekend, spanMinutes, weekday } from './time';
 import type { Activity, State } from './types';
 
 export interface Interpretation {
@@ -23,7 +23,7 @@ const SYNONYMS: { words: RegExp; match: (a: Activity) => boolean }[] = [
   { words: /\b(academia|musculacao|malhar|malhacao|gym|treino de forca|treinar|treino)\b/, match: (a) => /academia|muscula/i.test(norm(a.title)) },
   { words: /\b(cardio|esteira|bike|bicicleta|corrida|correr|aerobico)\b/, match: (a) => /cardio/.test(norm(a.title)) },
   { words: /\b(luta|boxe|mma)\b/, match: (a) => /luta|boxe|mma/.test(norm(a.title)) },
-  { words: /\b(estudo|estudos|estudar|faculdade|curso)\b/, match: (a) => /estud/.test(norm(a.title)) },
+  { words: /\b(estudo|estudos|estudar|faculdade|curso)\b/, match: (a) => /^estud/.test(norm(a.title)) },
   { words: /\b(leitura|ler|livro)\b/, match: (a) => /leitura|ler\b/.test(norm(a.title)) },
   { words: /\b(skincare|pele|rosto)\b.*\b(noite|noturno)\b|\b(noite|noturno)\b.*\b(skincare|pele)\b/, match: (a) => /skincare noturno/.test(norm(a.title)) },
   { words: /\b(skincare|pele)\b/, match: (a) => /skincare matinal/.test(norm(a.title)) },
@@ -45,12 +45,15 @@ const SYNONYMS: { words: RegExp; match: (a: Activity) => boolean }[] = [
 ];
 
 /** Atividades citadas no texto. */
-export function findActivities(text: string, state: State): Activity[] {
+export function findActivities(text: string, state: State, date?: string): Activity[] {
   const t = norm(text);
   const found: Activity[] = [];
+  const wd = date ? weekday(date) : null;
   for (const s of SYNONYMS) {
     if (!s.words.test(t)) continue;
-    const a = state.activities.find(s.match);
+    // Com duas parecidas (ex.: Estudos e Estudos do fim de semana), escolhe a que acontece no dia.
+    const cands = state.activities.filter(s.match);
+    const a = (wd !== null ? cands.find((x) => x.days.includes(wd) && !x.paused) : undefined) ?? cands[0];
     if (a && !found.includes(a)) { found.push(a); if (s.words.source.includes('noturno')) break; }
   }
   // Título exato de atividade criada pelo usuário.
@@ -161,7 +164,7 @@ function clause(t: string, state: State, today: string, ops: Op[]) {
   const dur = parseDuration(t);
   const timeText = dur ? t.slice(0, dur.span[0]) + ' '.repeat(dur.span[1] - dur.span[0]) + t.slice(dur.span[1]) : t;
   const times = parseTimes(timeText);
-  const acts = findActivities(t, state);
+  const acts = findActivities(t, state, /\bamanha\b/.test(t) ? addDays(today, 1) : today);
   const negative = /\b(nao (vou|irei|vai dar|tenho)\b|nao consigo|nao da|sem tempo|sem|pular|pula|cancelar|cancela|desmarcar|folga de|nao (vou )?fazer)\b/.test(t);
 
   // ACORDAR

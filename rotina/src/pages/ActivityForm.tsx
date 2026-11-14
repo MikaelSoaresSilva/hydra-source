@@ -68,6 +68,7 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
     if (!a.title.trim()) { setError('Dê um nome para a atividade.'); return; }
     if (!special && (a.duration < 5 || a.duration > 16 * 60)) { setError('Duração entre 5 min e 16 h.'); return; }
     if (!a.days.length) { setError('Escolha pelo menos um dia da semana.'); return; }
+    if (a.minDuration !== undefined && a.minDuration < 5) { setError('O mínimo para encurtar é 5 min.'); return; }
     let anchor = a.anchor;
     let duration = a.duration;
     if (timing === 'time') {
@@ -214,6 +215,15 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
               )}
             </div>
           </details>
+        )}
+        {!special && (
+          <div className="stack" style={{ gap: 8 }}>
+            <label className="check"><input type="checkbox" checked={!!a.optional} onChange={(e) => setA({ ...a, optional: e.target.checked || undefined })} /> Opcional: encaixar só se der (se o dia estiver cheio, fica de fora sem aviso)</label>
+            <label className="field">Pode encurtar até (min) — vazio = não encurta
+              <input type="number" inputMode="numeric" min={5} max={960} aria-label="Pode encurtar até" value={a.minDuration ?? ''} placeholder="ex.: 30"
+                onChange={(e) => { const v = Number(e.target.value); setA({ ...a, minDuration: e.target.value === '' || !v ? undefined : v }); }} />
+            </label>
+          </div>
         )}
         <label className="check"><input type="checkbox" checked={a.notify} onChange={(e) => setA({ ...a, notify: e.target.checked })} /> Lembrete com notificação</label>
         {!special && <label className="check"><input type="checkbox" checked={a.paused} onChange={(e) => setA({ ...a, paused: e.target.checked })} /> Pausada (some da rotina até reativar)</label>}

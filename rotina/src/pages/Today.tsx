@@ -112,6 +112,7 @@ export function Today({ go }: { go: (tab: string) => void }) {
           <button className="icon-btn" aria-label="Próximo dia" onClick={() => setOffset(offset + 1)}>›</button>
         </div>}>
         {plan.unplaced.length > 0 && <div className="banner warn" style={{ marginBottom: 8 }}>Não couberam: {plan.unplaced.map((u) => `${u.activity.title} (${u.reason})`).join('; ')}. Peça um ajuste na aba IA ou reduza durações.</div>}
+        {plan.optionalOut.length > 0 && <p className="muted" style={{ marginTop: 0 }} data-testid="optional-out"><small>Sem espaço hoje (opcional): {plan.optionalOut.map((a) => a.title).join(', ')}.</small></p>}
         {plan.skipped.length > 0 && (
           <p className="hint" style={{ marginTop: 0 }}><small>Fora deste dia: {plan.skipped.map((a) => a.title).join(', ')}. <button className="btn ghost sm" onClick={resetDay}>Desfazer mudanças do dia</button></small></p>
         )}
@@ -129,7 +130,7 @@ export function Today({ go }: { go: (tab: string) => void }) {
                   onKeyDown={(e) => { if (e.key === 'Enter') setOpen(open === it.activity.id ? null : it.activity.id); }}>
                   <div className="tl-title">{c.emoji} {it.activity.title}</div>
                   {it.parentId && <small className="pill violet" style={{ margin: '2px 0', whiteSpace: 'normal', maxWidth: '100%' }}>🔗 junto com {plan.items.find((p) => p.activity.id === it.parentId)?.activity.title}</small>}
-                  <small>{it.end > it.start ? durationLabel(it.end - it.start) : 'meta 8–9 h de sono'}{it.todayOnly ? ' · só hoje' : ''}{late ? ' · atrasada' : ''}{isNow && !isDone ? ' · agora' : ''}{state.snoozes[`${date}|${it.activity.id}`] && !isDone ? ' · adiada' : ''}</small>
+                  <small>{it.end > it.start ? durationLabel(it.end - it.start) : 'meta 8–9 h de sono'}{it.shortenedFrom ? ` · encurtado (era ${durationLabel(it.shortenedFrom)})` : ''}{it.todayOnly ? ' · só hoje' : ''}{late ? ' · atrasada' : ''}{isNow && !isDone ? ' · agora' : ''}{state.snoozes[`${date}|${it.activity.id}`] && !isDone ? ' · adiada' : ''}</small>
                 </div>
                 <div className="row" style={{ gap: 6 }}>
                   <button className="icon-btn" aria-label={`Opções de ${it.activity.title}`} onClick={() => setMenu(it)}>⋯</button>

@@ -35,6 +35,10 @@ export interface Activity {
    * Nos outros dias, usa a âncora e a duração normais.
    */
   join?: { parentId: string; at: number; duration: number };
+  /** Pode encurtar até estes minutos quando o dia está cheio. */
+  minDuration?: number;
+  /** Opcional: entra só se sobrar espaço (no fim), sem aviso quando não cabe. */
+  optional?: boolean;
 }
 
 export interface SleepWindow { wake: number; bed: number }

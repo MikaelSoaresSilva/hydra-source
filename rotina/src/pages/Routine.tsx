@@ -56,7 +56,7 @@ export function Routine() {
                   <div style={{ minWidth: 0 }}>
                     <strong>{c?.emoji} {a.title}</strong>{a.paused && <span className="pill" style={{ marginLeft: 6 }}>pausada</span>}
                     {a.join && <><br /><small>🔗 junto com <strong>{state.activities.find((x) => x.id === a.join!.parentId)?.title ?? '—'}</strong>: {hm(a.join.at)}–{hm(a.join.at + a.join.duration)} nesses dias; nos outros:</small></>}
-                    <br /><small>{anchorText(a)}{a.kind === 'normal' ? ` · ${durationLabel(a.duration)}` : ''} · {daysText(a.days)} · {PRIORITY_LABEL[a.priority]}{a.notify ? ' · 🔔' : ''}</small>
+                    <br /><small>{anchorText(a)}{a.kind === 'normal' ? ` · ${durationLabel(a.duration)}` : ''} · {daysText(a.days)} · {a.optional ? 'Opcional' : PRIORITY_LABEL[a.priority]}{a.minDuration ? ` · encurta até ${a.minDuration} min` : ''}{a.notify ? ' · 🔔' : ''}</small>
                   </div>
                   <div className="row" style={{ gap: 6, flex: 'none' }}>
                     {a.kind === 'normal' && <button className="btn ghost sm" aria-label={`${a.paused ? 'Retomar' : 'Pausar'} ${a.title}`} onClick={() => { update((s) => ({ ...s, activities: s.activities.map((x) => x.id === a.id ? { ...x, paused: !x.paused } : x) })); toast(a.paused ? `▶️ ${a.title} retomada` : `⏸️ ${a.title} pausada`); }}>{a.paused ? '▶️' : '⏸️'}</button>}

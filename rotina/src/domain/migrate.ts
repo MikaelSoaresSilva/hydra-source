@@ -1,5 +1,5 @@
 // Atualizações dos dados salvos entre versões do app.
-import { DEFAULT_PROFILE, STATE_VERSION, uid } from './defaults';
+import { DEFAULT_PROFILE, STATE_VERSION, WEEKDAY_STUDY_DESC, WEEKEND_STUDY_DESC, uid } from './defaults';
 import { norm } from './interpreter';
 import type { Activity, State } from './types';
 
@@ -28,9 +28,36 @@ export function migrateToV2(s: State): State {
     const wl = out.profile.workLunch;
     if (wl.at >= work.anchor.at && wl.at + wl.duration <= work.anchor.at + work.duration) lunch.join = { parentId: work.id, at: wl.at, duration: wl.duration };
   }
+  out.version = 2;
+  return out;
+}
+
+/**
+ * v3: estudos.
+ * - dias de semana: opcional (encaixa se der, encurta até 30 min, sem aviso se não couber);
+ * - fim de semana: bloco obrigatório de estudos (1 h 30, encurta até 45 min).
+ */
+export function migrateToV3(s: State): State {
+  if ((s.version ?? 1) >= 3) return s;
+  const out: State = structuredClone(s);
+  const studies = out.activities.filter((a) => /^estud/.test(norm(a.title)));
+  for (const a of studies) {
+    const weekdaysOnly = a.days.every((d) => d >= 1 && d <= 5);
+    if (weekdaysOnly) { a.optional = true; a.minDuration ??= 30; if (a.description === '' || /Bloco de foco profundo/.test(a.description)) a.description = WEEKDAY_STUDY_DESC; }
+  }
+  const weekendCovered = studies.some((a) => !a.paused && a.days.includes(0) && a.days.includes(6) && !a.optional);
+  if (!weekendCovered) {
+    out.activities.push({
+      id: uid(), title: 'Estudos (fim de semana)', categoryId: out.categories.some((c) => c.id === 'mind') ? 'mind' : out.categories[0].id,
+      description: WEEKEND_STUDY_DESC, duration: 90, anchor: { type: 'time', at: 14 * 60 }, fixed: false, priority: 1, days: [0, 6],
+      paused: false, notify: true, kind: 'normal', minDuration: 45,
+    });
+  }
   out.version = STATE_VERSION;
   return out;
 }
+
+export const migrateAll = (s: State) => migrateToV3(migrateToV2(s));
 
 export const isWorkActivity = (a: Activity) => /^trabalho/.test(norm(a.title)) && a.anchor.type === 'time' && !a.paused;
 export const isLunchActivity = (a: Activity) => /almoco/.test(norm(a.title));

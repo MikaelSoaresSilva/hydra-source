@@ -25,6 +25,7 @@ App Android (`com.titan.rotina`) + PWA. React 19 + TypeScript + Vite + Capacitor
   sequência de dias ≥ 80%, meta semanal (5 dias), histórico de 14 dias, atributos por categoria, 14 conquistas.
 - **Início e término**: no formulário (Início/Término calculam a duração) e pela linha do tempo em Hoje → ⋯ → "Mudar início e término", só hoje ou todos os dias; avisa se cair fora do horário acordado.
 - **Junto com outra atividade** (`Activity.join`): nos dias em que a atividade-mãe acontece, a outra fica dentro dela num horário escolhido, sem ocupar espaço (ex.: Almoço 11:30–12:50 dentro do Trabalho); nos outros dias usa o horário normal. Cartão "Trabalho e almoço" em Rotina; ao criar um Trabalho o almoço entra junto sozinho. "Unir as duas" junta duas atividades numa só.
+- **Opcional e encurtável** (`optional`, `minDuration`): estudos nos dias de semana entram se der (depois de refeições/treino, antes do lazer), encurtam até 30 min e saem sem aviso se não couber; no fim de semana "Estudos (fim de semana)" é essencial (1 h 30, encurta até 45 min, nunca sai).
 - **Nutrição**: água e calorias/macros do dia com metas editáveis.
 - **Backup**: exportar/restaurar JSON (no APK, pela folha de compartilhar do Android).
 

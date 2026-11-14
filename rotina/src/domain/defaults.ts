@@ -20,6 +20,9 @@ const ALL = [0, 1, 2, 3, 4, 5, 6];
 const WEEKDAYS = [1, 2, 3, 4, 5];
 const GYM = [1, 2, 4, 5]; // treino de 4 dias (seg, ter, qui, sex)
 
+export const WEEKDAY_STUDY_DESC = 'Opcional nos dias de semana: o app encaixa no maior espaço livre (até 1 h 30, mínimo 30 min). Se o dia estiver cheio, fica de fora sem aviso. Celular longe; defina antes o que vai terminar.';
+export const WEEKEND_STUDY_DESC = 'Obrigatório no fim de semana: bloco de foco profundo (2 × 45 min com 5 min de pausa). Se o dia apertar, encurta até 45 min, mas não sai da rotina.';
+
 let n = 0;
 const A = (title: string, categoryId: string, duration: number, anchor: Activity['anchor'], description: string, extra: Partial<Activity> = {}): Activity => ({
   id: `a${++n}`, title, categoryId, description, duration, anchor, fixed: false, priority: 2, days: ALL, paused: false, notify: true, kind: 'normal', ...extra,
@@ -34,7 +37,8 @@ export function defaultActivities(): Activity[] {
     A('Skincare matinal', 'face', 10, { type: 'wake', offset: 20 }, '1) Limpeza com sabonete facial suave. 2) Hidratante leve. 3) Protetor solar FPS 30+ em rosto, orelhas e pescoço (2 dedos de produto).', { priority: 1 }),
     A('Cabelo e barba', 'hair', 10, { type: 'wake', offset: 30 }, 'Finalização do cabelo (creme/pomada) e acabamento da barba. Nos dias de lavagem, use o bloco "Lavar e hidratar cabelo".'),
     A('Café da manhã', 'nutrition', 20, { type: 'wake', offset: 45 }, 'Proteína + carboidrato: ex. 2–3 ovos, pão ou cuscuz, fruta e leite. Comece o dia com 1 copo de água.', { priority: 1 }),
-    A('Estudos', 'mind', 90, { type: 'time', at: 8 * 60 + 30 }, 'Bloco de foco profundo: celular longe, 2 × 45 min com 5 min de pausa. Defina antes o que vai terminar.', { priority: 2, days: WEEKDAYS }),
+    A('Estudos', 'mind', 90, { type: 'time', at: 8 * 60 + 30 }, WEEKDAY_STUDY_DESC, { priority: 2, days: WEEKDAYS, optional: true, minDuration: 30 }),
+    A('Estudos (fim de semana)', 'mind', 90, { type: 'time', at: 14 * 60 }, WEEKEND_STUDY_DESC, { priority: 1, days: [0, 6], minDuration: 45 }),
     A('Organização pessoal', 'life', 15, { type: 'time', at: 10 * 60 + 15 }, 'Revisar tarefas do dia, arrumar o quarto e a mochila, responder mensagens pendentes.', { priority: 3 }),
     A('Leitura', 'mind', 30, { type: 'time', at: 10 * 60 + 40 }, 'Leitura sem tela: 10–20 páginas. Anote uma ideia útil.', { priority: 3 }),
     A('Almoço', 'nutrition', 40, { type: 'time', at: 12 * 60 }, 'Prato: metade arroz/feijão, 1/4 proteína (frango, carne, ovos), 1/4 salada. Mastigue devagar.', { priority: 1 }),
@@ -87,6 +91,6 @@ export function defaultState(now = new Date()): State {
   };
 }
 
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);

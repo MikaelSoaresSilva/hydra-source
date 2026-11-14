@@ -5,7 +5,7 @@ import { applyOps, preview } from './ops';
 import { buildDay } from './scheduler';
 import { hm } from './time';
 import type { State } from './types';
-import { linkWorkLunch, migrateToV2 } from './migrate';
+import { linkWorkLunch, migrateToV2, migrateToV3 } from './migrate';
 
 const MON = '2026-11-16';
 const SAT = '2026-11-14';
@@ -225,5 +225,74 @@ describe('atividades juntas e unidas', () => {
     expect(hm(at(r.state, MON, /Almoço/)!.start)).toBe('11:30');
     noOverlap(r.state, MON);
     expect(linkWorkLunch({ ...s, profile: { ...s.profile, workLunch: { at: 17 * 60, duration: 60 } } }).linked).toBe(false);
+  });
+});
+
+describe('estudos', () => {
+  const withWork = (s: State) => applyOps(s, interpret('Vou trabalhar das 8h às 17h', s, MON).ops);
+  it('dias de semana sem trabalho: 1 h 30 de estudos', () => {
+    const st = at(s0(), MON, /^Estudos$/)!;
+    expect(st.end - st.start).toBe(90);
+  });
+  it('dia de semana cheio: estudos encurtam ou saem, sem aviso de "não coube"', () => {
+    const s = withWork(s0());
+    const p = buildDay(s, MON);
+    const st = p.items.find((i) => i.activity.title === 'Estudos');
+    if (st) { expect(st.end - st.start).toBeGreaterThanOrEqual(30); }
+    else expect(p.optionalOut.map((a) => a.title)).toContain('Estudos');
+    expect(p.unplaced.some((u) => u.activity.title === 'Estudos')).toBe(false);
+    noOverlap(s, MON);
+  });
+  it('estudos opcionais não tiram refeições nem treino do lugar', () => {
+    const s = withWork(s0());
+    const p = buildDay(s, MON);
+    for (const t of [/Academia/, /Jantar/, /pós-treino/, /Alongamento/]) expect(p.items.some((i) => t.test(i.activity.title)), String(t)).toBe(true);
+  });
+  it('dia lotado: estudos opcionais encurtam até 30 min no maior espaço', () => {
+    const s = s0();
+    s.activities.push({ ...s.activities[0], id: 'x', title: 'Curso', kind: 'normal', categoryId: 'work', anchor: { type: 'time', at: 8 * 60 }, duration: 12 * 60 + 20, fixed: true, days: [1] });
+    const p = buildDay(s, MON);
+    const st = p.items.find((i) => i.activity.title === 'Estudos');
+    expect(st?.shortenedFrom === 90 || p.optionalOut.some((a) => a.title === 'Estudos')).toBe(true);
+    if (st) expect(st.end - st.start).toBeGreaterThanOrEqual(30);
+  });
+  it('fim de semana sempre tem estudos (mesmo apertado, encurta até 45 min)', () => {
+    for (const d of [SAT, '2026-11-15']) {
+      const st = at(s0(), d, /^Estudos/)!;
+      expect(st.activity.title).toBe('Estudos (fim de semana)');
+      expect(st.end - st.start).toBe(90);
+    }
+    const s = s0();
+    s.activities.push({ ...s.activities[0], id: 'y', title: 'Evento', kind: 'normal', categoryId: 'life', anchor: { type: 'time', at: 11 * 60 + 30 }, duration: 8 * 60 + 30, fixed: true, days: [6] });
+    const st = at(s, SAT, /^Estudos/)!;
+    expect(st).toBeTruthy();
+    expect(st.end - st.start).toBeGreaterThanOrEqual(45);
+    noOverlap(s, SAT);
+  });
+  it('migração v3: estudos de semana viram opcionais e o fim de semana ganha estudos', () => {
+    const v2 = s0();
+    v2.version = 2;
+    v2.activities = v2.activities.filter((a) => a.title !== 'Estudos (fim de semana)').map((a) => (a.title === 'Estudos' ? { ...a, optional: undefined, minDuration: undefined } : a));
+    const v3 = migrateToV3(v2);
+    expect(v3.version).toBe(3);
+    expect(v3.activities.find((a) => a.title === 'Estudos')!.optional).toBe(true);
+    expect(v3.activities.find((a) => a.title === 'Estudos (fim de semana)')!.days).toEqual([0, 6]);
+    expect(at(v3, SAT, /^Estudos/)).toBeTruthy();
+    expect(migrateToV3(v3)).toBe(v3);
+  });
+});
+
+describe('estudos pelo pedido', () => {
+  it('"hoje sem estudos" no sábado pula o estudo do fim de semana', () => {
+    const s = s0();
+    const next = applyOps(s, interpret('Hoje sem estudos', s, SAT).ops);
+    expect(at(next, SAT, /^Estudos/)).toBeFalsy();
+    expect(at(next, '2026-11-15', /^Estudos/)).toBeTruthy();
+  });
+  it('"preciso adicionar 1 hora de estudos" num dia de semana mexe no estudo de semana', () => {
+    const s = s0();
+    const next = applyOps(s, interpret('Preciso adicionar 1 hora de estudos.', s, MON).ops);
+    expect(next.activities.find((a) => a.title === 'Estudos')!.duration).toBe(150);
+    expect(next.activities.find((a) => a.title === 'Estudos (fim de semana)')!.duration).toBe(90);
   });
 });

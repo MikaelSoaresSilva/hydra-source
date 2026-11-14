@@ -1,0 +1,142 @@
+import { useState } from 'react';
+import { useApp } from '../data/AppContext';
+import { CATEGORY_HINT, uid } from '../domain/defaults';
+import { normBed, sleepMinutes } from '../domain/scheduler';
+import { durationLabel, hm, parseHM, WEEKDAY_SHORT } from '../domain/time';
+import { PRIORITY_LABEL, type Activity, type Category, type SleepWindow } from '../domain/types';
+import { Card, Chips, Modal } from '../ui/components';
+import { ActivityForm, newActivity } from './ActivityForm';
+
+const daysText = (d: number[]) => d.length === 7 ? 'Todos os dias' : d.join() === '1,2,3,4,5' ? 'Seg–Sex' : d.join() === '0,6' ? 'Fim de semana' : [1, 2, 3, 4, 5, 6, 0].filter((x) => d.includes(x)).map((x) => WEEKDAY_SHORT[x]).join(', ');
+const anchorText = (a: Activity) => a.kind === 'wake' ? 'no horário de acordar' : a.kind === 'bed' ? 'no horário de dormir'
+  : a.anchor.type === 'time' ? `${a.fixed ? 'fixo às' : 'perto das'} ${hm(a.anchor.at)}` : a.anchor.type === 'wake' ? `${a.anchor.offset} min após acordar` : `${a.anchor.offset} min antes de dormir`;
+
+export function Routine() {
+  const { state, update, toast } = useApp();
+  const [cat, setCat] = useState('all');
+  const [edit, setEdit] = useState<{ a: Activity; isNew: boolean } | null>(null);
+  const [catEdit, setCatEdit] = useState<Category | null>(null);
+  const list = state.activities.filter((a) => cat === 'all' || a.categoryId === cat)
+    .sort((a, b) => sortKey(a) - sortKey(b));
+  function sortKey(a: Activity) { return a.kind === 'wake' ? -1 : a.kind === 'bed' ? 3000 : a.anchor.type === 'wake' ? a.anchor.offset : a.anchor.type === 'bed' ? 2000 - a.anchor.offset : a.anchor.at; }
+
+  return (
+    <div className="stack">
+      <div><span className="kicker">Personalização</span><h1>Sua rotina</h1><p className="muted" style={{ margin: 0 }}>Edite qualquer atividade, horário, dia da semana e prioridade. O app reencaixa o resto sozinho, sem conflitos.</p></div>
+
+      <SleepCard />
+
+      <Card title="Categorias" action={<button className="btn sm" onClick={() => setCatEdit({ id: uid(), name: '', emoji: '⭐', color: '#a78bfa' })}>➕ Nova</button>}>
+        <div className="chips scroll-x">
+          <button className={`chip ${cat === 'all' ? 'on' : ''}`} onClick={() => setCat('all')}>Todas ({state.activities.length})</button>
+          {state.categories.map((c) => (
+            <button key={c.id} className={`chip ${cat === c.id ? 'on' : ''}`} onClick={() => setCat(c.id)} onDoubleClick={() => setCatEdit(c)}>
+              {c.emoji} {c.name} ({state.activities.filter((a) => a.categoryId === c.id).length})
+            </button>
+          ))}
+        </div>
+        {cat !== 'all' && (
+          <div className="row between" style={{ marginTop: 8 }}>
+            <small>{CATEGORY_HINT[cat] ?? 'Categoria personalizada'}</small>
+            <button className="btn ghost sm" onClick={() => setCatEdit(state.categories.find((c) => c.id === cat)!)}>Editar categoria</button>
+          </div>
+        )}
+      </Card>
+
+      <Card title={`Atividades (${list.length})`} action={<button className="btn primary sm" onClick={() => setEdit({ a: newActivity(cat === 'all' ? 'life' : cat), isNew: true })}>➕ Adicionar</button>}>
+        <ul className="list">
+          {list.map((a) => {
+            const c = state.categories.find((x) => x.id === a.categoryId);
+            return (
+              <li key={a.id} style={{ borderLeft: `4px solid ${c?.color ?? 'var(--accent)'}`, opacity: a.paused ? 0.55 : 1 }}>
+                <div className="row between" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <strong>{c?.emoji} {a.title}</strong>{a.paused && <span className="pill" style={{ marginLeft: 6 }}>pausada</span>}
+                    <br /><small>{anchorText(a)}{a.kind === 'normal' ? ` · ${durationLabel(a.duration)}` : ''} · {daysText(a.days)} · {PRIORITY_LABEL[a.priority]}{a.notify ? ' · 🔔' : ''}</small>
+                  </div>
+                  <div className="row" style={{ gap: 6, flex: 'none' }}>
+                    {a.kind === 'normal' && <button className="btn ghost sm" aria-label={`${a.paused ? 'Retomar' : 'Pausar'} ${a.title}`} onClick={() => { update((s) => ({ ...s, activities: s.activities.map((x) => x.id === a.id ? { ...x, paused: !x.paused } : x) })); toast(a.paused ? `▶️ ${a.title} retomada` : `⏸️ ${a.title} pausada`); }}>{a.paused ? '▶️' : '⏸️'}</button>}
+                    <button className="btn sm" aria-label={`Editar ${a.title}`} onClick={() => setEdit({ a, isNew: false })}>Editar</button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        {!list.length && <p className="empty">Nenhuma atividade nesta categoria.</p>}
+      </Card>
+
+      <Card title="Restaurar">
+        <p className="muted" style={{ marginTop: 0 }}>Volta para a rotina inicial (o histórico de XP e conquistas continua).</p>
+        <button className="btn danger sm" onClick={async () => {
+          if (!confirm('Substituir todas as atividades pela rotina inicial?')) return;
+          const { defaultActivities } = await import('../domain/defaults');
+          update((s) => ({ ...s, activities: defaultActivities(), overrides: {} }));
+          toast('Rotina inicial restaurada');
+        }}>Restaurar rotina inicial</button>
+      </Card>
+
+      {edit && <ActivityForm initial={edit.a} isNew={edit.isNew} onClose={() => setEdit(null)} />}
+      {catEdit && <CategoryForm initial={catEdit} onClose={() => setCatEdit(null)} />}
+    </div>
+  );
+}
+
+function SleepCard() {
+  const { state, update, toast } = useApp();
+  const [type, setType] = useState<'weekday' | 'weekend'>('weekday');
+  const w = state.sleep[type];
+  const sleep = sleepMinutes(normBed(w), w.wake);
+  const ok = sleep >= state.sleep.goalMin && sleep <= state.sleep.goalMax;
+  function set(patch: Partial<SleepWindow>) {
+    update((s) => ({ ...s, sleep: { ...s.sleep, [type]: { ...s.sleep[type], ...patch } } }));
+  }
+  function ideal() {
+    // Dormir para ter 8 h 30 min de sono a partir do horário de acordar.
+    set({ bed: ((w.wake - 510) % 1440 + 1440) % 1440 });
+    toast('🌙 Horário de dormir ajustado para 8 h 30 de sono');
+  }
+  return (
+    <Card title="🌙 Sono">
+      <Chips label="Tipo de dia" value={type} onChange={setType} options={[{ value: 'weekday', label: 'Dias de semana' }, { value: 'weekend', label: 'Fim de semana' }]} />
+      <div className="grid2" style={{ marginTop: 10 }}>
+        <label className="field">Acordar<input type="time" aria-label={`Acordar (${type === 'weekday' ? 'semana' : 'fim de semana'})`} value={hm(w.wake)} onChange={(e) => { const v = parseHM(e.target.value); if (v !== null) set({ wake: v }); }} /></label>
+        <label className="field">Dormir<input type="time" aria-label={`Dormir (${type === 'weekday' ? 'semana' : 'fim de semana'})`} value={hm(w.bed)} onChange={(e) => { const v = parseHM(e.target.value); if (v !== null) set({ bed: v }); }} /></label>
+      </div>
+      <div className={`banner ${ok ? 'ok' : 'warn'}`} style={{ marginTop: 10 }}>
+        Sono: <strong>{durationLabel(sleep)}</strong> {ok ? '✓ dentro da meta de 8–9 h.' : sleep < state.sleep.goalMin ? '— abaixo da meta de 8 h.' : '— acima de 9 h.'}
+        {' '}Desacelerar começa às {hm(normBed(w) - 30)}.
+      </div>
+      {!ok && <button className="btn sm" style={{ marginTop: 8 }} onClick={ideal}>Ajustar dormir para 8 h 30 de sono</button>}
+      <p className="muted" style={{ marginBottom: 0 }}><small>Rotina da manhã, skincare noturno e "Preparar para dormir" acompanham estes horários automaticamente.</small></p>
+    </Card>
+  );
+}
+
+function CategoryForm({ initial, onClose }: { initial: Category; onClose: () => void }) {
+  const { state, update, toast } = useApp();
+  const [c, setC] = useState(initial);
+  const exists = state.categories.some((x) => x.id === c.id);
+  const used = state.activities.filter((a) => a.categoryId === c.id).length;
+  return (
+    <Modal title={exists ? 'Editar categoria' : 'Nova categoria'} onClose={onClose}>
+      <div className="stack">
+        <label className="field">Nome<input value={c.name} onChange={(e) => setC({ ...c, name: e.target.value })} placeholder="Ex.: FINANÇAS" /></label>
+        <div className="grid2">
+          <label className="field">Emoji<input value={c.emoji} maxLength={4} onChange={(e) => setC({ ...c, emoji: e.target.value })} /></label>
+          <label className="field">Cor<input type="color" value={c.color} onChange={(e) => setC({ ...c, color: e.target.value })} style={{ padding: 4 }} /></label>
+        </div>
+        <button className="btn primary" disabled={!c.name.trim()} onClick={() => {
+          const final = { ...c, name: c.name.trim() };
+          update((s) => ({ ...s, categories: exists ? s.categories.map((x) => (x.id === c.id ? final : x)) : [...s.categories, final] }));
+          toast('💾 Categoria salva'); onClose();
+        }}>Salvar</button>
+        {exists && !c.builtin && (
+          <button className="btn danger" disabled={used > 0} onClick={() => { update((s) => ({ ...s, categories: s.categories.filter((x) => x.id !== c.id) })); toast('Categoria excluída'); onClose(); }}>
+            {used > 0 ? `Excluir (mova as ${used} atividades antes)` : 'Excluir categoria'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}

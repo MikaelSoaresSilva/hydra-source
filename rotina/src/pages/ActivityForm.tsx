@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useApp } from '../data/AppContext';
 import { uid } from '../domain/defaults';
 import { durationLabel, hm, parseHM, spanMinutes, WEEKDAY_SHORT } from '../domain/time';
-import { PRIORITY_LABEL, type Activity, type Priority } from '../domain/types';
+import { PRIORITY_LABEL, type Activity, type Priority, type State } from '../domain/types';
 import { Chips, Modal } from '../ui/components';
+import { isLunchActivity, isWorkActivity, linkWorkLunch } from '../domain/migrate';
 
 type Timing = 'time' | 'wake' | 'bed';
 
@@ -18,6 +19,40 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
   const [endText, setEndText] = useState(hm((a.anchor.type === 'time' ? a.anchor.at : 900) + a.duration));
   const [error, setError] = useState('');
   const special = a.kind === 'wake' || a.kind === 'bed';
+  // Fazer junto com outra atividade / unir duas em uma
+  const parents = state.activities.filter((x) => x.id !== a.id && x.kind === 'normal' && !x.join);
+  const [joinOn, setJoinOn] = useState(!!a.join);
+  const [joinParent, setJoinParent] = useState(a.join?.parentId ?? '');
+  const [joinStart, setJoinStart] = useState(hm(a.join?.at ?? (a.anchor.type === 'time' ? a.anchor.at : 720)));
+  const [joinEnd, setJoinEnd] = useState(hm((a.join?.at ?? (a.anchor.type === 'time' ? a.anchor.at : 720)) + (a.join?.duration ?? a.duration)));
+  const [mergeWith, setMergeWith] = useState('');
+  const parentOf = (id: string) => state.activities.find((x) => x.id === id);
+  const hasChildren = state.activities.some((x) => x.join?.parentId === a.id);
+
+  function merge() {
+    const other = parentOf(mergeWith);
+    if (!other) return;
+    if (!confirm(`Unir "${a.title}" e "${other.title}" numa atividade só? "${other.title}" deixa de existir separada.`)) return;
+    const startA = a.anchor.type === 'time' ? a.anchor.at : null;
+    const startB = other.anchor.type === 'time' ? other.anchor.at : null;
+    const first = startA !== null && startB !== null && startB < startA ? other : a;
+    const second = first === a ? other : a;
+    const merged: Activity = {
+      ...first, id: a.id, title: `${first.title} + ${second.title}`,
+      description: [first.description && `${first.title}: ${first.description}`, second.description && `${second.title}: ${second.description}`].filter(Boolean).join('\n'),
+      duration: Math.min(16 * 60, first.duration + second.duration),
+      days: [...new Set([...first.days, ...second.days])].sort(),
+      priority: Math.min(first.priority, second.priority) as Priority,
+      notify: first.notify || second.notify, paused: false,
+    };
+    delete merged.join;
+    update((s) => ({
+      ...s,
+      activities: s.activities.filter((x) => x.id !== other.id).map((x) => (x.id === a.id ? merged : x.join?.parentId === other.id ? { ...x, join: { ...x.join, parentId: a.id } } : x)),
+    }));
+    toast(`🔗 Unidas: ${merged.title}`);
+    onClose();
+  }
   const timing: Timing = a.anchor.type;
   const offset = a.anchor.type === 'time' ? 0 : a.anchor.offset;
 
@@ -44,9 +79,22 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
       if (duration > 16 * 60) { setError('Duração máxima de 16 h.'); return; }
       anchor = { type: 'time', at };
     }
-    const final = { ...a, title: a.title.trim(), anchor, duration };
-    update((s) => ({ ...s, activities: isNew ? [...s.activities, final] : s.activities.map((x) => (x.id === final.id ? final : x)) }));
+    const final: Activity = { ...a, title: a.title.trim(), anchor, duration };
+    if (joinOn) {
+      const jat = parseHM(joinStart); const jen = parseHM(joinEnd);
+      const jd = jat !== null && jen !== null ? spanMinutes(jat, jen) : 0;
+      if (!joinParent || jat === null || jd < 5) { setError('Escolha a atividade e um horário válido para "fazer junto".'); return; }
+      final.join = { parentId: joinParent, at: jat, duration: jd };
+    } else delete final.join;
+    let linked = false;
+    update((s) => {
+      let next: State = { ...s, activities: isNew ? [...s.activities, final] : s.activities.map((x) => (x.id === final.id ? final : x)) };
+      // Salvou um Trabalho: o almoço entra junto, no horário de almoço do trabalho.
+      if (isWorkActivity(final) && !next.activities.find(isLunchActivity)?.join) { const r = linkWorkLunch(next); next = r.state; linked = r.linked; }
+      return next;
+    });
     toast(isNew ? `➕ ${final.title} adicionada` : '💾 Atividade salva');
+    if (linked) setTimeout(() => toast('🍽️ Almoço colocado junto com o Trabalho'), 1200);
     onClose();
   }
 
@@ -124,6 +172,49 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
             <button type="button" className="chip" onClick={() => setA({ ...a, days: [0, 6] })}>Fim de semana</button>
           </div>
         </div>
+        {!special && (
+          <details open={joinOn} className="card" style={{ padding: 12, animation: 'none' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 700 }}>🔗 Combinar com outra atividade</summary>
+            <div className="stack" style={{ marginTop: 10 }}>
+              {hasChildren ? <p className="muted" style={{ margin: 0 }}><small>Outras atividades já acontecem dentro desta: {state.activities.filter((x) => x.join?.parentId === a.id).map((x) => x.title).join(', ')}.</small></p> : (
+                <>
+                  <label className="check"><input type="checkbox" checked={joinOn} onChange={(e) => {
+                    setJoinOn(e.target.checked);
+                    if (e.target.checked && !joinParent) { const w = parents.find(isWorkActivity); if (w) { setJoinParent(w.id); if (isLunchActivity(a)) { setJoinStart(hm(state.profile.workLunch.at)); setJoinEnd(hm(state.profile.workLunch.at + state.profile.workLunch.duration)); } } }
+                  }} /> Fazer junto com outra atividade (ao mesmo tempo)</label>
+                  {joinOn && (
+                    <>
+                      <label className="field">Junto com
+                        <select aria-label="Junto com" value={joinParent} onChange={(e) => setJoinParent(e.target.value)}>
+                          <option value="">Escolha…</option>
+                          {parents.map((p) => <option key={p.id} value={p.id}>{p.title}{p.anchor.type === 'time' ? ` (${hm(p.anchor.at)}–${hm(p.anchor.at + p.duration)})` : ''}</option>)}
+                        </select>
+                      </label>
+                      <div className="grid2">
+                        <label className="field">Início (junto)<input type="time" aria-label="Início junto" value={joinStart} onChange={(e) => { const old = spanMinutes(parseHM(joinStart) ?? 0, parseHM(joinEnd) ?? 0); setJoinStart(e.target.value); const st = parseHM(e.target.value); if (st !== null && old >= 5) setJoinEnd(hm(st + old)); }} /></label>
+                        <label className="field">Término (junto)<input type="time" aria-label="Término junto" value={joinEnd} onChange={(e) => setJoinEnd(e.target.value)} /></label>
+                      </div>
+                      <small className="muted">Nos dias em que {parentOf(joinParent)?.title ?? 'a outra atividade'} acontece, {a.title || 'esta atividade'} fica dentro dela nesse horário, sem ocupar espaço próprio. Nos outros dias, usa o horário normal acima.</small>
+                    </>
+                  )}
+                </>
+              )}
+              {!isNew && (
+                <>
+                  <div className="sep" style={{ margin: '4px 0' }} />
+                  <label className="field">Unir numa só atividade com
+                    <select aria-label="Unir com" value={mergeWith} onChange={(e) => setMergeWith(e.target.value)}>
+                      <option value="">Escolha…</option>
+                      {state.activities.filter((x) => x.id !== a.id && x.kind === 'normal').map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+                    </select>
+                  </label>
+                  <button type="button" className="btn sm" disabled={!mergeWith} onClick={merge}>Unir as duas</button>
+                  <small className="muted">Vira uma atividade só: nomes, descrições e durações somados, começando no horário da primeira.</small>
+                </>
+              )}
+            </div>
+          </details>
+        )}
         <label className="check"><input type="checkbox" checked={a.notify} onChange={(e) => setA({ ...a, notify: e.target.checked })} /> Lembrete com notificação</label>
         {!special && <label className="check"><input type="checkbox" checked={a.paused} onChange={(e) => setA({ ...a, paused: e.target.checked })} /> Pausada (some da rotina até reativar)</label>}
         <div className="row" style={{ gap: 8 }}>

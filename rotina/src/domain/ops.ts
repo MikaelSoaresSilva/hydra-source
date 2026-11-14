@@ -16,7 +16,9 @@ export type Op =
   | { type: 'duration'; id: string; minutes: number; scope: Scope }
   | { type: 'add'; activity: Activity; scope: Scope }
   | { type: 'remove'; id: string }
-  | { type: 'pause'; id: string; paused: boolean };
+  | { type: 'pause'; id: string; paused: boolean }
+  | { type: 'join'; id: string; parentId: string; at: number; duration: number }
+  | { type: 'unjoin'; id: string };
 
 const ov = (s: State, date: string): DayOverride => (s.overrides[date] ??= emptyOverride());
 
@@ -89,6 +91,8 @@ export function applyOps(state: State, ops: Op[]): State {
       }
       case 'remove': s.activities = s.activities.filter((a) => a.id !== op.id); break;
       case 'pause': { const a = s.activities.find((x) => x.id === op.id); if (a) a.paused = op.paused; break; }
+      case 'join': { const a = s.activities.find((x) => x.id === op.id); if (a && op.parentId !== op.id) a.join = { parentId: op.parentId, at: op.at, duration: op.duration }; break; }
+      case 'unjoin': { const a = s.activities.find((x) => x.id === op.id); if (a) delete a.join; break; }
     }
   }
   return s;
@@ -112,6 +116,8 @@ export function describeOp(s: State, op: Op, today: string): string {
     case 'add': return `Nova atividade: ${op.activity.title} (${durationLabel(op.activity.duration)}${op.activity.anchor.type === 'time' ? `, às ${hm(op.activity.anchor.at)}` : ''}) ${scopeText(op.scope, today)}.`;
     case 'remove': return `Remover ${nameOf(s, op.id)} da rotina.`;
     case 'pause': return `${op.paused ? 'Pausar' : 'Retomar'} ${nameOf(s, op.id)}.`;
+    case 'join': return `${nameOf(s, op.id)} junto com ${nameOf(s, op.parentId)}, das ${hm(op.at)} às ${hm(op.at + op.duration)} (nos dias em que ${nameOf(s, op.parentId)} acontece; nos outros, horário normal).`;
+    case 'unjoin': return `${nameOf(s, op.id)} volta a ter horário próprio.`;
   }
 }
 

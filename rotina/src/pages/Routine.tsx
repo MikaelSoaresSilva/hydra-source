@@ -5,6 +5,7 @@ import { normBed, sleepMinutes } from '../domain/scheduler';
 import { durationLabel, hm, parseHM, WEEKDAY_SHORT } from '../domain/time';
 import { PRIORITY_LABEL, type Activity, type Category, type SleepWindow } from '../domain/types';
 import { Card, Chips, Modal } from '../ui/components';
+import { isLunchActivity, isWorkActivity, linkWorkLunch } from '../domain/migrate';
 import { ActivityForm, newActivity } from './ActivityForm';
 
 const daysText = (d: number[]) => d.length === 7 ? 'Todos os dias' : d.join() === '1,2,3,4,5' ? 'Seg–Sex' : d.join() === '0,6' ? 'Fim de semana' : [1, 2, 3, 4, 5, 6, 0].filter((x) => d.includes(x)).map((x) => WEEKDAY_SHORT[x]).join(', ');
@@ -25,6 +26,8 @@ export function Routine() {
       <div><span className="kicker">Personalização</span><h1>Sua rotina</h1><p className="muted" style={{ margin: 0 }}>Edite qualquer atividade, horário, dia da semana e prioridade. O app reencaixa o resto sozinho, sem conflitos.</p></div>
 
       <SleepCard />
+
+      <WorkLunchCard />
 
       <Card title="Categorias" action={<button className="btn sm" onClick={() => setCatEdit({ id: uid(), name: '', emoji: '⭐', color: '#a78bfa' })}>➕ Nova</button>}>
         <div className="chips scroll-x">
@@ -52,6 +55,7 @@ export function Routine() {
                 <div className="row between" style={{ alignItems: 'flex-start' }}>
                   <div style={{ minWidth: 0 }}>
                     <strong>{c?.emoji} {a.title}</strong>{a.paused && <span className="pill" style={{ marginLeft: 6 }}>pausada</span>}
+                    {a.join && <><br /><small>🔗 junto com <strong>{state.activities.find((x) => x.id === a.join!.parentId)?.title ?? '—'}</strong>: {hm(a.join.at)}–{hm(a.join.at + a.join.duration)} nesses dias; nos outros:</small></>}
                     <br /><small>{anchorText(a)}{a.kind === 'normal' ? ` · ${durationLabel(a.duration)}` : ''} · {daysText(a.days)} · {PRIORITY_LABEL[a.priority]}{a.notify ? ' · 🔔' : ''}</small>
                   </div>
                   <div className="row" style={{ gap: 6, flex: 'none' }}>
@@ -138,5 +142,42 @@ function CategoryForm({ initial, onClose }: { initial: Category; onClose: () => 
         )}
       </div>
     </Modal>
+  );
+}
+
+function WorkLunchCard() {
+  const { state, update, toast } = useApp();
+  const wl = state.profile.workLunch;
+  const [start, setStart] = useState(hm(wl.at));
+  const [end, setEnd] = useState(hm(wl.at + wl.duration));
+  const work = state.activities.find(isWorkActivity);
+  const lunch = state.activities.find(isLunchActivity);
+  const linked = !!(work && lunch?.join?.parentId === work.id);
+  function apply() {
+    const at = parseHM(start); const en = parseHM(end);
+    if (at === null || en === null || en - at < 10) { toast('Horário de almoço inválido'); return; }
+    let msg = '';
+    update((s) => {
+      const withLunch = { ...s, profile: { ...s.profile, workLunch: { at, duration: en - at } } };
+      const r = linkWorkLunch(withLunch);
+      msg = r.linked ? `🍽️ Almoço junto com o Trabalho: ${start}–${end}` : `Horário salvo. ${r.reason ?? ''}`;
+      return r.state;
+    });
+    setTimeout(() => toast(msg), 0);
+  }
+  return (
+    <Card title="💼 Trabalho e almoço">
+      <p className="muted" style={{ marginTop: 0 }}><small>Nos dias de trabalho o almoço acontece dentro do horário de trabalho. Nos dias sem trabalho, o almoço volta ao horário normal{lunch && lunch.anchor.type === 'time' ? ` (${hm(lunch.anchor.at)}–${hm(lunch.anchor.at + lunch.duration)})` : ''}.</small></p>
+      <div className="grid2">
+        <label className="field">Almoço do trabalho — início<input type="time" aria-label="Almoço do trabalho início" value={start} onChange={(e) => setStart(e.target.value)} /></label>
+        <label className="field">Término<input type="time" aria-label="Almoço do trabalho término" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
+      </div>
+      <div className={`banner ${linked ? 'ok' : 'warn'}`} style={{ marginTop: 10 }} data-testid="work-lunch-status">
+        {linked && work && lunch?.join
+          ? <>✓ Almoço junto com <strong>{work.title}</strong> ({work.anchor.type === 'time' ? `${hm(work.anchor.at)}–${hm(work.anchor.at + work.duration)}` : ''}): {hm(lunch.join.at)}–{hm(lunch.join.at + lunch.join.duration)}.</>
+          : work ? <>O almoço ainda não está junto com {work.title}. Toque em "Aplicar".</> : <>Ainda não há atividade de Trabalho. Adicione uma (ex.: "Trabalho" 08:00–17:00, Seg–Sex) ou escreva na aba IA "vou trabalhar das 8h às 17h" — o almoço entra junto automaticamente.</>}
+      </div>
+      <button className="btn primary sm" style={{ marginTop: 8 }} onClick={apply}>Aplicar</button>
+    </Card>
   );
 }

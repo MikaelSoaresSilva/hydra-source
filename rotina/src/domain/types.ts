@@ -29,6 +29,12 @@ export interface Activity {
   paused: boolean;
   notify: boolean;
   kind?: ActivityKind;
+  /**
+   * "Junto com outra atividade": nos dias em que a atividade-mãe acontece, esta fica DENTRO dela,
+   * no horário `at` com `duration` minutos (ex.: Almoço 11:30–12:50 dentro do Trabalho).
+   * Nos outros dias, usa a âncora e a duração normais.
+   */
+  join?: { parentId: string; at: number; duration: number };
 }
 
 export interface SleepWindow { wake: number; bed: number }
@@ -57,12 +63,16 @@ export interface Settings {
   theme: 'dark' | 'light';
 }
 
-export interface Profile { name: string; weightKg: number; kcal: number; protein: number; carbs: number; fat: number; waterMl: number }
+export interface Profile {
+  name: string; weightKg: number; kcal: number; protein: number; carbs: number; fat: number; waterMl: number;
+  /** Almoço nos dias de trabalho (min desde 00:00 e duração). */
+  workLunch: { at: number; duration: number };
+}
 
 export interface AiLogEntry { at: string; text: string; summary: string; source: 'local' | 'claude'; applied: boolean }
 
 export interface State {
-  version: 1;
+  version: number;
   createdAt: string;
   profile: Profile;
   categories: Category[];

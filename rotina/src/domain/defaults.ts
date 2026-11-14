@@ -63,15 +63,15 @@ export const DEFAULT_SLEEP: SleepSettings = {
   goalMax: 9 * 60,
 };
 
-export const DEFAULT_PROFILE: Profile = { name: '', weightKg: 75, kcal: 2450, protein: 150, carbs: 325, fat: 60, waterMl: 2600 };
+export const DEFAULT_PROFILE: Profile = { name: '', weightKg: 75, kcal: 2450, protein: 150, carbs: 325, fat: 60, waterMl: 2600, workLunch: { at: 11 * 60 + 30, duration: 80 } };
 
 export const DEFAULT_SETTINGS: Settings = { notifications: true, lateAlerts: true, lateAfterMin: 15, snoozeMin: 10, aiEnabled: false, theme: 'dark' };
 
 export function defaultState(now = new Date()): State {
   return {
-    version: 1,
+    version: STATE_VERSION,
     createdAt: now.toISOString(),
-    profile: { ...DEFAULT_PROFILE },
+    profile: { ...DEFAULT_PROFILE, workLunch: { ...DEFAULT_PROFILE.workLunch } },
     categories: CATEGORIES.map((c) => ({ ...c })),
     activities: defaultActivities(),
     sleep: structuredClone(DEFAULT_SLEEP),
@@ -86,5 +86,7 @@ export function defaultState(now = new Date()): State {
     snoozes: {},
   };
 }
+
+export const STATE_VERSION = 2;
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);

@@ -123,11 +123,12 @@ export function Today({ go }: { go: (tab: string) => void }) {
             const late = lateOf(it);
             const canCheck = offset <= 0 || it.activity.kind === 'wake';
             return (
-              <li key={it.activity.id} className={`tl-item ${isDone ? 'done' : ''} ${isNow && !isDone ? 'now' : ''} ${late ? 'late' : ''}`} style={{ ['--c' as string]: c.color }} data-testid="tl-item">
+              <li key={it.activity.id} className={`tl-item ${isDone ? 'done' : ''} ${isNow && !isDone ? 'now' : ''} ${late ? 'late' : ''}`} style={{ ['--c' as string]: c.color, ...(it.parentId ? { marginLeft: 22 } : {}) }} data-testid="tl-item">
                 <div className="tl-time">{hm(it.start)}<small>{it.end > it.start ? hm(it.end) : ''}</small></div>
                 <div className="tl-main" onClick={() => setOpen(open === it.activity.id ? null : it.activity.id)} role="button" tabIndex={0} aria-expanded={open === it.activity.id}
                   onKeyDown={(e) => { if (e.key === 'Enter') setOpen(open === it.activity.id ? null : it.activity.id); }}>
                   <div className="tl-title">{c.emoji} {it.activity.title}</div>
+                  {it.parentId && <small className="pill violet" style={{ margin: '2px 0', whiteSpace: 'normal', maxWidth: '100%' }}>🔗 junto com {plan.items.find((p) => p.activity.id === it.parentId)?.activity.title}</small>}
                   <small>{it.end > it.start ? durationLabel(it.end - it.start) : 'meta 8–9 h de sono'}{it.todayOnly ? ' · só hoje' : ''}{late ? ' · atrasada' : ''}{isNow && !isDone ? ' · agora' : ''}{state.snoozes[`${date}|${it.activity.id}`] && !isDone ? ' · adiada' : ''}</small>
                 </div>
                 <div className="row" style={{ gap: 6 }}>
@@ -228,6 +229,10 @@ function TimeEdit({ item, date, isToday, onClose }: { item: PlanItem; date: stri
   // Confere antes de salvar se o novo horário cabe entre acordar e dormir.
   const outside = (() => {
     if (!valid || st === null) return null;
+    if (item.parentId) {
+      const p = buildDay(state, date).items.find((x) => x.activity.id === item.parentId);
+      return p && (st < p.start || st + d > p.end) ? `fora de ${p.activity.title}` : null;
+    }
     const o = structuredClone(state.overrides[date] ?? emptyOverride());
     o.move[item.activity.id] = st; o.duration[item.activity.id] = d;
     const u = buildDay({ ...state, overrides: { ...state.overrides, [date]: o } }, date).unplaced.find((x) => x.activity.id === item.activity.id);
@@ -245,7 +250,8 @@ function TimeEdit({ item, date, isToday, onClose }: { item: PlanItem; date: stri
     } else {
       update((s) => ({
         ...s,
-        activities: s.activities.map((a) => (a.id === id ? { ...a, anchor: { type: 'time', at: st }, duration: d, fixed: true } : a)),
+        // Atividade "junto com": muda o horário dentro da outra; senão, o horário próprio.
+        activities: s.activities.map((a) => (a.id !== id ? a : item.parentId && a.join ? { ...a, join: { ...a.join, at: st, duration: d } } : { ...a, anchor: { type: 'time', at: st }, duration: d, fixed: true })),
         // remove ajustes só-hoje desta atividade, para valer o novo horário
         overrides: Object.fromEntries(Object.entries(s.overrides).map(([k, o]) => {
           const m = { ...o.move }; const du = { ...o.duration }; delete m[id]; delete du[id];
@@ -268,7 +274,10 @@ function TimeEdit({ item, date, isToday, onClose }: { item: PlanItem; date: stri
           <label className="field">Término<input type="time" aria-label="Novo término" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
         </div>
         <small className={valid ? 'muted' : ''} style={valid ? undefined : { color: 'var(--danger)' }}>{valid ? `Duração: ${durationLabel(d)}${en !== null && st !== null && en < st ? ' (termina no dia seguinte)' : ''}` : 'O término precisa ser pelo menos 5 min depois do início (máx. 16 h).'}</small>
-        {outside && <div className="banner warn" role="alert">Esse horário fica {outside} ({hm(buildDay(state, date).wake)}–{hm(buildDay(state, date).bed)}). Mude o horário ou ajuste o sono em Rotina → Sono.</div>}
+        {outside && (() => {
+          const p = item.parentId ? buildDay(state, date).items.find((x) => x.activity.id === item.parentId) : null;
+          return <div className="banner warn" role="alert">Esse horário fica {outside} ({p ? `${hm(p.start)}–${hm(p.end)}` : `${hm(buildDay(state, date).wake)}–${hm(buildDay(state, date).bed)}`}). {p ? 'Escolha um horário dentro dela, ou separe as atividades em Rotina → Editar.' : 'Mude o horário ou ajuste o sono em Rotina → Sono.'}</div>;
+        })()}
         {!onlyThisDay && <Chips label="Vale para" value={scope} onChange={setScope} options={[{ value: 'day', label: isToday ? 'Só hoje' : 'Só neste dia' }, { value: 'always', label: 'Todos os dias' }]} />}
         <p className="muted" style={{ margin: 0 }}><small>A atividade fica fixa nesse horário e as outras se reorganizam em volta, sem conflito.</small></p>
         <button className="btn primary" disabled={!valid || !!outside} onClick={save}>Salvar horário</button>

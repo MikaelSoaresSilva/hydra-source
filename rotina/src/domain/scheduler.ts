@@ -12,6 +12,8 @@ export interface PlanItem {
   fixed: boolean;
   /** Só neste dia (adicionado ou movido para hoje). */
   todayOnly: boolean;
+  /** Acontece dentro desta atividade (não ocupa horário próprio). */
+  parentId?: string;
 }
 
 export interface DayPlan {
@@ -104,7 +106,11 @@ export function buildDay(state: State, date: string): DayPlan {
     if (end > start) busy.push([start, end]);
   }
 
-  const normal = list.filter((x) => x.kind !== 'wake' && x.kind !== 'bed');
+  // Atividades "junto com": se a mãe acontece hoje, são encaixadas dentro dela no fim (não ocupam horário).
+  const present = new Set(list.map((a) => a.id));
+  const joined = list.filter((a) => a.join && a.join.parentId !== a.id && present.has(a.join.parentId) && !list.find((p) => p.id === a.join!.parentId)?.join);
+  const joinedIds = new Set(joined.map((a) => a.id));
+  const normal = list.filter((x) => x.kind !== 'wake' && x.kind !== 'bed' && !joinedIds.has(x.id));
   const isFixed = (a: Activity) => a.fixed || a.id in (override?.move ?? {});
   const pref = (a: Activity) => override?.move[a.id] ?? preferredStart(a, wake, bed);
 
@@ -142,6 +148,18 @@ export function buildDay(state: State, date: string): DayPlan {
     busy.push([best, best + d]);
   }
 
+  // 4) Dentro da atividade-mãe.
+  for (const a of joined) {
+    const parent = items.find((i) => i.activity.id === a.join!.parentId);
+    if (!parent) { unplaced.push({ activity: a, reason: `${list.find((p) => p.id === a.join!.parentId)?.title ?? 'a atividade'} não coube hoje` }); continue; }
+    const d = Math.min(override?.duration[a.id] ?? a.join!.duration, parent.end - parent.start);
+    // Horário escolhido; se a mãe foi movida neste dia, acompanha o deslocamento.
+    const moved = override?.move[a.id];
+    let start = moved ?? a.join!.at + (parent.start - parent.preferred);
+    start = Math.max(parent.start, Math.min(start, parent.end - d));
+    items.push({ activity: a, start, end: start + d, preferred: a.join!.at, fixed: true, todayOnly: todayOnly(a), parentId: parent.activity.id });
+  }
+
   items.sort((a, b) => a.start - b.start || (a.activity.kind === 'bed' ? 1 : 0) - (b.activity.kind === 'bed' ? 1 : 0));
   return { date, wake, bed, sleepMinutes: sleepMinutes(bed, nextWin.wake), items, unplaced, skipped, conflicts };
 }
@@ -154,7 +172,8 @@ function nextDate(iso: string): string {
 
 /** Item atual e próximo para um horário (minutos). */
 export function currentAndNext(plan: DayPlan, nowMin: number, done: Set<string>) {
-  const current = plan.items.find((i) => i.start <= nowMin && nowMin < i.end) ?? null;
+  // Com atividades "junto", a de dentro (que começou depois) é a atual.
+  const current = [...plan.items].reverse().find((i) => i.start <= nowMin && nowMin < i.end) ?? null;
   const next = plan.items.find((i) => i.start > nowMin && !done.has(i.activity.id)) ?? null;
   return { current, next };
 }

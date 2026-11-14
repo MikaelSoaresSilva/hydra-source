@@ -5,13 +5,14 @@ import { applyOps, preview } from './ops';
 import { buildDay } from './scheduler';
 import { hm } from './time';
 import type { State } from './types';
+import { linkWorkLunch, migrateToV2 } from './migrate';
 
 const MON = '2026-11-16';
 const SAT = '2026-11-14';
 const s0 = () => defaultState(new Date('2026-11-14T10:00:00'));
 const at = (s: State, date: string, title: RegExp) => buildDay(s, date).items.find((i) => title.test(i.activity.title));
 const noOverlap = (s: State, date: string) => {
-  const items = buildDay(s, date).items.filter((i) => i.end > i.start);
+  const items = buildDay(s, date).items.filter((i) => i.end > i.start && !i.parentId);
   for (let i = 1; i < items.length; i++) expect(items[i].start, `${items[i - 1].activity.title} x ${items[i].activity.title}`).toBeGreaterThanOrEqual(items[i - 1].end);
 };
 
@@ -74,17 +75,22 @@ describe('Descreva sua necessidade (exemplos do pedido)', () => {
     return { r, next: applyOps(s, r.ops), pv: preview(s, r.ops, today) };
   };
 
-  it('"Vou começar a trabalhar às 8h." → bloco de trabalho fixo, resto reorganizado sem conflito', () => {
+  it('"Vou começar a trabalhar às 8h." → Trabalho 08:00–17:00 com o almoço junto (11:30–12:50)', () => {
     const { next } = run('Vou começar a trabalhar às 8h.');
     const items = buildDay(next, MON).items;
     const work = items.filter((i) => /Trabalho/.test(i.activity.title));
-    expect(work.length).toBe(2);
+    expect(work.length).toBe(1);
     expect(hm(work[0].start)).toBe('08:00');
-    expect(hm(work[1].end)).toBe('17:00');
-    expect(hm(at(next, MON, /Almoço/)!.start)).toBe('12:00');
+    expect(hm(work[0].end)).toBe('17:00');
+    const lunch = at(next, MON, /Almoço/)!;
+    expect(hm(lunch.start)).toBe('11:30');
+    expect(hm(lunch.end)).toBe('12:50');
+    expect(lunch.parentId).toBe(work[0].activity.id);
     expect(at(next, MON, /Academia/)!.start).toBeGreaterThanOrEqual(17 * 60);
     noOverlap(next, MON);
     expect(buildDay(next, SAT).items.some((i) => /Trabalho/.test(i.activity.title))).toBe(false);
+    expect(hm(at(next, SAT, /Almoço/)!.start)).toBe('12:00');
+    expect(at(next, SAT, /Almoço/)!.parentId).toBeUndefined();
   });
   it('"Hoje só vou conseguir ir à academia às 18h." → só hoje', () => {
     const { next, pv } = run('Hoje só vou conseguir ir à academia às 18h.');
@@ -174,5 +180,50 @@ describe('contexto entre frases', () => {
     const s = s0();
     const next = applyOps(s, interpret('Quero dormir mais cedo', s, MON).ops);
     expect(hm(buildDay(next, '2026-11-17').bed)).toBe('22:00');
+  });
+});
+
+describe('atividades juntas e unidas', () => {
+  const work = (s: State) => applyOps(s, interpret('Vou trabalhar das 8h às 17h', s, MON).ops);
+  it('faltar ao trabalho hoje: almoço volta ao horário normal', () => {
+    const s = work(s0());
+    const next = applyOps(s, interpret('Hoje não vou trabalhar', s, MON).ops);
+    expect(at(next, MON, /Trabalho/)).toBeFalsy();
+    expect(hm(at(next, MON, /Almoço/)!.start)).toBe('12:00');
+  });
+  it('"podcast junto com o cardio": junta qualquer atividade', () => {
+    let s = s0();
+    s = applyOps(s, interpret('Adicionar podcast às 15h por 20 min', s, MON).ops);
+    s = applyOps(s, interpret('Podcast junto com o cardio das 17h55 às 18h10', s, MON).ops);
+    const tue = '2026-11-17';
+    const cardio = at(s, tue, /^Cardio/)!;
+    const pod = at(s, tue, /Podcast/)!;
+    expect(pod.parentId).toBe(cardio.activity.id);
+    expect(pod.start).toBeGreaterThanOrEqual(cardio.start);
+    expect(pod.end).toBeLessThanOrEqual(cardio.end);
+    expect(hm(at(s, MON, /Podcast/)!.start)).toBe('15:00');
+    noOverlap(s, tue);
+  });
+  it('migração da v1: manhã+tarde viram um Trabalho e o almoço entra junto às 11:30–12:50', () => {
+    const v1 = s0();
+    v1.version = 1;
+    const mk = (title: string, at: number, duration: number) => ({ ...v1.activities[0], id: title, title, categoryId: 'work', kind: 'normal' as const, anchor: { type: 'time' as const, at }, duration, fixed: true, days: [1, 2, 3, 4, 5] });
+    v1.activities.push(mk('Trabalho (manhã)', 480, 240), mk('Trabalho (tarde)', 760, 260));
+    const v2 = migrateToV2(v1);
+    expect(v2.version).toBe(2);
+    expect(v2.activities.filter((a) => /^Trabalho/.test(a.title)).map((w) => w.title)).toEqual(['Trabalho']);
+    expect(hm(at(v2, MON, /Almoço/)!.start)).toBe('11:30');
+    expect(hm(at(v2, MON, /Almoço/)!.end)).toBe('12:50');
+    expect(hm(at(v2, MON, /Trabalho/)!.end)).toBe('17:00');
+    expect(migrateToV2(v2)).toBe(v2);
+  });
+  it('ligar almoço ao trabalho criado à mão; não liga se o almoço cai fora do expediente', () => {
+    const s = s0();
+    s.activities.push({ ...s.activities[0], id: 'w', title: 'Trabalho', categoryId: 'work', kind: 'normal', anchor: { type: 'time', at: 7 * 60 + 30 }, duration: 9 * 60, fixed: true, days: [1, 2, 3, 4, 5] });
+    const r = linkWorkLunch(s);
+    expect(r.linked).toBe(true);
+    expect(hm(at(r.state, MON, /Almoço/)!.start)).toBe('11:30');
+    noOverlap(r.state, MON);
+    expect(linkWorkLunch({ ...s, profile: { ...s.profile, workLunch: { at: 17 * 60, duration: 60 } } }).linked).toBe(false);
   });
 });

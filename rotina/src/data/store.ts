@@ -2,6 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { openDB, type IDBPDatabase } from 'idb';
 import { defaultState } from '../domain/defaults';
+import { migrateToV2 } from '../domain/migrate';
 import type { State } from '../domain/types';
 
 const DB = 'titan-rotina';
@@ -16,14 +17,15 @@ const db = () => (dbp ??= openDB(DB, 1, { upgrade(d) { d.createObjectStore(STORE
 export function migrate(raw: Partial<State>): State {
   const base = defaultState();
   const s = { ...base, ...raw } as State;
-  s.profile = { ...base.profile, ...raw.profile };
+  s.profile = { ...base.profile, ...raw.profile, workLunch: { ...base.profile.workLunch, ...raw.profile?.workLunch } };
   s.settings = { ...base.settings, ...raw.settings };
   s.sleep = { ...base.sleep, ...raw.sleep, weekday: { ...base.sleep.weekday, ...raw.sleep?.weekday }, weekend: { ...base.sleep.weekend, ...raw.sleep?.weekend } };
   for (const k of ['overrides', 'completions', 'water', 'food', 'dayLog', 'achievements', 'snoozes'] as const) (s as unknown as Record<string, unknown>)[k] = raw[k] ?? {};
   s.aiLog = raw.aiLog ?? [];
   s.categories = raw.categories?.length ? raw.categories : base.categories;
   s.activities = raw.activities ?? base.activities;
-  return s;
+  s.version = raw.version ?? 1;
+  return migrateToV2(s);
 }
 
 export async function loadState(): Promise<State> {

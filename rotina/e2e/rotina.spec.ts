@@ -178,3 +178,62 @@ test('início e término: no formulário e pela linha do tempo (só hoje / todos
   await expect(page.getByRole('alert')).toContainText('antes do horário de acordar');
   await expect(page.getByRole('button', { name: 'Salvar horário' })).toBeDisabled();
 });
+
+test('trabalho com almoço junto (11:30–12:50), juntar e unir atividades', async ({ page }, info) => {
+  await start(page, '2026-11-16T08:00:00');
+  await nav(page, 'Rotina').click();
+  await expect(page.getByTestId('work-lunch-status')).toContainText('Ainda não há atividade de Trabalho');
+  // cria o Trabalho 08:00–17:00 seg–sex
+  await page.getByRole('button', { name: '➕ Adicionar' }).click();
+  await page.getByLabel('Nome').fill('Trabalho');
+  await page.getByLabel('Categoria').selectOption('work');
+  await page.getByLabel('Horário de início').fill('08:00');
+  await page.getByLabel('Horário de término').fill('17:00');
+  await page.getByRole('button', { name: 'Seg–Sex' }).click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.getByTestId('work-lunch-status')).toContainText('Almoço junto com Trabalho');
+  await expect(page.getByTestId('work-lunch-status')).toContainText('11:30–12:50');
+  await page.screenshot({ path: `test-results/trabalho-almoco-${info.project.name}.png`, fullPage: true });
+
+  await nav(page, 'Hoje').click();
+  const lunch = page.getByTestId('tl-item').filter({ hasText: 'Almoço' });
+  await expect(lunch).toContainText('11:30');
+  await expect(lunch).toContainText('12:50');
+  await expect(lunch).toContainText('junto com Trabalho');
+  // sábado: sem trabalho, almoço no horário normal
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Próximo dia' }).click();
+  await expect(page.getByText(/Sábado, 21 de novembro/)).toBeVisible();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Almoço' })).toContainText('12:00');
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Trabalho' })).toHaveCount(0);
+  await page.getByRole('main').getByRole('button', { name: 'Hoje', exact: true }).click();
+
+  // juntar: Leitura junto com Tempo livre
+  await nav(page, 'Rotina').click();
+  await page.getByRole('button', { name: 'Editar Leitura' }).click();
+  await page.getByText('🔗 Combinar com outra atividade').click();
+  await page.getByText('Fazer junto com outra atividade (ao mesmo tempo)').click();
+  await page.getByLabel('Junto com', { exact: true }).selectOption({ label: 'Tempo livre (20:05–21:05)' });
+  await page.getByLabel('Início junto').fill('20:10');
+  await page.getByLabel('Término junto').fill('20:40');
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.locator('.list li', { hasText: 'Leitura' })).toContainText('junto com Tempo livre');
+
+  // unir: Higiene pessoal + Skincare matinal
+  page.on('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: 'Editar Higiene pessoal' }).click();
+  await page.getByText('🔗 Combinar com outra atividade').click();
+  await page.getByLabel('Unir com').selectOption({ label: 'Skincare matinal' });
+  await page.getByRole('button', { name: 'Unir as duas' }).click();
+  await expect(page.getByRole('status')).toContainText('Unidas: Higiene pessoal + Skincare matinal');
+  await expect(page.locator('.list li', { hasText: 'Higiene pessoal + Skincare matinal' })).toContainText('25 min');
+  await expect(page.locator('.list li').filter({ hasText: /^.*Skincare matinal$/ })).toHaveCount(0);
+
+  await nav(page, 'Hoje').click();
+  // segunda com trabalho + academia: o tempo livre não cabe e o app avisa (com a leitura que está dentro dele)
+  await expect(page.locator('.banner.warn', { hasText: 'Não couberam' })).toContainText('Tempo livre');
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Higiene pessoal + Skincare matinal' })).toHaveCount(1);
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Próximo dia' }).click();
+  const reading = page.getByTestId('tl-item').filter({ hasText: 'Leitura' });
+  await expect(reading).toContainText('20:10');
+  await expect(reading).toContainText('junto com Tempo livre');
+});

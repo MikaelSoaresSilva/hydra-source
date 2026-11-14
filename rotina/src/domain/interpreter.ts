@@ -2,7 +2,7 @@
 // e transforma em operações. O que ele não entender pode ir para o Claude (se você ativar).
 import { uid } from './defaults';
 import type { Op, Scope } from './ops';
-import { addDays, isWeekend } from './time';
+import { addDays, isWeekend, spanMinutes } from './time';
 import type { Activity, State } from './types';
 
 export interface Interpretation {
@@ -162,7 +162,7 @@ function clause(t: string, state: State, today: string, ops: Op[]) {
   const timeText = dur ? t.slice(0, dur.span[0]) + ' '.repeat(dur.span[1] - dur.span[0]) + t.slice(dur.span[1]) : t;
   const times = parseTimes(timeText);
   const acts = findActivities(t, state);
-  const negative = /\b(nao vou (conseguir|poder|dar|ter tempo|fazer|ir|treinar)|nao consigo|nao da|sem tempo|sem|pular|pula|cancelar|cancela|desmarcar|folga de|nao (vou )?fazer)\b/.test(t);
+  const negative = /\b(nao (vou|irei|vai dar|tenho)\b|nao consigo|nao da|sem tempo|sem|pular|pula|cancelar|cancela|desmarcar|folga de|nao (vou )?fazer)\b/.test(t);
 
   // ACORDAR
   if (/\b(acordar|acordo|despertar|levantar|acorda)\b/.test(t)) {
@@ -190,6 +190,22 @@ function clause(t: string, state: State, today: string, ops: Op[]) {
     workOps(state, start, end, scope, ops);
     return;
   }
+
+  // JUNTAR: "almoço junto com o trabalho", "podcast durante o cardio das 17h às 17h20"
+  const joinRe = /\b(junto com|junto ao|junto do|junto da|durante|dentro d[oa]|ao mesmo tempo que|no meio d[oa])\b/;
+  const jm = joinRe.exec(t);
+  if (jm) {
+    const child = findActivities(t.slice(0, jm.index), state)[0];
+    const parent = findActivities(t.slice(jm.index + jm[0].length), state)[0];
+    if (child && parent && child.id !== parent.id) {
+      const at = times[0] ?? (parent.anchor.type === 'time' ? parent.anchor.at : 12 * 60);
+      const duration = times[1] !== undefined ? spanMinutes(times[0], times[1]) : dur?.minutes ?? child.duration;
+      ops.push({ type: 'join', id: child.id, parentId: parent.id, at, duration: Math.max(5, duration) });
+      return;
+    }
+    if (child && /\b(separar|separado|horario proprio)\b/.test(t)) { ops.push({ type: 'unjoin', id: child.id }); return; }
+  }
+  if (/\b(separar|separa|horario proprio)\b/.test(t) && acts.length) { for (const a of acts) if (a.join) ops.push({ type: 'unjoin', id: a.id }); if (acts.some((a) => a.join)) return; }
 
   // PULAR / NÃO FAZER
   if (negative && acts.length) {
@@ -268,23 +284,20 @@ function wakeOf(state: State, scope: Scope): number {
   return scope.dayType === 'weekend' ? state.sleep.weekend.wake : state.sleep.weekday.wake;
 }
 
-/** Trabalho vira bloco fixo; se cobrir o almoço, é dividido em manhã e tarde em volta dele. */
+/** Trabalho vira um bloco fixo; o almoço fica JUNTO com ele no horário de almoço do trabalho. */
 function workOps(state: State, start: number, end: number, scope: Scope, ops: Op[]) {
   const lunch = state.activities.find((a) => /almoco/.test(norm(a.title)));
-  const lunchStart = lunch?.anchor.type === 'time' ? lunch.anchor.at : 12 * 60;
-  const lunchEnd = lunchStart + (lunch?.duration ?? 60);
   const days = scope.kind === 'always' && scope.dayType === 'weekend' ? [0, 6] : [1, 2, 3, 4, 5];
   for (const a of state.activities.filter((x) => /^trabalho/.test(norm(x.title)))) {
     ops.push(scope.kind === 'always' ? { type: 'remove', id: a.id } : { type: 'skip', id: a.id, date: scope.date });
   }
-  const mk = (title: string, s: number, e: number): Activity => ({
-    id: uid(), title, categoryId: 'work', description: 'Horário de trabalho. Os outros blocos se reorganizam em volta dele.', duration: e - s,
-    anchor: { type: 'time', at: s }, fixed: true, priority: 1, days, paused: false, notify: true, kind: 'normal',
-  });
-  const blocks = lunch && start < lunchStart && end > lunchEnd
-    ? [mk('Trabalho (manhã)', start, lunchStart), mk('Trabalho (tarde)', lunchEnd, end)]
-    : [mk('Trabalho', start, end)];
-  if (lunch && start < lunchStart && end > lunchEnd && !lunch.fixed) ops.push({ type: 'move', id: lunch.id, at: lunchStart, scope: { kind: 'always', dayType: 'both' } });
-  const addScope: Scope = scope.kind === 'date' ? scope : { kind: 'always', dayType: 'both' };
-  for (const b of blocks) ops.push({ type: 'add', activity: scope.kind === 'date' ? { ...b, days: [0, 1, 2, 3, 4, 5, 6] } : b, scope: addScope });
+  const work: Activity = {
+    id: uid(), title: 'Trabalho', categoryId: 'work', description: 'Horário de trabalho. O almoço do trabalho acontece dentro dele; o resto se reorganiza em volta.', duration: spanMinutes(start, end) || 9 * 60,
+    anchor: { type: 'time', at: start }, fixed: true, priority: 1, days: scope.kind === 'date' ? [0, 1, 2, 3, 4, 5, 6] : days, paused: false, notify: true, kind: 'normal',
+  };
+  ops.push({ type: 'add', activity: work, scope: scope.kind === 'date' ? scope : { kind: 'always', dayType: 'both' } });
+  const wl = state.profile.workLunch;
+  if (lunch && scope.kind === 'always' && wl.at >= start && wl.at + wl.duration <= start + work.duration) {
+    ops.push({ type: 'join', id: lunch.id, parentId: work.id, at: wl.at, duration: wl.duration });
+  }
 }

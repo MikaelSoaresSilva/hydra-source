@@ -98,6 +98,8 @@ export interface Preferences {
   goal?: 'recomp' | 'gain';
   /** Treino ativo escolhido (o JKK de 5 dias fica guardado para voltar quando pedir). */
   trainingProtocol?: JkkProtocol;
+  /** Data de início do treino de Luta (sábado e domingo, em casa). */
+  fightStart?: string;
 }
 
 export interface Profile {

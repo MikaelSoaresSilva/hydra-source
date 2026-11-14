@@ -98,6 +98,20 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Luta em casa (Boxe + MMA) — v3.1
+
+Aba **Luta** (`/luta`, menu inferior): dois treinos solo por semana, **sábado e domingo, no máximo 90 min** (o teste garante ≤ 90 em todos os planos e semanas).
+
+- **Sábado · Ataque, pés e reflexo:** aquecimento, fundamentos (base, guarda, jab, direto, cruzado, uppercut, combinações), pés e agilidade (passo-arrasta, escada no chão, pivô, ângulos), **reflexo por som e visão** (o app apita 1/2/3 vezes em intervalos aleatórios e mostra o número: jab-direto / esquiva + contra / sprawl; rodadas olhando, só ouvindo e de olhos fechados), sombra com "janelas" de oportunidade de golpe.
+- **Domingo · Defesa, MMA e aprender a apanhar:** bloqueio, esquiva, pêndulo, passo atrás; sprawl, mudança de nível, chute baixo e checagem, levantar em base; **aprender a apanhar com segurança** (quedas/ukemi, pescoço em isometria, tronco que absorve golpe, compostura) e sentidos/propriocepção (guarda e equilíbrio de olhos fechados).
+- Nunca treina levar pancada na cabeça; sparring só em academia com professor e proteção; sinais de alerta de concussão na tela.
+- Progressão de 8 semanas (`domain/fight.ts`); cronômetro de rounds com bipe e tela acesa.
+- A **corda do fim de semana entra dentro da luta** (intervalada no sábado, contínua no domingo; no plano de 5 dias só no domingo). Marcar a luta marca a corda. Item opcional na Missão e na tela Hoje.
+
+## Cardápio econômico (R$ 500/mês)
+
+Nutrição → aba **R$ 500** (`domain/budget.ts`): mesma meta de calorias e proteína só com ovo, frango, feijão, arroz, leite, banana e óleo, calculado com o **preço mais caro encontrado** de cada alimento em pesquisas públicas de 2026 (fonte e data na tela). Se a proteína não couber, desce até 90% da meta (mínimo 1,8 g/kg). O custo real continua vindo dos preços que você registra em Compras.
+
 ## Treino: Protocolo JKK em 3, 4 ou 5 dias (alternável)
 
 **Versão 3 dias** (`JKK3_DAYS`): corpo inteiro em seg/qua/sex, 28 séries e ~95 min por treino. Braços, braquial, elevação lateral e peito superior mantêm as séries semanais do plano de 5 dias (bíceps 9, tríceps 12, braquial 5, lateral 8, peito superior 10), com frequência 3×; pernas, costas e abdômen cedem volume. Tem revisão automática após medições e sessão em casa para cada dia.

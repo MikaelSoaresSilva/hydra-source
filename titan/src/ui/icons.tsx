@@ -5,3 +5,4 @@ export const IconFood = () => <svg viewBox="0 0 24 24" {...P} aria-hidden><path 
 export const IconDrop = () => <svg viewBox="0 0 24 24" {...P} aria-hidden><path d="M12 3s7 7 7 12a7 7 0 0 1-14 0c0-5 7-12 7-12z" /></svg>;
 export const IconChart = () => <svg viewBox="0 0 24 24" {...P} aria-hidden><path d="M3 21h18M6 17V10M11 17V5M16 17v-8M21 17v-4" /></svg>;
 export const IconUser = () => <svg viewBox="0 0 24 24" {...P} aria-hidden><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg>;
+export const IconGlove = () => <svg viewBox="0 0 24 24" {...P} aria-hidden><path d="M7 21h8v-3l2.5-2.5A4 4 0 0 0 19 13V8a4 4 0 0 0-4-4H10a4 4 0 0 0-4 4v2H5a2 2 0 0 0 0 4h2v4z" /><path d="M7 18h8M10 10h5" /></svg>;

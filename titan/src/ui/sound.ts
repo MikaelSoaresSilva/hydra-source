@@ -81,6 +81,29 @@ export function playRestBeep(): boolean {
   return true;
 }
 
+/** Sinal do treino de reflexo: N bipes curtos e graves (diferentes do bipe de fim de round). */
+export function playCue(n: number): boolean {
+  const c = audioCtx();
+  if (!c) return false;
+  if (c.state === 'suspended') void c.resume().catch(() => {});
+  const t0 = c.currentTime + 0.02;
+  for (let i = 0; i < n; i++) {
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 1200;
+    const at = t0 + i * 0.22;
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(0.9, at + 0.005);
+    gain.gain.setValueAtTime(0.9, at + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+    osc.connect(gain).connect(c.destination);
+    osc.start(at);
+    osc.stop(at + 0.14);
+  }
+  return true;
+}
+
 type WakeLockSentinelLike = { release(): Promise<void> };
 /** Mantém a tela acesa enquanto o descanso corre. */
 export async function keepScreenOn(): Promise<WakeLockSentinelLike | null> {

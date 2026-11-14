@@ -402,3 +402,51 @@ test('backup: exportar e restaurar os dados', async ({ page }) => {
   await page.getByLabel('Arquivo de backup').setInputFiles({ name: 'titan-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
   await expect(page.getByText(/Backup restaurado: \d+ registros/)).toBeVisible();
 });
+
+test('luta: sábado e domingo até 90 min, reflexo por som e cardápio de R$ 500', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await expect(page.getByRole('heading', { name: 'O que fazer hoje' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Luta' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Luta em casa', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Começar o treino de luta' }).click();
+  await expect(page.getByText(/semana 1 de 8/)).toBeVisible();
+
+  await page.getByRole('radio', { name: /Domingo/ }).click();
+  await expect(page.getByRole('heading', { name: /Aprender a apanhar \(do jeito seguro\)/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Fundamentos de MMA/ })).toBeVisible();
+  const sun = Number((await page.getByTestId('fight-total').textContent())!.replace(/\D/g, ''));
+  expect(sun).toBeLessThanOrEqual(90);
+
+  await page.getByRole('radio', { name: /Sábado/ }).click();
+  await expect(page.getByRole('heading', { name: /Reflexo por som e visão/ })).toBeVisible();
+  const sat = Number((await page.getByTestId('fight-total').textContent())!.replace(/\D/g, ''));
+  expect(sat).toBeLessThanOrEqual(90);
+  const reflex = page.locator('.card').filter({ has: page.getByRole('heading', { name: /Reflexo por som e visão/ }) });
+  await reflex.getByRole('button', { name: /Iniciar rounds/ }).click();
+  await expect(reflex.getByRole('timer')).toContainText('LUTE');
+  await expect(reflex.getByRole('timer')).toContainText('Round 1/4');
+  await expect(reflex.getByTestId('reflex-cue')).toBeVisible();
+  await page.screenshot({ path: `test-results/luta-${info.project.name}.png`, fullPage: true });
+  await reflex.getByRole('button', { name: 'Parar' }).click();
+
+  // Cardápio econômico com preço teto
+  await page.getByRole('link', { name: 'Nutrição' }).first().click();
+  await page.getByRole('tab', { name: 'R$ 500' }).click();
+  await expect(page.getByRole('heading', { name: /Cardápio econômico · até R\$ 500\/mês/ })).toBeVisible();
+  const cost = Number((await page.getByTestId('budget-cost').textContent())!.replace(/[^\d,]/g, '').replace(',', '.'));
+  expect(cost).toBeGreaterThan(300);
+  expect(cost).toBeLessThanOrEqual(500);
+  await expect(page.getByRole('heading', { name: 'Preços usados (teto) e fontes' })).toBeVisible();
+  await page.getByRole('button', { name: 'Comi isso' }).first().click();
+  await page.screenshot({ path: `test-results/r500-${info.project.name}.png`, fullPage: true });
+});

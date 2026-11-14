@@ -136,6 +136,8 @@ export function Today() {
     ...(wash ? [{ label: 'Lavar e finalizar o cabelo', done: hairDone, to: '/cuidados' }] : []),
     ...(currentGoal(profile) === 'recomp' && program && isJkk(program.config.protocol) && ropeFor(program.config.protocol, today)
       ? [{ label: 'Pular corda (cardio do fim de semana)', done: !!checkins.data.find((c) => c.date === today)?.habits?.rope, to: '/cardio' }] : []),
+    ...(profile?.preferences.fightStart && [0, 6].includes(new Date(`${today}T12:00:00Z`).getUTCDay())
+      ? [{ label: 'Treino de luta (até 90 min)', done: !!checkins.data.find((c) => c.date === today)?.habits?.fight, to: '/luta' }] : []),
   ];
 
   async function goTrain() {

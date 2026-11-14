@@ -33,7 +33,8 @@ export function useMissionData(): { data: MissionData; loading: boolean } {
     hasSkinRoutine: routine.data.some((r) => r.area === 'skin' && r.enabled),
     supplementPlan: profile?.nutrition.supplementPlan,
     goal: profile?.preferences.goal,
-  }), [programs.data, sessions.data, food.data, targets.data, care.data, checkins.data, routine.data, profile?.nutrition.supplementPlan, profile?.preferences.goal]);
+    fight: !!profile?.preferences.fightStart,
+  }), [programs.data, sessions.data, food.data, targets.data, care.data, checkins.data, routine.data, profile?.nutrition.supplementPlan, profile?.preferences.goal, profile?.preferences.fightStart]);
   return { data, loading: programs.loading || sessions.loading || checkins.loading };
 }
 

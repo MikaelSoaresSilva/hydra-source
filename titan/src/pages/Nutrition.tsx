@@ -13,9 +13,10 @@ import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Progress, Tabs, fmt
 import { mealsBelowProtein, proteinPerMealTarget } from '../domain/science';
 import { GoalSwitch, currentGoal } from './GoalSwitch';
 import { RECOMP_ADJUST, RECOMP_DIET } from '../domain/recomp';
+import { BUDGET_FOOD_KEY, BUDGET_LIMIT, BUDGET_RULES, REF_PRICES, budgetPlan } from '../domain/budget';
 import { SUGGESTED_STACK, SUPPLEMENTS, SUPPLEMENT_TRUTH, TIER_LABEL, type Tier } from '../domain/supplements';
 
-type Tab = 'hoje' | 'plano' | 'compras' | 'metas' | 'suplementos';
+type Tab = 'hoje' | 'plano' | 'barato' | 'compras' | 'metas' | 'suplementos';
 
 const userFoodToFood = (u: UserFoodRow): Food => ({
   key: `user:${u.id}`, name: u.name, role: 'carb', kcal: Number(u.kcal_100g), protein: Number(u.protein_100g), carbs: Number(u.carbs_100g), fat: Number(u.fat_100g),
@@ -109,7 +110,7 @@ export function Nutrition() {
         {target && goal === 'recomp' && (target.inputs as { phase?: string }).phase !== 'recomp' && <div className="banner">Sua meta de calorias ainda é a anterior. Toque de novo em "Perder gordura e ganhar massa" e confirme para aplicar a meta de recomposição.</div>}
       </Card>
 
-      <Tabs value={tab} onChange={setTab} tabs={[{ value: 'hoje', label: 'Hoje' }, { value: 'plano', label: 'Plano' }, { value: 'compras', label: 'Compras' }, { value: 'metas', label: 'Metas' }, { value: 'suplementos', label: 'Suplementos' }]} />
+      <Tabs value={tab} onChange={setTab} tabs={[{ value: 'hoje', label: 'Hoje' }, { value: 'plano', label: 'Plano' }, { value: 'barato', label: 'R$ 500' }, { value: 'compras', label: 'Compras' }, { value: 'metas', label: 'Metas' }, { value: 'suplementos', label: 'Suplementos' }]} />
       <ErrorBox error={error} />
 
       {!target && (
@@ -175,6 +176,7 @@ export function Nutrition() {
 
       {tab === 'plano' && plan && (
         <>
+          <div className="banner info">Precisa caber em R$ {BUDGET_LIMIT}/mês? A aba <button className="btn ghost sm" onClick={() => setTab('barato')}>R$ 500</button> tem o cardápio econômico com a mesma meta.</div>
           <Card title="Plano do dia" action={<span className="tag">{plan.totals.kcal} kcal · P {plan.totals.protein} · C {plan.totals.carbs} · G {plan.totals.fat}</span>}>
             <p className="hint">Meta: {target!.kcal} kcal · P {target!.protein_g} g · C {target!.carbs_g} g · G {target!.fat_g} g. Quantidades do alimento pronto (cozido/grelhado). Troque itens mantendo o macro principal.</p>
             {plan.notes.map((n) => <p key={n} className="hint">• {n}</p>)}
@@ -217,6 +219,42 @@ export function Nutrition() {
           </Card>
         </>
       )}
+
+      {tab === 'barato' && target && (() => {
+        const b = budgetPlan(target.kcal, target.protein_g);
+        return (
+          <>
+            <Card title={`Cardápio econômico · até R$ ${BUDGET_LIMIT}/mês`} className="accent" action={<span className="tag" data-testid="budget-cost" style={{ whiteSpace: "nowrap" }}>R$ {fmt(b.costMonth, 2)}/mês</span>}>
+              <p style={{ marginTop: 0 }}>Mesma meta ({target.kcal} kcal · P {target.protein_g} g), só com o que dá mais proteína e caloria por real: ovo, frango, feijão, arroz, leite e banana.</p>
+              <p className="hint">Calculado com o <strong>preço mais caro</strong> que encontrei de cada alimento (pesquisas de 2026, fontes abaixo). Total do dia: {b.totals.kcal} kcal · P {b.totals.protein} g · C {b.totals.carbs} g · G {b.totals.fat} g.</p>
+              {b.proteinUsed < b.proteinTarget && <div className="banner">Para caber no teto, a proteína ficou em {b.proteinUsed} g (meta {b.proteinTarget} g) — ainda dentro da faixa de 1,8–2,2 g/kg do protocolo.</div>}
+              <p className={b.fits ? 'hint' : 'error'}>{b.fits ? `Sobra até R$ ${fmt(b.reserve, 2)} no pior cenário de preço (para tempero, cebola, alho e sal). No preço normal do mercado a sobra é maior.` : 'Mesmo assim passou do teto: registre seus preços em Compras para ver o custo real.'}</p>
+            </Card>
+            {b.meals.map((m) => (
+              <Card key={m.name} title={m.name} action={<button className="btn sm" onClick={async () => {
+                for (const [k, g] of m.items) { const fk = BUDGET_FOOD_KEY[k]; if (fk && g > 0) await addLog(fk, g, m.name); }
+                toast(`${m.name} registrada.`);
+              }}>Comi isso</button>}>
+                <p style={{ margin: 0 }}>{m.text}</p>
+              </Card>
+            ))}
+            <Card title="Compras do mês (preço teto)">
+              <div className="scroll-x"><table className="t">
+                <thead><tr><th>Alimento</th><th>Por dia (pronto)</th><th>Comprar no mês</th><th>Custo/mês</th></tr></thead>
+                <tbody>{b.items.map((i) => <tr key={i.key}><td>{REF_PRICES[i.key].name}</td><td>{i.unitsDay ? `${i.unitsDay} ovos` : `${i.gramsDay} ${i.key === 'leite' ? 'ml' : 'g'}`}</td><td><small>{i.buyMonth}</small></td><td>R$ {fmt(i.costMonth, 2)}</td></tr>)}
+                  <tr><td colSpan={3}><strong>Total</strong></td><td><strong>R$ {fmt(b.costMonth, 2)}</strong></td></tr></tbody>
+              </table></div>
+            </Card>
+            <Card title="Como economizar sem perder resultado">
+              <ul className="list">{BUDGET_RULES.map((r) => <li key={r}><small>{r}</small></li>)}</ul>
+            </Card>
+            <Card title="Preços usados (teto) e fontes">
+              <ul className="list">{Object.values(REF_PRICES).filter((r) => b.items.some((i) => i.key === r.key)).map((r) => <li key={r.key}><small><strong>{r.name}</strong> — R$ {fmt(r.price, 2)} ({r.pkgLabel}). {r.where}. <a href={r.url} target="_blank" rel="noreferrer">fonte</a></small></li>)}</ul>
+              <p className="hint">Preços mudam por cidade e por mês: são referências para planejar, não promessa. Confira no seu mercado e registre em Compras.</p>
+            </Card>
+          </>
+        );
+      })()}
 
       {tab === 'compras' && plan && (() => {
         const items = shoppingList(plan);

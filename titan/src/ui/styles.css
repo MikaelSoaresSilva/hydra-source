@@ -199,3 +199,4 @@ table.t th { color: var(--muted); font-weight: 600; }
 details.more > summary { font-weight: 700; color: var(--text); font-size: 0.95rem; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
 details.more[open] > summary { margin-bottom: 10px; }
 details.more > .stack { gap: var(--gap); }
+@media (max-width: 400px) { .nav a { min-width: 0; font-size: 0.62rem; } .nav svg { width: 20px; height: 20px; } }

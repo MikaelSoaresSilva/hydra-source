@@ -21,6 +21,8 @@ export interface MissionData {
   supplementPlan?: string[];
   /** Objetivo atual (modo recomposição acrescenta o cardio de corda). */
   goal?: 'recomp' | 'gain';
+  /** Treino de luta ativo (sábado e domingo). */
+  fight?: boolean;
 }
 
 export type HabitArea = 'corpo' | 'rosto' | 'base';
@@ -105,6 +107,16 @@ export const HABITS: Habit[] = [
       const p = d.program?.config.protocol;
       if (!isJkk(p) || !ropeFor(p, date)) return null;
       return !!checkinOf(d, date)?.habits?.rope;
+    },
+  },
+  {
+    id: 'fight', area: 'corpo', label: 'Treino de luta do fim de semana', to: '/luta',
+    why: 'Fundamentos de Boxe e MMA, reflexo e defesa: só conta no sábado e no domingo.',
+    enabled: (d) => !!d.fight,
+    auto: (d, date) => {
+      const wd = new Date(`${date}T12:00:00Z`).getUTCDay();
+      if (wd !== 0 && wd !== 6) return null;
+      return !!checkinOf(d, date)?.habits?.fight;
     },
   },
   { id: 'creatine', area: 'corpo', label: 'Creatina do dia (3–5 g)', why: 'Só funciona tomando todo dia, inclusive nos dias sem treino.', enabled: (d) => !!d.supplementPlan?.includes('creatine') },

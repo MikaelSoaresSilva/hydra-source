@@ -68,3 +68,14 @@ describe('hábito opcional de creatina', () => {
     expect(on.total).toBe(off.total + 1);
   });
 });
+
+describe('Missão · luta do fim de semana', () => {
+  it('só aparece com a luta iniciada e só conta no sábado/domingo', () => {
+    expect(dayStatus(base, '2026-10-17').items.some((i) => i.habit.id === 'fight')).toBe(false);
+    const on = { ...base, fight: true };
+    expect(dayStatus(on, '2026-10-20').items.find((i) => i.habit.id === 'fight')?.done).toBeNull();
+    expect(dayStatus(on, '2026-10-17').items.find((i) => i.habit.id === 'fight')?.done).toBe(false);
+    const done = { ...on, checkins: [{ date: '2026-10-18', habits: { fight: true } } as unknown as CheckinRow] };
+    expect(dayStatus(done, '2026-10-18').items.find((i) => i.habit.id === 'fight')?.done).toBe(true);
+  });
+});

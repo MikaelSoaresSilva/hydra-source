@@ -268,7 +268,7 @@ export function Training() {
               return <li key={dia}><strong>{dia} · {r.title}</strong><br /><small>{r.rounds} séries de {r.workSec >= 60 ? `${r.workSec / 60} min` : `${r.workSec} s`} pulando, {r.restSec} s de descanso · ~{r.mainMinutes + 7} min com aquecimento · esforço {r.effort}</small></li>;
             })}
           </ul>
-          <p className="hint">{variant === 'jkk' ? 'No plano de 5 dias o sábado já tem treino, então a corda fica só no domingo. ' : ''}A progressão sobe a cada 2 semanas (semana {Math.min(next.week, 8)} de 8). Técnica, aquecimento e cuidados estão na tela do cronômetro.</p>
+          <p className="hint">Se você faz o treino de <Link to="/luta">Luta</Link> no fim de semana, a corda já está dentro dele: não precisa fazer separado. {variant === 'jkk' ? 'No plano de 5 dias o sábado já tem treino, então a corda fica só no domingo. ' : ''}A progressão sobe a cada 2 semanas (semana {Math.min(next.week, 8)} de 8). Técnica, aquecimento e cuidados estão na tela do cronômetro.</p>
           <details><summary>Regras do cardio depois do treino (esteira ou bike)</summary><ul>{FINISHER_RULES.map((t) => <li key={t}><small>{t}</small></li>)}</ul></details>
         </Card>
       )}

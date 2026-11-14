@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, Link } from 'react-router-dom';
 import { AppProvider, useApp, useProfile, useStore } from './data/AppContext';
-import { IconChart, IconDrop, IconDumbbell, IconFood, IconHome, IconUser } from './ui/icons';
+import { IconChart, IconDrop, IconDumbbell, IconFood, IconGlove, IconHome, IconUser } from './ui/icons';
 import { Loading } from './ui/components';
 import { Login } from './pages/Login';
 import { Onboarding } from './pages/Onboarding';
@@ -17,6 +17,7 @@ import { Library } from './pages/Library';
 import { Appearance } from './pages/Appearance';
 import { Mission } from './pages/Mission';
 import { Cardio } from './pages/Cardio';
+import { Fight } from './pages/Fight';
 
 function Shell() {
   const { profile, loading } = useProfile();
@@ -40,6 +41,7 @@ function Shell() {
   const nav = [
     { to: '/', label: 'Hoje', icon: <IconHome /> },
     { to: '/treino', label: 'Treino', icon: <IconDumbbell /> },
+    { to: '/luta', label: 'Luta', icon: <IconGlove /> },
     { to: '/nutricao', label: 'Nutrição', icon: <IconFood /> },
     { to: '/cuidados', label: 'Cuidados', icon: <IconDrop /> },
     { to: '/evolucao', label: 'Evolução', icon: <IconChart /> },
@@ -75,6 +77,7 @@ function Shell() {
           <Route path="/aparencia" element={<Appearance />} />
           <Route path="/missao" element={<Mission />} />
           <Route path="/cardio" element={<Cardio />} />
+          <Route path="/luta" element={<Fight />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

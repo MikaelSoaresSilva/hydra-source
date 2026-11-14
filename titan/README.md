@@ -1,0 +1,168 @@
+# Titan — sistema pessoal de transformação física, estética e performance
+
+App web responsivo (PWA instalável no celular) com quatro módulos integrados:
+
+| Módulo | O que faz |
+|---|---|
+| **Titan Muscle** | Ciclo de 8 semanas gerado do seu perfil (dias, tempo, equipamentos, prioridades), prescrição semanal com RIR, progressão dupla automática, treino ao vivo com cronômetro, substituições, painel de braços, volume semanal, detecção de fadiga. |
+| **Nutrição** | Meta calórica (Mifflin-St Jeor + faixa de erro), superávit conservador, macros, plano alimentar com alimentos brasileiros, trocas equivalentes, registro do consumo, lista de compras semanal/mensal, custo **somente com preços que você registra** (com data e fonte), ajuste gradual pela tendência semanal de peso. |
+| **Titan Skin / Hair** | Rotinas manhã/noite e de lavagem editáveis, cadastro de produtos com detecção de ativos pelo INCI, bloqueio de combinações perigosas ou desconhecidas, introdução gradual (um ativo por vez), suspensão automática por reação, couro cabeludo priorizado com coceira persistente, barba/bigode/sobrancelhas. |
+| **Titan Evolution** | Peso (diário × média 7 dias), medidas, check-in de sono/recuperação, fotos privadas com condições padronizadas e alerta de comparação não confiável, gráficos só com dados reais. |
+
+O **painel Hoje** responde: o que fazer hoje, treino do dia, meta nutricional, refeições que faltam, pele/cabelo do dia, recuperação, hábito que mais prejudica a consistência, próxima meta mensurável e recomendações — cada uma com motivo, dados usados e o que será monitorado. As recomendações são **regras determinísticas** sobre seus registros; não há IA aprendendo com seus dados.
+
+## Arquitetura
+
+- **Front-end:** React 19 + TypeScript + Vite, PWA (`vite-plugin-pwa`), roteamento por hash (funciona em hospedagem estática).
+- **Back-end:** Supabase — Auth (senha com hash, nunca em texto), PostgreSQL com **Row Level Security** em todas as tabelas, Storage privado para fotos, função `delete_my_account()`.
+- **Validação:** no cliente (faixas nos formulários) **e** no banco (`CHECK` constraints, trigger que impede referenciar registros de outro usuário).
+- **Offline:** toda escrita entra primeiro numa fila no IndexedDB e é enviada ao servidor; sem conexão, fica na fila e sincroniza quando a rede volta. Cada série do treino é salva individualmente.
+- **Domínio puro e testável:** `src/domain/*` (cálculos de energia, plano alimentar, progressão, gerador de programa, agenda, skincare, cabelo, recomendações).
+- **Modo local:** sem chaves do Supabase, o app roda com dados só no navegador (com aviso visível). Serve para testar; para uso real, configure a nuvem.
+
+```
+titan/
+  src/domain/        regras e cálculos (com testes *.test.ts)
+  src/data/          Supabase, fila offline, modo local, contexto
+  src/pages/         telas (Hoje, Treino, Treino ao vivo, Braços, Nutrição, Cuidados, Evolução, Perfil, Onboarding)
+  supabase/migrations/  esquema versionado (tabelas, RLS, storage)
+  supabase/tests/       teste de isolamento RLS em PostgreSQL
+  e2e/               teste ponta a ponta (Playwright, celular e desktop)
+```
+
+## Rodar localmente
+
+Requisitos: Node 22+.
+
+```bash
+cd titan
+npm install
+cp .env.example .env.local   # preencha com seu projeto Supabase (ou deixe sem para o modo local)
+npm run dev                  # http://localhost:5173
+```
+
+## Testes
+
+```bash
+npm run typecheck   # TypeScript
+npm test            # 50 testes unitários: cálculos, progressão, agenda, plano alimentar, skincare, fila offline
+npm run test:db     # migrações + RLS num PostgreSQL local (precisa de psql e PGHOST/PGUSER configurados)
+npx vite build && npm run test:e2e   # fluxo completo no Chromium (celular e desktop)
+```
+
+## Configurar o Supabase (conta, banco e fotos)
+
+1. Crie um projeto gratuito em <https://supabase.com> (região São Paulo, `sa-east-1`).
+2. **SQL Editor →** execute, na ordem, `supabase/migrations/20261014000001_schema.sql`, `20261014000002_storage.sql` e `20261015000003_knowledge_appearance.sql` , `20261020000004_metrics_detail.sql`, `20261020000005_habits.sql` e `20261112000006_session_location.sql`.
+   (Ou, com a CLI: `supabase link --project-ref SEU_REF && supabase db push`.)
+3. **Authentication → Providers → Email:** habilitado. Recomendado: "Confirm email" ligado e senha mínima de 8 caracteres.
+4. **Authentication → URL Configuration:** em *Site URL* e *Redirect URLs* coloque a URL onde o app será publicado (ex.: `https://SEU-USUARIO.github.io/hydra-source/`) e `http://localhost:5173` para desenvolvimento.
+5. **Project Settings → API:** copie `Project URL` e a chave `anon public` para `.env.local` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+   A chave `anon` é pública por design — a segurança vem do RLS. **Nunca** coloque a `service_role` no front-end ou no repositório.
+
+## Publicar e instalar no celular
+
+O workflow `.github/workflows/titan.yml` roda os testes e, a cada push na `main`, publica no **GitHub Pages**:
+
+1. GitHub → **Settings → Pages → Source: GitHub Actions**. (Em repositório privado, o Pages exige plano pago; alternativas: tornar o repositório público, ou publicar a pasta `titan/dist` na Vercel/Netlify/Cloudflare Pages com as mesmas variáveis.)
+2. **Settings → Secrets and variables → Actions → Variables:** crie `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+3. Faça merge na `main`. A URL fica em `https://SEU-USUARIO.github.io/hydra-source/`.
+4. No celular:
+   - **Android (Chrome):** abra a URL → menu ⋮ → **Instalar app** / "Adicionar à tela inicial".
+   - **iPhone (Safari):** abra a URL → Compartilhar → **Adicionar à Tela de Início**.
+5. Entre com a mesma conta no PC e no celular: os dados sincronizam pela nuvem.
+
+Para hospedar em outro lugar: `BASE_PATH=/ npx vite build` e envie `dist/` (qualquer hospedagem estática com HTTPS).
+
+## APK para Android
+
+O app também é empacotado como APK nativo (Capacitor 8, pacote `com.titan.transformacao`, Android 7+).
+
+**Instalar:** copie `Titan.apk` para o celular → abra → permita "instalar apps desta fonte" → Instalar. O Play Protect pode avisar que o app é desconhecido (não está na Play Store); toque em "Instalar mesmo assim".
+
+**Dados no APK:**
+- Gerado **sem** chaves do Supabase → modo local: tudo fica salvo no próprio celular (continua após fechar o app ou reiniciar), mas **é apagado se desinstalar** e não sincroniza com o PC. Faça backup em Perfil → Exportar JSON.
+- Gerado **com** `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` no `.env.local` (ou nas variables do repositório, pelo CI) → conta na nuvem, igual à versão web.
+
+**Gerar um novo APK** (precisa de JDK 21 e Android SDK 36):
+
+```bash
+cd titan
+# android/keystore.properties (fora do git): storeFile, storePassword, keyAlias=titan, keyPassword
+npm run apk     # → android/app/build/outputs/apk/release/app-release.apk
+```
+
+Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.jks`) e `TITAN_KEYSTORE_PASSWORD`, e rode o workflow manualmente; o APK sai como artefato.
+
+**Histórico da chave:** a chave da 1ª geração (versões 1.0–2.3) foi perdida junto com o ambiente de build. A partir da 3.0 o app volta ao id `com.titan.transformacao` com uma chave nova: para trocar, é preciso desinstalar uma única vez a versão antiga (o Android recusa atualizar com outra assinatura); daí em diante as atualizações instalam por cima. Os dados migram por Perfil → Backup.
+
+**Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
+
+## Luta em casa (Boxe + MMA) — v3.1
+
+Aba **Luta** (`/luta`, menu inferior): dois treinos solo por semana, **sábado e domingo, no máximo 90 min** (o teste garante ≤ 90 em todos os planos e semanas).
+
+- **Sábado · Ataque, pés e reflexo:** aquecimento, fundamentos (base, guarda, jab, direto, cruzado, uppercut, combinações), pés e agilidade (passo-arrasta, escada no chão, pivô, ângulos), **reflexo por som e visão** (o app apita 1/2/3 vezes em intervalos aleatórios e mostra o número: jab-direto / esquiva + contra / sprawl; rodadas olhando, só ouvindo e de olhos fechados), sombra com "janelas" de oportunidade de golpe.
+- **Domingo · Defesa, MMA e aprender a apanhar:** bloqueio, esquiva, pêndulo, passo atrás; sprawl, mudança de nível, chute baixo e checagem, levantar em base; **aprender a apanhar com segurança** (quedas/ukemi, pescoço em isometria, tronco que absorve golpe, compostura) e sentidos/propriocepção (guarda e equilíbrio de olhos fechados).
+- Nunca treina levar pancada na cabeça; sparring só em academia com professor e proteção; sinais de alerta de concussão na tela.
+- Progressão de 8 semanas (`domain/fight.ts`); cronômetro de rounds com bipe e tela acesa.
+- A **corda do fim de semana entra dentro da luta** (intervalada no sábado, contínua no domingo; no plano de 5 dias só no domingo). Marcar a luta marca a corda. Item opcional na Missão e na tela Hoje.
+
+## Cardápio econômico (R$ 500/mês)
+
+Nutrição → aba **R$ 500** (`domain/budget.ts`): mesma meta de calorias e proteína só com ovo, frango, feijão, arroz, leite, banana e óleo, calculado com o **preço mais caro encontrado** de cada alimento em pesquisas públicas de 2026 (fonte e data na tela). Se a proteína não couber, desce até 90% da meta (mínimo 1,8 g/kg). O custo real continua vindo dos preços que você registra em Compras.
+
+## Treino: Protocolo JKK em 3, 4 ou 5 dias (alternável)
+
+**Versão 3 dias** (`JKK3_DAYS`): corpo inteiro em seg/qua/sex, 28 séries e ~95 min por treino. Braços, braquial, elevação lateral e peito superior mantêm as séries semanais do plano de 5 dias (bíceps 9, tríceps 12, braquial 5, lateral 8, peito superior 10), com frequência 3×; pernas, costas e abdômen cedem volume. Tem revisão automática após medições e sessão em casa para cada dia.
+
+
+Em Treino → "Seu treino" (ou Perfil → Treino) o usuário alterna entre os treinos de 3, 4 e 5 dias. Cada plano guarda o próprio ciclo: ao voltar para um deles, `activateProtocol` reativa o ciclo arquivado na mesma semana e com o histórico.
+
+**Objetivo "Perder gordura e ganhar massa"** (`src/domain/recomp.ts`, seletor em Treino e Nutrição): aplica a meta de recomposição (−350 kcal, proteína 2,0 g/kg) e acrescenta ao plano de 3/4/5 dias cardio leve depois do treino — esteira inclinada ou bike, 12 a 20 min conforme a semana (até 3 por semana, nunca em dia de perna nem em deload) e pular corda no fim de semana (sáb intervalada + dom contínua; no plano de 5 dias só domingo), com progressão de 8 semanas e cronômetro com bipe em `/cardio`. A corda entra na Missão nos dias previstos.
+
+**Treino em casa** (`src/domain/home.ts`): para cada dia dos dois planos existe uma sessão equivalente só com o peso do corpo (cadeira, mesa firme e toalha). Em Treino → "Onde vai ser a próxima sessão?" o usuário escolhe Academia ou Em casa; a sessão em casa conta no ciclo (`workout_sessions.location`, migração 6). Progressão por repetições, tempo de descida e variação, não por carga.
+
+**Suplementos** (`src/domain/supplements.ts`, Nutrição → Suplementos): níveis de evidência A/B/C com efeito real, dose pelo peso, cuidados e fonte; "Meu protocolo" (creatina/proteína) entra na Missão. **Fase da dieta** (Nutrição → Metas): recomposição (−350 kcal, proteína 2,0 g/kg) ou ganho limpo (+250 kcal), com o ajuste pela tendência de peso funcionando também para alvo de perda.
+
+**Plano do rosto** (`src/domain/facePlan.ts`, Aparência → Plano do rosto): gordura facial via gordura corporal (sem promessa de perda localizada), treino facial diário de postura/pescoço/drenagem, o que não fazer, simetria percebida e pele limpa.
+
+### Versão 4 dias
+
+`JKK4_DAYS` em `src/domain/jkk.ts` reorganiza o Protocolo JKK em superior/inferior 2× (seg, ter, qui, sex) usando as mesmas linhas do PDF; o volume semanal e a frequência de cada músculo são ≥ aos do JKK de 5 dias (testado). A preferência `trainingProtocol` (padrão `jkk4`) escolhe o plano ativo; ao voltar para `jkk`, o ciclo arquivado é reativado na mesma semana, com o histórico.
+
+**Revisão automática após cada medição** (`src/domain/autoReview.ts`): ao salvar medidas em Evolução, o app reavalia o plano de 4 dias e troca exercícios só se necessário — dor ≥ 4/10 em duas sessões seguidas, ou carga parada há 4 sessões com a medida da região sem crescer ≥ 0,5 cm em 28+ dias (fadiga vira deload, não troca). Máximo de 2 trocas por vez, sem trocar de novo o mesmo exercício antes de 28 dias, sempre por uma variação do mesmo músculo e sem repetir exercício no dia. Séries, faixas, descansos e dias não mudam. Peso e cintura geram orientação de dieta, não troca. Cada revisão fica registrada em `config.revisions` e aparece em Evolução e no Treino.
+
+**Bipe do descanso:** com o app aberto, toca `public/sounds/rest_beep.wav` (bip-bip-bip a 2400 Hz, volume máximo, com compressor); em segundo plano/tela bloqueada, uma notificação local (`@capacitor/local-notifications`, canal `rest_end_v1`, som `res/raw/rest_beep.wav`, alarme exato com `USE_EXACT_ALARM`) toca no fim exato do descanso. Com o app visível, o aviso do sistema é cancelado 1,5 s antes para não tocar dobrado.
+
+## Protocolo JKK (5 dias)
+
+`src/domain/jkk.ts` transcreve o PDF "Protocolo JKK" (5 dias: seg, ter, qua, sex, sáb): exercícios, séries, faixas de repetição, descansos, orientações e origem de cada item, além das seções "O que vi nas fotos", "Como treinar", "Flancos" e "De onde veio cada coisa". O plano é fechado (só registro), usa RIR 1–2 com a última série dos isolados até a falha, progressão dupla, aquecimento de 2 séries leves no 1º exercício e deload a cada 6–8 semanas com metade das séries e as mesmas cargas. Ao abrir a aba Treino, o JKK substitui o ciclo anterior (o histórico de séries é mantido).
+
+## Base de conhecimento e análise de aparência
+
+- `src/domain/knowledge.ts` e `src/domain/science.ts` reúnem o conteúdo dos materiais estudados (CREF4/SC 2018 e 2019, Musculação Aplicada, Ministério da Saúde/BVS, Almanaque da pele, apostila de corte masculino), cada ponto com a fonte. Telas: **Biblioteca** (artigos, calculadora de 1RM por %, sistemas de treino, divergências entre fontes) e **Aparência**.
+- O motor de treino agora garante ≥10 séries semanais nos músculos prioritários (quando cabe no tempo), pergunta a prontidão (TQR 6–20) antes da sessão e reduz o volume se < 13, e calcula a carga interna (PSE × minutos) e a tonelagem por semana.
+- **Aparência → Questionário** (sem IA): formato do rosto por autoavaliação, depois cortes pelas regras da apostila, adaptados à curvatura do cabelo, mais massagem facial e cuidados.
+- **Aparência → Foto + IA**: envia 1–3 fotos (reduzidas, sem EXIF) ao modelo `claude-opus-5-5` com saída estruturada em JSON (validada no app com zod) e `fallbacks: "default"` (se o modelo recusar, a API reexecuta no modelo de reserva recomendado pela Anthropic). Dois caminhos:
+  - **Nuvem:** Edge Function `supabase/functions/analyze-appearance` com a chave guardada como segredo:
+    `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` e `supabase functions deploy analyze-appearance`. Limite de 10 análises por usuário por dia.
+  - **Sem nuvem (APK local):** o usuário cola a própria chave da API, que fica só no aparelho e pode ser removida.
+
+## Privacidade e segurança
+
+- Cada usuário só acessa as próprias linhas (RLS testado: outro usuário não lê, não altera, não insere em nome alheio, não usa programa alheio, não envia foto para a pasta alheia; anônimo não lê nada).
+- Fotos: bucket privado, pasta por usuário, links temporários de 1 h; metadados EXIF/GPS removidos antes do envio; a imagem não é editada.
+- Por padrão nenhum dado vai para serviços de IA. A única exceção é a **análise de aparência por foto**, desligada por padrão: só funciona se você ligar (Perfil ou tela Aparência) e confirmar cada envio, vendo antes exatamente quais fotos e dados de perfil serão enviados à Anthropic. A chave da API do usuário (modo sem nuvem) fica só no aparelho e não entra no backup.
+- **Exportar** (JSON com todos os registros) e **Excluir conta e dados** (apaga fotos, linhas e o usuário de autenticação) em Perfil.
+- Logs de erro não incluem conteúdo pessoal (só tabela e código do erro).
+
+## Limites conhecidos (honestos)
+
+- Valores nutricionais dos alimentos-base são aproximações da TACO/USDA; cadastre alimentos do rótulo quando precisar de precisão.
+- Preços: o app não busca preços na internet — usa só os que você registrar.
+- Links de demonstração são **buscas** no YouTube, não vídeos verificados.
+- O app não diagnostica pele, couro cabeludo ou lesões; sinaliza quando procurar dermatologista ou outro profissional.
+- Simulações de resultado não existem no app; nenhuma foto é alterada.
+- A análise por IA foi testada com respostas simuladas (formato, validação, recusa, erros); a chamada real à API depende de uma chave válida e não foi executada no desenvolvimento.
+- Formato do rosto e tipo de cabelo são estimativas (questionário ou foto 2D), não medidas.

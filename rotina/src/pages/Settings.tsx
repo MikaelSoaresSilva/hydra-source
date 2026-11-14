@@ -107,7 +107,7 @@ export function Settings() {
         <Chips label="Tema" value={s.theme} onChange={(v) => setS({ theme: v })} options={[{ value: 'dark', label: '🌙 Escuro' }, { value: 'light', label: '☀️ Claro' }]} />
       </Card>
 
-      <p className="muted" style={{ textAlign: 'center' }}><small>Titan Rotina 1.0 · dados só no seu aparelho</small></p>
+      <p className="muted" style={{ textAlign: 'center' }}><small>Titan Rotina 1.1 · dados só no seu aparelho</small></p>
     </div>
   );
 }

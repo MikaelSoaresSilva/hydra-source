@@ -23,6 +23,7 @@ App Android (`com.titan.rotina`) + PWA. React 19 + TypeScript + Vite + Capacitor
   restauradas após reiniciar o celular.
 - **Evolução** (`src/domain/progress.ts`): XP (essencial 20, importante 15, flexível 10, +5 no horário), níveis,
   sequência de dias ≥ 80%, meta semanal (5 dias), histórico de 14 dias, atributos por categoria, 14 conquistas.
+- **Início e término**: no formulário (Início/Término calculam a duração) e pela linha do tempo em Hoje → ⋯ → "Mudar início e término", só hoje ou todos os dias; avisa se cair fora do horário acordado.
 - **Nutrição**: água e calorias/macros do dia com metas editáveis.
 - **Backup**: exportar/restaurar JSON (no APK, pela folha de compartilhar do Android).
 

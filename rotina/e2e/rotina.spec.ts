@@ -81,7 +81,8 @@ test('rotina: adicionar atividade personalizada, pausar e mudar o sono', async (
   await page.getByLabel('Descrição').fill('Duolingo + 1 vídeo');
   await page.getByLabel('Duração (min)').fill('45');
   await page.getByLabel('Horário de início').fill('14:00');
-  await page.getByText('Horário fixo (não mover)').click();
+  await expect(page.getByLabel(/Horário fixo: começa e termina/)).toBeChecked(); // definir o início já fixa o horário
+  await expect(page.getByLabel('Horário de término')).toHaveValue('14:45');
   await page.getByRole('button', { name: 'Fim de semana' }).click();
   await page.getByRole('button', { name: 'Seg–Sex' }).click();
   await page.getByRole('button', { name: 'Salvar' }).click();
@@ -124,4 +125,56 @@ test('evolução: nível, metas, conquistas; ajustes: backup e restauração', a
   await expect(page.getByRole('status')).toContainText('Backup restaurado');
   await nav(page, 'Hoje').click();
   await expect(page.getByTestId('day-pct')).toHaveText('100%');
+});
+
+test('início e término: no formulário e pela linha do tempo (só hoje / todos os dias)', async ({ page }, info) => {
+  await start(page, '2026-11-16T08:00:00');
+  // Formulário: término define a duração
+  await nav(page, 'Rotina').click();
+  await page.getByRole('button', { name: 'Editar Leitura' }).click();
+  await page.getByLabel('Horário de início').fill('11:00');
+  await page.getByLabel('Horário de término').fill('11:50');
+  await expect(page.getByTestId('form-span')).toContainText('11:00 até 11:50 · 50 min');
+  await expect(page.getByLabel('Duração (min)')).toHaveValue('50');
+  await page.screenshot({ path: `test-results/inicio-termino-${info.project.name}.png`, fullPage: true });
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.locator('.list li', { hasText: 'Leitura' })).toContainText('11:00–11:50');
+  // término antes do início dá erro
+  await page.getByRole('button', { name: 'Editar Leitura' }).click();
+  await page.getByLabel('Horário de término').fill('11:02');
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.getByRole('alert')).toContainText('pelo menos 5 min');
+  await page.getByRole('button', { name: 'Fechar' }).click();
+
+  // Linha do tempo: só hoje
+  await nav(page, 'Hoje').click();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Leitura' })).toContainText('11:00');
+  await page.getByRole('button', { name: 'Opções de Almoço' }).click();
+  await page.getByRole('button', { name: '🕒 Mudar início e término' }).click();
+  await page.getByLabel('Novo início').fill('12:30');
+  await page.getByLabel('Novo término').fill('13:30');
+  await page.getByRole('button', { name: 'Salvar horário' }).click();
+  const lunch = page.getByTestId('tl-item').filter({ hasText: 'Almoço' });
+  await expect(lunch).toContainText('12:30');
+  await expect(lunch).toContainText('13:30');
+  await expect(lunch).toContainText('só hoje');
+  await page.getByRole('button', { name: 'Próximo dia' }).click();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Almoço' })).toContainText('12:00');
+  // todos os dias
+  await page.getByRole('button', { name: 'Opções de Jantar' }).click();
+  await page.getByRole('button', { name: '🕒 Mudar início e término' }).click();
+  await page.getByLabel('Novo início').fill('20:00');
+  await page.getByLabel('Novo término').fill('20:45');
+  await page.getByRole('radio', { name: 'Todos os dias' }).click();
+  await page.getByRole('button', { name: 'Salvar horário' }).click();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Jantar' })).toContainText('20:45');
+  await page.getByRole('main').getByRole('button', { name: 'Hoje', exact: true }).click();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Jantar' })).toContainText('20:00');
+  // fora do horário acordado: avisa e não deixa salvar
+  await page.getByRole('button', { name: 'Opções de Leitura' }).click();
+  await page.getByRole('button', { name: '🕒 Mudar início e término' }).click();
+  await page.getByLabel('Novo início').fill('05:00');
+  await page.getByLabel('Novo término').fill('05:30');
+  await expect(page.getByRole('alert')).toContainText('antes do horário de acordar');
+  await expect(page.getByRole('button', { name: 'Salvar horário' })).toBeDisabled();
 });

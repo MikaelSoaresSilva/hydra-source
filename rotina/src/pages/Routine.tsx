@@ -9,7 +9,7 @@ import { ActivityForm, newActivity } from './ActivityForm';
 
 const daysText = (d: number[]) => d.length === 7 ? 'Todos os dias' : d.join() === '1,2,3,4,5' ? 'Seg–Sex' : d.join() === '0,6' ? 'Fim de semana' : [1, 2, 3, 4, 5, 6, 0].filter((x) => d.includes(x)).map((x) => WEEKDAY_SHORT[x]).join(', ');
 const anchorText = (a: Activity) => a.kind === 'wake' ? 'no horário de acordar' : a.kind === 'bed' ? 'no horário de dormir'
-  : a.anchor.type === 'time' ? `${a.fixed ? 'fixo às' : 'perto das'} ${hm(a.anchor.at)}` : a.anchor.type === 'wake' ? `${a.anchor.offset} min após acordar` : `${a.anchor.offset} min antes de dormir`;
+  : a.anchor.type === 'time' ? `${a.fixed ? '' : 'perto de '}${hm(a.anchor.at)}–${hm(a.anchor.at + a.duration)}` : a.anchor.type === 'wake' ? `${a.anchor.offset} min após acordar` : `${a.anchor.offset} min antes de dormir`;
 
 export function Routine() {
   const { state, update, toast } = useApp();

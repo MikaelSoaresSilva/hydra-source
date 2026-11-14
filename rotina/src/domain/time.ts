@@ -68,3 +68,8 @@ export function weekDates(iso: string): string[] {
   const monday = addDays(iso, wd === 0 ? -6 : 1 - wd);
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 }
+
+/** Minutos entre início e término (término depois da meia-noite conta como dia seguinte). 0 = inválido. */
+export function spanMinutes(start: number, end: number): number {
+  return ((end - start) % 1440 + 1440) % 1440;
+}

@@ -3,9 +3,9 @@ import { useApp } from '../data/AppContext';
 import { uid } from '../domain/defaults';
 import { levelInfo, streak, totalXp } from '../domain/progress';
 import { buildDay, currentAndNext, isLate, type PlanItem } from '../domain/scheduler';
-import { addDays, durationLabel, hm, longDate, pad } from '../domain/time';
+import { addDays, durationLabel, hm, longDate, pad, parseHM, spanMinutes } from '../domain/time';
 import { emptyOverride, type Activity } from '../domain/types';
-import { Bar, Card, Modal, Ring, fmt } from '../ui/components';
+import { Bar, Card, Chips, Modal, Ring, fmt } from '../ui/components';
 import { ActivityForm } from './ActivityForm';
 
 export function Today({ go }: { go: (tab: string) => void }) {
@@ -14,6 +14,7 @@ export function Today({ go }: { go: (tab: string) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const [edit, setEdit] = useState<Activity | null>(null);
   const [menu, setMenu] = useState<PlanItem | null>(null);
+  const [timeEdit, setTimeEdit] = useState<PlanItem | null>(null);
   const date = addDays(day.date, offset);
   const isToday = offset === 0;
   const plan = useMemo(() => buildDay(state, date), [state, date]);
@@ -152,11 +153,13 @@ export function Today({ go }: { go: (tab: string) => void }) {
             <p className="muted" style={{ margin: 0 }}>{hm(menu.start)}–{hm(menu.end)} · {durationLabel(menu.end - menu.start)}</p>
             <button className="btn block" onClick={() => { toggle(date, menu.activity.id); setMenu(null); }}>{done.has(menu.activity.id) ? 'Desmarcar' : '✅ Concluir'}</button>
             {isToday && !done.has(menu.activity.id) && <button className="btn block" onClick={() => { snooze(date, menu.activity.id); setMenu(null); }}>⏰ Adiar lembrete {state.settings.snoozeMin} min</button>}
+            {menu.activity.kind === 'normal' && <button className="btn block" onClick={() => { setTimeEdit(menu); setMenu(null); }}>🕒 Mudar início e término</button>}
             {menu.activity.kind === 'normal' && <button className="btn block" onClick={() => skipToday(menu)}>⏭️ Não fazer {isToday ? 'hoje' : 'neste dia'}</button>}
             {!state.overrides[date]?.add.some((x) => x.id === menu.activity.id) && <button className="btn block" onClick={() => { setEdit(state.activities.find((a) => a.id === menu.activity.id) ?? null); setMenu(null); }}>✏️ Editar atividade</button>}
           </div>
         </Modal>
       )}
+      {timeEdit && <TimeEdit item={timeEdit} date={date} isToday={isToday} onClose={() => setTimeEdit(null)} />}
       {edit && <ActivityForm initial={edit} isNew={!state.activities.some((a) => a.id === edit.id)} onClose={() => setEdit(null)} />}
     </div>
   );
@@ -209,5 +212,67 @@ function NutritionCard({ date }: { date: string }) {
         </div>
       </details>
     </Card>
+  );
+}
+
+/** Início e término de uma atividade: só neste dia ou para todos os dias em que ela acontece. */
+function TimeEdit({ item, date, isToday, onClose }: { item: PlanItem; date: string; isToday: boolean; onClose: () => void }) {
+  const { state, update, toast } = useApp();
+  const [start, setStart] = useState(hm(item.start));
+  const [end, setEnd] = useState(hm(item.end));
+  const onlyThisDay = state.overrides[date]?.add.some((x) => x.id === item.activity.id) ?? false;
+  const [scope, setScope] = useState<'day' | 'always'>('day');
+  const st = parseHM(start); const en = parseHM(end);
+  const d = st !== null && en !== null ? spanMinutes(st, en) : 0;
+  const valid = d >= 5 && d <= 16 * 60;
+  // Confere antes de salvar se o novo horário cabe entre acordar e dormir.
+  const outside = (() => {
+    if (!valid || st === null) return null;
+    const o = structuredClone(state.overrides[date] ?? emptyOverride());
+    o.move[item.activity.id] = st; o.duration[item.activity.id] = d;
+    const u = buildDay({ ...state, overrides: { ...state.overrides, [date]: o } }, date).unplaced.find((x) => x.activity.id === item.activity.id);
+    return u ? u.reason : null;
+  })();
+  function save() {
+    if (!valid || st === null) return;
+    const id = item.activity.id;
+    if (scope === 'day') {
+      update((s) => {
+        const o = structuredClone(s.overrides[date] ?? emptyOverride());
+        o.move[id] = st; o.duration[id] = d;
+        return { ...s, overrides: { ...s.overrides, [date]: o } };
+      });
+    } else {
+      update((s) => ({
+        ...s,
+        activities: s.activities.map((a) => (a.id === id ? { ...a, anchor: { type: 'time', at: st }, duration: d, fixed: true } : a)),
+        // remove ajustes só-hoje desta atividade, para valer o novo horário
+        overrides: Object.fromEntries(Object.entries(s.overrides).map(([k, o]) => {
+          const m = { ...o.move }; const du = { ...o.duration }; delete m[id]; delete du[id];
+          return [k, { ...o, move: m, duration: du }];
+        })),
+      }));
+    }
+    toast(`🕒 ${item.activity.title}: ${start}–${end}${scope === 'day' ? (isToday ? ' (só hoje)' : ' (só neste dia)') : ''}. O resto foi reorganizado.`);
+    onClose();
+  }
+  return (
+    <Modal title={`Horário · ${item.activity.title}`} onClose={onClose}>
+      <div className="stack">
+        <div className="grid2">
+          <label className="field">Início<input type="time" aria-label="Novo início" value={start} onChange={(e) => {
+            setStart(e.target.value);
+            const s2 = parseHM(e.target.value);
+            if (s2 !== null && st !== null && en !== null) setEnd(hm(s2 + spanMinutes(st, en)));
+          }} /></label>
+          <label className="field">Término<input type="time" aria-label="Novo término" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
+        </div>
+        <small className={valid ? 'muted' : ''} style={valid ? undefined : { color: 'var(--danger)' }}>{valid ? `Duração: ${durationLabel(d)}${en !== null && st !== null && en < st ? ' (termina no dia seguinte)' : ''}` : 'O término precisa ser pelo menos 5 min depois do início (máx. 16 h).'}</small>
+        {outside && <div className="banner warn" role="alert">Esse horário fica {outside} ({hm(buildDay(state, date).wake)}–{hm(buildDay(state, date).bed)}). Mude o horário ou ajuste o sono em Rotina → Sono.</div>}
+        {!onlyThisDay && <Chips label="Vale para" value={scope} onChange={setScope} options={[{ value: 'day', label: isToday ? 'Só hoje' : 'Só neste dia' }, { value: 'always', label: 'Todos os dias' }]} />}
+        <p className="muted" style={{ margin: 0 }}><small>A atividade fica fixa nesse horário e as outras se reorganizam em volta, sem conflito.</small></p>
+        <button className="btn primary" disabled={!valid || !!outside} onClick={save}>Salvar horário</button>
+      </div>
+    </Modal>
   );
 }

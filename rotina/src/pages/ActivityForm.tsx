@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../data/AppContext';
 import { uid } from '../domain/defaults';
-import { hm, parseHM, WEEKDAY_SHORT } from '../domain/time';
+import { durationLabel, hm, parseHM, spanMinutes, WEEKDAY_SHORT } from '../domain/time';
 import { PRIORITY_LABEL, type Activity, type Priority } from '../domain/types';
 import { Chips, Modal } from '../ui/components';
 
@@ -15,12 +15,14 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
   const { state, update, toast } = useApp();
   const [a, setA] = useState<Activity>(initial);
   const [timeText, setTimeText] = useState(a.anchor.type === 'time' ? hm(a.anchor.at) : '15:00');
+  const [endText, setEndText] = useState(hm((a.anchor.type === 'time' ? a.anchor.at : 900) + a.duration));
   const [error, setError] = useState('');
   const special = a.kind === 'wake' || a.kind === 'bed';
   const timing: Timing = a.anchor.type;
   const offset = a.anchor.type === 'time' ? 0 : a.anchor.offset;
 
   function setTiming(t: Timing) {
+    if (t === 'time') setEndText(hm((parseHM(timeText) ?? 900) + a.duration));
     setA({ ...a, anchor: t === 'time' ? { type: 'time', at: parseHM(timeText) ?? 900 } : { type: t, offset: t === 'bed' ? Math.max(a.duration, 30) : 30 } });
   }
   function toggleDay(d: number) {
@@ -32,12 +34,17 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
     if (!special && (a.duration < 5 || a.duration > 16 * 60)) { setError('Duração entre 5 min e 16 h.'); return; }
     if (!a.days.length) { setError('Escolha pelo menos um dia da semana.'); return; }
     let anchor = a.anchor;
+    let duration = a.duration;
     if (timing === 'time') {
       const at = parseHM(timeText);
-      if (at === null) { setError('Horário inválido (use HH:MM).'); return; }
+      const end = parseHM(endText);
+      if (at === null || end === null) { setError('Início e término precisam estar no formato HH:MM.'); return; }
+      duration = spanMinutes(at, end);
+      if (duration < 5) { setError('O término precisa ser pelo menos 5 min depois do início.'); return; }
+      if (duration > 16 * 60) { setError('Duração máxima de 16 h.'); return; }
       anchor = { type: 'time', at };
     }
-    const final = { ...a, title: a.title.trim(), anchor };
+    const final = { ...a, title: a.title.trim(), anchor, duration };
     update((s) => ({ ...s, activities: isNew ? [...s.activities, final] : s.activities.map((x) => (x.id === final.id ? final : x)) }));
     toast(isNew ? `➕ ${final.title} adicionada` : '💾 Atividade salva');
     onClose();
@@ -66,7 +73,12 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
         ) : (
           <>
             <div className="grid2">
-              <label className="field">Duração (min)<input type="number" inputMode="numeric" min={5} max={960} value={a.duration} onChange={(e) => setA({ ...a, duration: Number(e.target.value) })} /></label>
+              <label className="field">Duração (min)<input type="number" inputMode="numeric" min={5} max={960} value={a.duration} onChange={(e) => {
+                const d = Number(e.target.value);
+                setA({ ...a, duration: d });
+                const st = parseHM(timeText);
+                if (st !== null && d > 0) setEndText(hm(st + d));
+              }} /></label>
               <label className="field">Prioridade
                 <select value={a.priority} onChange={(e) => setA({ ...a, priority: Number(e.target.value) as Priority })}>
                   {([1, 2, 3] as Priority[]).map((p) => <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
@@ -79,10 +91,26 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
                 options={[{ value: 'time', label: 'No relógio' }, { value: 'wake', label: 'Depois de acordar' }, { value: 'bed', label: 'Antes de dormir' }]} />
             </div>
             {timing === 'time'
-              ? <label className="field">Começa às<input type="time" value={timeText} onChange={(e) => setTimeText(e.target.value)} aria-label="Horário de início" /></label>
+              ? <>
+                <div className="grid2">
+                  <label className="field">Início<input type="time" value={timeText} aria-label="Horário de início" onChange={(e) => {
+                    // Mudar o início mantém a duração e empurra o término junto.
+                    setTimeText(e.target.value);
+                    const st = parseHM(e.target.value);
+                    if (st !== null) setEndText(hm(st + a.duration));
+                    setA((x) => ({ ...x, fixed: true }));
+                  }} /></label>
+                  <label className="field">Término<input type="time" value={endText} aria-label="Horário de término" onChange={(e) => {
+                    setEndText(e.target.value);
+                    const st = parseHM(timeText); const en = parseHM(e.target.value);
+                    if (st !== null && en !== null && spanMinutes(st, en) >= 5) setA((x) => ({ ...x, duration: spanMinutes(st, en), fixed: true }));
+                  }} /></label>
+                </div>
+                <small className="muted" data-testid="form-span">{(() => { const st = parseHM(timeText); const en = parseHM(endText); const d = st !== null && en !== null ? spanMinutes(st, en) : 0; return d >= 5 ? `${timeText} até ${endText} · ${durationLabel(d)}${en !== null && st !== null && en < st ? ' (termina no dia seguinte)' : ''}` : 'O término precisa ser depois do início.'; })()}</small>
+              </>
               : <label className="field">{timing === 'wake' ? 'Minutos depois de acordar' : 'Começa quantos minutos antes de dormir'}
                 <input type="number" inputMode="numeric" min={0} max={900} value={offset} onChange={(e) => setA({ ...a, anchor: { type: timing, offset: Number(e.target.value) } })} /></label>}
-            <label className="check"><input type="checkbox" checked={a.fixed} onChange={(e) => setA({ ...a, fixed: e.target.checked })} /> Horário fixo (não mover). Desmarcado: o app encaixa no horário livre mais próximo.</label>
+            <label className="check"><input type="checkbox" checked={a.fixed} onChange={(e) => setA({ ...a, fixed: e.target.checked })} /> Horário fixo: começa e termina exatamente nos horários escolhidos. Desmarcado: o app encaixa no horário livre mais próximo.</label>
           </>
         )}
         <div>

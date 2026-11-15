@@ -98,6 +98,17 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Meu Código (perfil pessoal) — v3.2
+
+Tela **Código** (`/codigo`, `domain/personal.ts`): tudo calculado só dos registros do usuário; sem dado suficiente, cada módulo diz o que falta.
+
+- **Proporções**: ombro÷cintura (ref. 1,62), peito÷cintura (1,33), braço × panturrilha, simetria dos braços — com quanto falta em cm.
+- **Resposta por região**: cm por 4 semanas entre a primeira e a última medida (mín. 28 dias) × séries semanais registradas; separa "pouco volume" de "região lenta".
+- **Exercícios que mais rendem**: ganho de 1RM estimado por semana (4+ sessões); melhores e travados.
+- **Sono × treino**: progresso por treino depois de noites ≥ 7,5 h × noites curtas (3+ treinos de cada).
+- **Gasto calórico real**: ingestão média − variação de peso × 7.700 kcal/kg em 28 dias (14+ dias de comida, 6+ pesagens); botão para recalcular as metas com o gasto medido (`applyNutritionPhase(..., realTdee)`).
+- Calibração (0–100%) e aviso do dia na tela Hoje. O app não lê DNA: mede a resposta do corpo.
+
 ## Luta em casa (Boxe + MMA) — v3.1
 
 Aba **Luta** (`/luta`, menu inferior): dois treinos solo por semana, **sábado e domingo, no máximo 90 min** (o teste garante ≤ 90 em todos os planos e semanas).

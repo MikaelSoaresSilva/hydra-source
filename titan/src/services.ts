@@ -229,13 +229,16 @@ export async function reviewAfterMeasurement(store: DataStore, metricId: string 
  * Fase da dieta (do Protocolo JKK, seção "Flancos"): recomposição = −300 a −400 kcal/dia por 8–12 semanas;
  * ganho limpo = +200 a +300 kcal/dia. Proteína 1,8–2,2 g/kg. A meta continua sendo ajustada pela média de peso.
  */
-export async function applyNutritionPhase(store: DataStore, p: Profile, phase: 'recomp' | 'lean_gain'): Promise<TargetRow> {
+/** `realTdee`: gasto medido nos seus registros (Meu Código); substitui a estimativa da fórmula. */
+export async function applyNutritionPhase(store: DataStore, p: Profile, phase: 'recomp' | 'lean_gain', realTdee?: number): Promise<TargetRow> {
   const t = calculateTargets({
     weightKg: p.nutrition.weightKg!, heightCm: p.height_cm!, age: p.age!, sex: p.sex!,
     activityLevel: p.nutrition.activityLevel ?? 'moderate', experienceMonths: p.training.experienceMonths,
   });
   const w = p.nutrition.weightKg!;
   const delta = phase === 'recomp' ? -350 : 250;
+  const formulaTdee = t.tdee;
+  if (realTdee) t.tdee = realTdee;
   const kcal = Math.round((t.tdee + delta) / 50) * 50;
   const proteinG = Math.round(w * (phase === 'recomp' ? 2.0 : 1.8));
   const fatG = Math.max(Math.round(w * 0.8), Math.round((kcal * 0.2) / 9));
@@ -255,8 +258,8 @@ export async function applyNutritionPhase(store: DataStore, p: Profile, phase: '
     ];
   const row: TargetRow = {
     id: uuid(), user_id: store.userId, effective_from: todayISO(), kcal, protein_g: proteinG, carbs_g: carbsG, fat_g: fatG,
-    rationale: rationale.join('\n'),
-    inputs: { weightKg: w, heightCm: p.height_cm, age: p.age, activity: p.nutrition.activityLevel ?? 'moderate', weeklyGainKg, tdee: t.tdee, tdeeRange: t.tdeeRange, surplus: delta, phase },
+    rationale: [...(realTdee ? [`Gasto MEDIDO nos seus registros: ~${realTdee} kcal/dia (a fórmula estimava ${formulaTdee}). As metas abaixo usam o seu número.`] : []), ...rationale].join('\n'),
+    inputs: { weightKg: w, heightCm: p.height_cm, age: p.age, activity: p.nutrition.activityLevel ?? 'moderate', weeklyGainKg, tdee: t.tdee, tdeeRange: t.tdeeRange, surplus: delta, phase, ...(realTdee ? { tdeeSource: 'real', formulaTdee } : {}) },
   };
   await store.upsert('nutrition_targets', row as unknown as Record<string, unknown>);
   return row;

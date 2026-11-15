@@ -18,6 +18,7 @@ import { Appearance } from './pages/Appearance';
 import { Mission } from './pages/Mission';
 import { Cardio } from './pages/Cardio';
 import { Fight } from './pages/Fight';
+import { Code } from './pages/Code';
 
 function Shell() {
   const { profile, loading } = useProfile();
@@ -55,6 +56,7 @@ function Shell() {
         <div className="topbar">
           <span className="brand">TITAN</span>
           <span className="row" style={{ gap: 6 }}>
+            <Link to="/codigo" className="btn ghost sm">Código</Link>
             <Link to="/missao" className="btn ghost sm">Missão</Link>
             <Link to="/aparencia" className="btn ghost sm">Aparência</Link>
             <Link to="/perfil" className="btn ghost sm" aria-label="Perfil e configurações"><IconUser /></Link>
@@ -78,6 +80,7 @@ function Shell() {
           <Route path="/missao" element={<Mission />} />
           <Route path="/cardio" element={<Cardio />} />
           <Route path="/luta" element={<Fight />} />
+          <Route path="/codigo" element={<Code />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

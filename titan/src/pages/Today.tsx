@@ -18,6 +18,7 @@ import { Card, Field, Loading, NumberInput, Progress, Ring, fmt, useToast } from
 import { CheckinForm } from './Evolution';
 import { usePlan } from './Nutrition';
 import { currentGoal } from './GoalSwitch';
+import { usePersonalCode } from './Code';
 import { ropeFor } from '../domain/recomp';
 import { useMissionData } from './Mission';
 import { DAY_PASS, dayStatus, streak } from '../domain/mission';
@@ -49,6 +50,18 @@ function QuickWeight() {
           } finally { setBusy(false); }
         }}>Salvar</button>
       </div>
+    </Card>
+  );
+}
+
+/** Resumo do Meu Código: calibração e o aviso do dia tirado só dos seus dados. */
+function CodeCard() {
+  const { loading, code } = usePersonalCode();
+  if (loading) return null;
+  return (
+    <Card title="Meu Código" action={<Link className="btn sm" to="/codigo">Abrir</Link>}>
+      <Progress value={code.cal.pct} max={100} label="Calibração do Meu Código" />
+      <p className="hint" style={{ marginBottom: 0 }}>{code.insight ?? `${code.cal.pct}% calibrado. ${code.cal.parts.find((p) => !p.done)?.hint ?? 'Tudo calibrado com os seus dados.'}`}</p>
     </Card>
   );
 }
@@ -209,6 +222,7 @@ export function Today() {
       <QuickWeight />
 
       <MissionCard />
+      <CodeCard />
 
       <Card title="O que fazer hoje">
         <ul className="list">

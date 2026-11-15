@@ -361,6 +361,7 @@ test('treino em casa (peso do corpo), suplementos e fase de recomposição', asy
   // Cronômetro da corda
   await page.getByRole('link', { name: 'Abrir cronômetro' }).click();
   await expect(page.getByRole('heading', { name: 'Pular corda' })).toBeVisible();
+  await page.getByRole('radio', { name: /Intervalada/ }).click(); // independe do dia da semana em que o teste roda
   await page.getByRole('button', { name: /Iniciar cronômetro \(8 × 30 s\)/ }).click();
   await expect(page.getByRole('timer')).toContainText('PULE');
   await expect(page.getByRole('timer')).toContainText('Série 1/8');
@@ -449,4 +450,26 @@ test('luta: sábado e domingo até 90 min, reflexo por som e cardápio de R$ 500
   await expect(page.getByRole('heading', { name: 'Preços usados (teto) e fontes' })).toBeVisible();
   await page.getByRole('button', { name: 'Comi isso' }).first().click();
   await page.screenshot({ path: `test-results/r500-${info.project.name}.png`, fullPage: true });
+});
+
+test('meu código: perfil pessoal calculado só dos registros, sem inventar', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await expect(page.getByRole('heading', { name: 'Meu Código' })).toBeVisible(); // cartão na tela Hoje
+  await page.getByRole('link', { name: 'Código' }).click();
+  await expect(page.getByRole('heading', { name: 'Meu Código', level: 1 })).toBeVisible();
+  await expect(page.getByText(/Código \d+% calibrado/)).toBeVisible();
+  // sem dados: avisa o que falta, não chuta
+  await expect(page.getByTestId('region-arm')).toContainText('Aguardando dados');
+  await expect(page.getByTestId('tdee-text')).toContainText('Para medir o seu gasto de verdade preciso');
+  await expect(page.getByText(/O Titan não lê DNA/)).toBeVisible();
+  await page.screenshot({ path: `test-results/codigo-${info.project.name}.png`, fullPage: true });
 });

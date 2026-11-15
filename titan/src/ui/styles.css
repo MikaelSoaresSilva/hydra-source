@@ -200,3 +200,11 @@ details.more > summary { font-weight: 700; color: var(--text); font-size: 0.95re
 details.more[open] > summary { margin-bottom: 10px; }
 details.more > .stack { gap: var(--gap); }
 @media (max-width: 400px) { .nav a { min-width: 0; font-size: 0.62rem; } .nav svg { width: 20px; height: 20px; } }
+.topbar > .row { flex-wrap: nowrap; min-width: 0; }
+@media (max-width: 420px) {
+  .topbar { gap: 6px; }
+  .topbar .brand { font-size: 0.92rem; letter-spacing: 0.1em; }
+  .topbar .btn.sm { padding: 6px 8px; font-size: 0.78rem; }
+  .topbar > .row { gap: 4px !important; }
+}
+@media (max-width: 340px) { .topbar .btn.sm { padding: 6px 6px; font-size: 0.72rem; } .topbar .brand { font-size: 0.8rem; letter-spacing: 0.06em; } }

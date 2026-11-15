@@ -100,6 +100,8 @@ export interface Preferences {
   trainingProtocol?: JkkProtocol;
   /** Data de início do treino de Luta (sábado e domingo, em casa). */
   fightStart?: string;
+  /** Lembretes no celular (check-in, peso, treino, medidas). */
+  reminders?: { on: boolean; morning: string };
 }
 
 export interface Profile {

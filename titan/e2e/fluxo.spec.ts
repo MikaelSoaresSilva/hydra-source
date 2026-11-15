@@ -473,3 +473,29 @@ test('meu código: perfil pessoal calculado só dos registros, sem inventar', as
   await expect(page.getByText(/O Titan não lê DNA/)).toBeVisible();
   await page.screenshot({ path: `test-results/codigo-${info.project.name}.png`, fullPage: true });
 });
+
+test('lembretes: ligar e escolher o horário fica salvo; topo cabe em tela estreita', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await expect(page.getByRole('heading', { name: 'O que fazer hoje' })).toBeVisible();
+  // topo em uma linha só e sem rolagem lateral a 360 px
+  expect(await page.evaluate(() => Math.round(document.querySelector('.topbar')!.getBoundingClientRect().height))).toBeLessThan(70);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  await page.getByRole('link', { name: 'Perfil e configurações' }).click();
+  await page.getByLabel('Ligar lembretes').click();
+  await expect(page.getByLabel('Ligar lembretes')).toBeChecked();
+  await page.getByLabel('Horário da manhã').fill('06:30');
+  await expect(page.getByLabel('Horário da manhã')).toHaveValue('06:30');
+  await page.reload();
+  await expect(page.getByLabel('Ligar lembretes')).toBeChecked();
+  await expect(page.getByLabel('Horário da manhã')).toHaveValue('06:30');
+});

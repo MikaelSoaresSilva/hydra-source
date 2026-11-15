@@ -9,6 +9,7 @@ import { apiKeyStore } from '../appearanceClient';
 import { PROTOCOL_LABEL, ProtocolSwitch } from './ProtocolSwitch';
 import { ensureRestAlerts, playRestBeep, scheduleRestAlert, unlockAudio } from '../ui/sound';
 import { Capacitor } from '@capacitor/core';
+import { remindersPermission } from '../ui/reminders';
 
 export function ProfilePage() {
   const store = useStore();
@@ -71,6 +72,22 @@ export function ProfilePage() {
           }}>Testar em segundo plano</button>}
         </div>
         <p className="hint">Com o app aberto, o bipe usa o volume de mídia. Com a tela bloqueada ou em outro app, ele toca como notificação ("Fim do descanso"), no volume de notificação. Durante o descanso a tela fica acesa.</p>
+      </Card>
+
+      <Card title="Lembretes">
+        <p className="hint" style={{ marginTop: 0 }}>Avisos no celular para manter os registros que calibram o Meu Código: check-in de sono todo dia, peso em jejum (seg, qua, sex), treino 30 min antes{p.training.trainingTime ? ` (${p.training.trainingTime})` : ''} e o dia de medir a cada 4 semanas.</p>
+        <label className="check"><input type="checkbox" checked={!!p.preferences.reminders?.on} onChange={async (e) => {
+          const on = e.target.checked;
+          if (on && (await remindersPermission(true)) === 'denied') { toast('Permita as notificações do Titan nas configurações do Android.'); return; }
+          await save({ preferences: { ...p.preferences, reminders: { on, morning: p.preferences.reminders?.morning ?? '07:00' } } });
+          toast(on ? 'Lembretes ligados.' : 'Lembretes desligados.');
+        }} /> Ligar lembretes</label>
+        {p.preferences.reminders?.on && (
+          <Field label="Horário da manhã (check-in e peso)">
+            <input type="time" aria-label="Horário da manhã" value={p.preferences.reminders.morning} onChange={(e) => { if (/^\d{2}:\d{2}$/.test(e.target.value)) void save({ preferences: { ...p.preferences, reminders: { on: true, morning: e.target.value } } }); }} />
+          </Field>
+        )}
+        {!Capacitor.isNativePlatform() && <p className="hint">Os lembretes tocam no app Android (APK). No navegador a opção fica salva, mas não há aviso.</p>}
       </Card>
 
       <Card title="Conteúdo">

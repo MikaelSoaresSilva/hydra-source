@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, Link } from 'react-router-dom';
-import { AppProvider, useApp, useProfile, useStore } from './data/AppContext';
+import { AppProvider, useApp, useProfile, useRows, useStore } from './data/AppContext';
 import { IconChart, IconDrop, IconDumbbell, IconFood, IconGlove, IconHome, IconUser } from './ui/icons';
 import { Loading } from './ui/components';
 import { Login } from './pages/Login';
@@ -19,6 +19,9 @@ import { Mission } from './pages/Mission';
 import { Cardio } from './pages/Cardio';
 import { Fight } from './pages/Fight';
 import { Code } from './pages/Code';
+import { syncReminders } from './ui/reminders';
+import { todayISO } from './domain/dates';
+import type { MetricRow, ProgramRow } from './domain/types';
 
 function Shell() {
   const { profile, loading } = useProfile();
@@ -34,6 +37,17 @@ function Shell() {
     const off = store.subscribe(tick);
     return () => { clearInterval(t); off(); };
   }, [store]);
+
+  // Lembretes: reagenda quando mudam as preferências, o plano ou a última medição.
+  const programs = useRows<ProgramRow>('programs', { eq: { status: 'active' } });
+  const metrics = useRows<MetricRow>('body_metrics', { order: { col: 'date', asc: false } });
+  const rem = profile?.preferences?.reminders;
+  const trainingDays = (programs.data[0]?.config.trainingDays ?? profile?.training?.trainingDays ?? []).join(',');
+  const lastMeasure = metrics.data.find((m) => [m.arm_right_cm, m.arm_left_cm, m.chest_cm, m.waist_cm, m.thigh_cm, m.shoulders_cm].some((v) => v !== null && v !== undefined))?.date ?? null;
+  useEffect(() => {
+    if (!profile?.onboarding_completed_at || programs.loading || metrics.loading) return;
+    void syncReminders({ enabled: !!rem?.on, morning: rem?.morning ?? '07:00', trainingDays: trainingDays ? trainingDays.split(',').map(Number) : [], trainingTime: profile.training?.trainingTime, lastMeasure, today: todayISO() });
+  }, [rem?.on, rem?.morning, trainingDays, profile?.training?.trainingTime, lastMeasure, profile?.onboarding_completed_at, programs.loading, metrics.loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <Loading />;
   if (!profile?.onboarding_completed_at) {

@@ -98,6 +98,10 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Lembretes — v3.3
+
+Perfil → **Lembretes** (`ui/reminders.ts`, só no APK): check-in de sono todo dia e peso em jejum (seg/qua/sex) no horário da manhã escolhido, treino 30 min antes nos dias do plano, e "Dia de medir" 28 dias depois da última medição. Reagendados quando mudam as preferências, o plano ou as medidas. A v3.3 também corrige o topo quebrando em duas linhas em telas de 320–360 px.
+
 ## Meu Código (perfil pessoal) — v3.2
 
 Tela **Código** (`/codigo`, `domain/personal.ts`): tudo calculado só dos registros do usuário; sem dado suficiente, cada módulo diz o que falta.

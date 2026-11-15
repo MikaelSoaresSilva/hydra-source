@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useRows, useStore } from '../data/AppContext';
+import { useProfile, useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
 import { formatBR, todayISO } from '../domain/dates';
 import { photoComparability } from '../domain/recommendations';
 import { movingAverage } from '../domain/trend';
 import { MEASURING_GUIDE } from '../domain/olympia';
-import type { CheckinRow, MetricRow, PhotoRow, ProgramRevision } from '../domain/types';
-import { reviewAfterMeasurement, sanitizeImage } from '../services';
-import { RevisionResultCard } from './RevisionCard';
+import type { CheckinRow, MetricRow, PhotoRow } from '../domain/types';
+import { reviewAll, sanitizeImage, type FullReview } from '../services';
+import { FullReviewCards } from './RevisionCard';
 import { TrendChart } from '../ui/charts';
 import { Card, Empty, ErrorBox, Field, Loading, NumberInput, Scale, Tabs, fmt, useToast } from '../ui/components';
 
@@ -88,7 +88,8 @@ export function Evolution() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | PhotoRow['category']>('all');
-  const [revision, setRevision] = useState<ProgramRevision | null>(null);
+  const [review, setReview] = useState<FullReview | null>(null);
+  const { profile, save: saveProfile } = useProfile();
   const { toast, node } = useToast();
 
   const asc = [...metrics.data].reverse();
@@ -104,12 +105,22 @@ export function Evolution() {
       conditions: m.conditions ?? {}, notes: m.notes ?? null,
     });
     setM({ date: todayISO(), conditions: m.conditions });
-    toast('Medidas salvas. Avaliando o treino…');
-    // Reavalia o treino de 4 dias com as medidas novas e troca exercícios só se necessário.
-    try { setRevision(await reviewAfterMeasurement(store, metricId)); } catch (e) { setError(`Medidas salvas, mas a avaliação do treino falhou: ${(e as Error).message}`); }
+    toast('Medidas salvas. Avaliando treino e dieta…');
+    await runReview('metric', metricId);
   }
 
-  async function upload(file: File) {
+  /** Reavalia treino e dieta com os dados novos; muda só se for necessário e mostra o porquê. */
+  async function runReview(trigger: 'metric' | 'photo', metricId: string | null = null) {
+    try {
+      const r = await reviewAll(store, trigger, metricId);
+      setReview(r);
+      if (r.diet?.newWeightKg && profile) await saveProfile({ nutrition: { ...profile.nutrition, weightKg: r.diet.newWeightKg } });
+      const n = (r.training?.changes.length ?? 0) + (r.diet?.changed ? 1 : 0);
+      toast(n ? 'Revisão feita: houve ajuste. Veja o motivo abaixo.' : 'Revisão feita: nada precisou mudar.');
+    } catch (e) { setError(`Registro salvo, mas a revisão automática falhou: ${(e as Error).message}`); }
+  }
+
+  async function upload(file: File): Promise<boolean> {
     setBusy(true); setError(null);
     try {
       if (!file.type.startsWith('image/')) throw new Error('Envie uma imagem.');
@@ -120,8 +131,10 @@ export function Evolution() {
       await store.uploadPhoto(path, blob);
       await store.upsert('photos', { id, category: ph.category, storage_path: path, taken_at: new Date(file.lastModified && file.lastModified < Date.now() ? file.lastModified : Date.now()).toISOString(), lighting: ph.lighting, distance: ph.distance, pose: ph.pose, time_of_day: ph.time_of_day, pump: ph.pump, notes: ph.notes || null });
       toast('Foto salva com privacidade.');
+      return true;
     } catch (e) {
       setError(`Falha ao salvar a foto: ${(e as Error).message}`);
+      return false;
     } finally { setBusy(false); }
   }
 
@@ -136,7 +149,7 @@ export function Evolution() {
 
       {tab === 'medidas' && (
         <>
-          {revision && <RevisionResultCard r={revision} />}
+          {review?.trigger === 'metric' && <FullReviewCards r={review} />}
           <Card title="Nova medição">
             <div className="grid two">
               <Field label="Data"><input type="date" value={m.date} max={todayISO()} onChange={(e) => setM({ ...m, date: e.target.value })} /></Field>
@@ -184,6 +197,7 @@ export function Evolution() {
 
       {tab === 'fotos' && (
         <>
+          {review?.trigger === 'photo' && <FullReviewCards r={review} />}
           <Card title="Nova foto (privada)">
             <p className="hint">Fotos ficam em armazenamento privado da sua conta (somente você acessa, via link temporário). Antes de enviar, o app remove metadados como localização GPS e reduz para até 1600 px; a imagem em si não é editada nem "melhorada".</p>
             <div className="grid two">
@@ -197,7 +211,7 @@ export function Evolution() {
             <label className="check"><input type="checkbox" checked={ph.pump} onChange={(e) => setPh({ ...ph, pump: e.target.checked })} /> Tirada após treino (com pump)</label>
             <label className="btn primary big" style={{ marginTop: 8 }}>
               {busy ? 'Enviando…' : 'Tirar ou escolher fotos (galeria, várias de uma vez)'}
-              <input type="file" accept="image/*" multiple className="sr-only" aria-label="Escolher fotos" disabled={busy} onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; void (async () => { for (const f of fs) await upload(f); })(); }} />
+              <input type="file" accept="image/*" multiple className="sr-only" aria-label="Escolher fotos" disabled={busy} onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; void (async () => { let ok = 0; for (const f of fs) if (await upload(f)) ok++; if (ok && ph.category === 'physique') await runReview('photo'); })(); }} />
             </label>
           </Card>
           {selected.length === 2 && (

@@ -6,6 +6,7 @@ import { generateProgram, phaseFor, prescribeDay, warmupFor } from './domain/pro
 import { OLYMPIA_WEEKS } from './domain/olympia';
 import { JKK_WEEKS, generateJkk } from './domain/jkk';
 import { reviewProgram } from './domain/autoReview';
+import { reviewDiet, type DietReview } from './domain/dietReview';
 import { hasHomeVersion, homeSession } from './domain/home';
 import { groupHistory, suggestProgression } from './domain/progression';
 import { applyReadiness } from './domain/science';
@@ -13,7 +14,7 @@ import type { DataStore } from './data/store';
 import { uuid } from './data/store';
 import { isJkk } from './domain/types';
 import type {
-  CheckinRow, JkkProtocol, MetricRow, OverrideRow, PlannedExercise, Profile, ProgramRevision, ProgramRow, SessionRow, SetLogRow, TargetRow,
+  CheckinRow, FoodLogRow, JkkProtocol, MetricRow, OverrideRow, PlannedExercise, Profile, ProgramRevision, ProgramRow, SessionRow, SetLogRow, TargetRow,
 } from './domain/types';
 
 export function overridesMap(rows: OverrideRow[]) {
@@ -263,4 +264,40 @@ export async function applyNutritionPhase(store: DataStore, p: Profile, phase: '
   };
   await store.upsert('nutrition_targets', row as unknown as Record<string, unknown>);
   return row;
+}
+
+export interface FullReview { trigger: 'metric' | 'photo'; training: ProgramRevision | null; diet: DietReview | null; notes: string[] }
+
+/**
+ * Revisão completa depois de registrar medidas ou adicionar uma foto do físico:
+ * treino (troca de exercícios, regras em domain/autoReview) e dieta (regras em domain/dietReview).
+ * As duas só mudam com motivo nos registros; sem motivo, nada é alterado.
+ */
+export async function reviewAll(store: DataStore, trigger: 'metric' | 'photo', metricId: string | null = null, today = todayISO()): Promise<FullReview> {
+  const notes: string[] = [];
+  const training = await reviewAfterMeasurement(store, metricId, today);
+  const metrics = await store.list<MetricRow>('body_metrics');
+  const targets = await store.list<TargetRow>('nutrition_targets');
+  const target = [...targets].sort((a, b) => (a.effective_from + (a.created_at ?? '') < b.effective_from + (b.created_at ?? '') ? 1 : -1))[0];
+  let diet: DietReview | null = null;
+  if (target) {
+    const food = await store.list<FoodLogRow>('food_logs', { gte: { date: addDays(today, -21) } });
+    diet = reviewDiet({ target, metrics, food, today });
+    if (diet.changed) {
+      const row: TargetRow = {
+        id: uuid(), user_id: store.userId, effective_from: today, kcal: diet.kcal, protein_g: diet.protein, carbs_g: diet.carbs, fat_g: diet.fat,
+        rationale: [`Revisão automática (${trigger === 'photo' ? 'nova foto' : 'novas medidas'}):`, ...diet.changes].join('\n'),
+        inputs: { ...target.inputs, ...(diet.newWeightKg ? { weightKg: diet.newWeightKg } : {}), autoReview: trigger },
+      };
+      await store.upsert('nutrition_targets', row as unknown as Record<string, unknown>);
+    }
+  }
+  if (trigger === 'photo') {
+    const tape = metrics.filter((m) => [m.arm_right_cm, m.arm_left_cm, m.chest_cm, m.waist_cm, m.thigh_cm, m.shoulders_cm].some((v) => v !== null && v !== undefined)).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    const age = tape ? Math.round((Date.parse(today) - Date.parse(tape.date)) / 86400000) : null;
+    notes.push('A foto fica guardada para você comparar; o app não mede o corpo pela imagem. A revisão usa suas medidas, pesagens, treinos e comida registrados.');
+    if (age === null) notes.push('Você ainda não tem medidas com fita: registre em Medidas para a revisão ter base.');
+    else if (age > 28) notes.push(`Sua última medição com fita tem ${age} dias. Meça hoje junto com a foto para a revisão valer de verdade.`);
+  }
+  return { trigger, training, diet, notes };
 }

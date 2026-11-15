@@ -13,7 +13,7 @@ import { weeklyAverages } from '../domain/trend';
 import type {
   CareLogRow, CheckinRow, FoodLogRow, MetricRow, OverrideRow, ProductRow, ProgramRow, RoutineItemRow, SessionRow, SetLogRow, TargetRow,
 } from '../domain/types';
-import { buildSessionPlan, recoveryScore, reviewAfterMeasurement } from '../services';
+import { buildSessionPlan, recoveryScore, reviewAll } from '../services';
 import { Card, Field, Loading, NumberInput, Progress, Ring, fmt, useToast } from '../ui/components';
 import { CheckinForm } from './Evolution';
 import { usePlan } from './Nutrition';
@@ -45,8 +45,10 @@ function QuickWeight() {
             const id = existing?.id ?? uuid();
             await store.upsert('body_metrics', existing ? { ...existing, weight_kg: w } : { id, date: today, weight_kg: w, conditions: { fasted: true, morning: true }, notes: null });
             setW(null);
-            const rev = await reviewAfterMeasurement(store, id);
-            toast(rev?.changes.length ? `Peso salvo. ${rev.changes.length} exercício(s) trocado(s) — veja em Treino.` : 'Peso salvo.');
+            // Peso também é medida: reavalia treino e dieta, e só muda se for necessário.
+            const r = await reviewAll(store, 'metric', id);
+            const parts = [r.training?.changes.length ? `${r.training.changes.length} exercício(s) trocado(s) — veja em Treino` : '', r.diet?.changed ? `dieta ajustada para ${r.diet.kcal} kcal — veja em Nutrição` : ''].filter(Boolean);
+            toast(parts.length ? `Peso salvo. ${parts.join('; ')}.` : 'Peso salvo.');
           } finally { setBusy(false); }
         }}>Salvar</button>
       </div>

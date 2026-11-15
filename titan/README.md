@@ -98,6 +98,14 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Revisão automática de treino e dieta — v3.4
+
+Ao salvar medidas (ou o peso do dia) ou adicionar uma foto do físico, `reviewAll` (services) reavalia treino e dieta e mostra o resultado com o motivo. Só muda quando há evidência:
+
+- **Treino** (`domain/autoReview`): troca de exercício por dor repetida ou carga parada 4 sessões com a região sem crescer em 28 dias (planos de 4 e 3 dias; máx. 2 trocas).
+- **Dieta** (`domain/dietReview`): ±100–150 kcal só com 2 semanas seguidas fora do ritmo de peso E comida registrada com adesão ≥ 70%; −150 kcal na fase de ganho se a cintura subir 1,5 cm em 4 semanas sem o braço crescer; proteína/gordura recalculadas quando o peso muda 2 kg+. Intervalo mínimo de 14 dias entre mudanças; limites de −500/+400 kcal sobre o gasto estimado.
+- **Foto**: o app não mede o corpo pela imagem; a foto é um ponto de reavaliação com os registros (e avisa se as medidas com fita estão velhas).
+
 ## Lembretes — v3.3
 
 Perfil → **Lembretes** (`ui/reminders.ts`, só no APK): check-in de sono todo dia e peso em jejum (seg/qua/sex) no horário da manhã escolhido, treino 30 min antes nos dias do plano, e "Dia de medir" 28 dias depois da última medição. Reagendados quando mudam as preferências, o plano ou as medidas. A v3.3 também corrige o topo quebrando em duas linhas em telas de 320–360 px.

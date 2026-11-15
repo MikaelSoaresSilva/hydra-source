@@ -99,6 +99,10 @@ test('onboarding → treino com séries → persistência → nutrição → pel
   await expect(page.getByRole('heading', { name: /Avaliação do treino/ })).toBeVisible();
   await expect(page.getByText('Nenhuma troca necessária.')).toBeVisible();
   await expect(page.getByText(/linha de base/).first()).toBeVisible();
+  // …e a dieta também: sem motivo nos registros, nada muda e o app explica por quê
+  await expect(page.getByRole('heading', { name: /Avaliação da dieta/ })).toBeVisible();
+  await expect(page.getByText('Nenhuma mudança necessária.')).toBeVisible();
+  await expect(page.getByText(/Espero 14 dias para ver o efeito/)).toBeVisible();
   await page.getByRole('tab', { name: 'Gráficos' }).click();
   await expect(page.locator('.recharts-surface').first()).toBeVisible();
 
@@ -206,6 +210,12 @@ test('fotos: escolher várias da galeria de uma vez', async ({ page }) => {
     { name: 'b.png', mimeType: 'image/png', buffer: png },
   ]);
   await expect(page.locator('.photo-grid img')).toHaveCount(2);
+  // Foto do físico dispara a revisão de treino e dieta (uma vez só, depois de todas as fotos)
+  await expect(page.getByTestId('full-review')).toBeVisible();
+  await expect(page.getByTestId('full-review')).toContainText('o app não mede o corpo pela imagem');
+  await expect(page.getByTestId('full-review')).toContainText('Você ainda não tem medidas com fita');
+  await expect(page.getByRole('heading', { name: /Avaliação da dieta/ })).toBeVisible();
+  await expect(page.getByText('Nenhuma mudança necessária.')).toBeVisible();
 });
 
 test('bipe do descanso: botão "Testar som" toca o bipe alto no navegador real', async ({ page }) => {

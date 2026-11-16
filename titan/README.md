@@ -98,6 +98,10 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Produtos de rosto baratos — v3.5
+
+Cuidados → Pele → **Produtos baratos para a sua pele** (`domain/careProducts.ts`): kit essencial (limpeza, hidratante, protetor) pelo tipo de pele do perfil, o mais barato de cada etapa entre marcas de farmácia, com faixa de preço e fonte (consulta de 16/11/2026), links reais de farmácias/comparadores, busca do menor preço do dia e o termo para pedir no balcão. Teto de R$ 300 (testado no preço mais alto). Não é diagnóstico; fotos só entram como observação da análise de aparência.
+
 ## Revisão automática de treino e dieta — v3.4
 
 Ao salvar medidas (ou o peso do dia) ou adicionar uma foto do físico, `reviewAll` (services) reavalia treino e dieta e mostra o resultado com o motivo. Só muda quando há evidência:

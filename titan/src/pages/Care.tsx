@@ -9,6 +9,7 @@ import {
 } from '../domain/skincare';
 import type { CareArea, CareLogRow, CareSlot, ProductRow, RoutineItemRow } from '../domain/types';
 import { Card, Chips, Empty, ErrorBox, Field, Loading, Tabs, useToast } from '../ui/components';
+import { CARE_PRODUCT_NOTES, FACE_BUDGET, KIT_LABEL, PRICES_CHECKED_ON, STEP_LABEL, kitFor, kitPlan, searchUrl, type CareProduct, type SkinKit } from '../domain/careProducts';
 
 type Tab = 'skin' | 'hair' | 'grooming';
 const SLOT_LABEL: Record<CareSlot, string> = { am: 'Manhã', pm: 'Noite', wash: 'Dia de lavagem', non_wash: 'Dia sem lavagem', scalp: 'Couro cabeludo', weekly: 'Semanal' };
@@ -250,6 +251,7 @@ function Skin({ products, items, logs }: Props) {
           <TodaySlot area="skin" slot="pm" items={items} products={products} logs={logs} />
         </div>
       )}
+      <FaceProductsCard />
       <ReactionForm area="skin" products={products} />
       <ProductManager area="skin" products={products} />
       {skinItems.length > 0 && <RoutineEditor area="skin" slots={['am', 'pm']} items={items} products={products} />}
@@ -329,5 +331,60 @@ function Grooming({ products, items, logs }: Props) {
       <RoutineEditor area="beard" slots={['weekly']} items={items} products={products} />
       <ProductManager area="beard" products={products} />
     </>
+  );
+}
+
+const SKIN_TYPE_LABEL: Record<string, string> = { oily: 'oleosa', combination: 'mista', normal: 'normal', dry: 'seca', sensitive: 'sensível' };
+const money = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function ProductLine({ p }: { p: CareProduct }) {
+  return (
+    <li data-testid={`care-product-${p.id}`}>
+      <div className="row between" style={{ alignItems: 'flex-start' }}>
+        <span><small className="muted">{STEP_LABEL[p.step]}</small><br /><strong>{p.brand} {p.name}</strong> <small className="muted">· {p.size}</small></span>
+        <span className="tag" style={{ whiteSpace: 'nowrap' }}>{p.price ? `R$ ${money(p.price.min)}–${money(p.price.max)}` : 'compare no link'}</span>
+      </div>
+      <small>{p.why}</small>
+      <br /><small className="muted"><strong>Como usar:</strong> {p.how} Dura cerca de {p.lastsMonths} {p.lastsMonths === 1 ? 'mês' : 'meses'}.</small>
+      {p.caution && <><br /><small className="muted">⚠️ {p.caution}</small></>}
+      {p.price && <><br /><small className="muted">Onde vi: {p.price.where}.</small></>}
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+        {p.links.map((l) => <a key={l.url} className="btn sm" href={l.url} target="_blank" rel="noreferrer">{l.label}</a>)}
+        <a className="btn ghost sm" href={searchUrl(p.search)} target="_blank" rel="noreferrer">Buscar o menor preço hoje</a>
+      </div>
+      <small className="muted">Na farmácia, peça: "{p.search}".</small>
+    </li>
+  );
+}
+
+/** Produtos mais baratos por etapa para o tipo de pele do perfil, dentro do teto de R$ 300. */
+function FaceProductsCard() {
+  const { profile } = useProfile();
+  const analyses = useRows<{ id: string; created_at?: string; result: { skin?: { observations?: string[] } } }>('appearance_analyses', { order: { col: 'created_at', asc: false } });
+  const [override, setOverride] = useState<SkinKit | null>(null);
+  const type = profile?.skin.type;
+  const kit = override ?? kitFor(profile?.skin);
+  const plan = kitPlan(kit);
+  const obs = analyses.data.find((a) => a.result?.skin?.observations?.length)?.result.skin!.observations!.slice(0, 3) ?? [];
+  return (
+    <Card title="Produtos baratos para a sua pele" className="accent" action={<span className="tag" data-testid="care-total" style={{ whiteSpace: "nowrap" }}>R$ {money(plan.totalMin)}–{money(plan.totalMax)}</span>}>
+      <p style={{ marginTop: 0 }}>Kit essencial (limpeza, hidratante e protetor) para <strong>{KIT_LABEL[kit].toLowerCase()}</strong>. {plan.fitsBudget ? `Fica dentro do seu teto de R$ ${FACE_BUDGET} mesmo no preço mais alto que encontrei.` : `No preço mais alto passa de R$ ${FACE_BUDGET}: escolha as lojas mais baratas dos links.`}</p>
+      <p className="hint">{type ? `Seu perfil diz pele ${SKIN_TYPE_LABEL[type] ?? type}.` : 'Você ainda não informou o tipo de pele no Perfil: usei o padrão da rotina base (oleosa com tendência a acne).'} Depois da primeira compra, o gasto fica em até ~R$ {money(plan.monthlyMax)} por mês (o protetor acaba em cerca de 1 mês; os outros duram mais).</p>
+      <div className="chips" role="radiogroup" aria-label="Tipo de pele do kit" style={{ marginBottom: 8 }}>
+        {(['oily', 'gentle'] as SkinKit[]).map((k) => <button key={k} type="button" role="radio" aria-checked={kit === k} className={`chip ${kit === k ? 'on' : ''}`} onClick={() => setOverride(k)}>{k === 'oily' ? 'Oleosa / mista' : 'Normal / seca / sensível'}</button>)}
+      </div>
+      {obs.length > 0 && <div className="banner info">Da sua última análise de aparência (fotos): {obs.join(' ')} <small>Observação visual, não diagnóstico.</small></div>}
+      <ul className="list">{plan.essentials.map((p) => <ProductLine key={p.id} p={p} />)}</ul>
+      {plan.optional.length > 0 && (
+        <details><summary>Opcional, só depois de 2–3 semanas ({plan.optional.length}) · kit completo até R$ {money(plan.withOptionalMax)}</summary>
+          <ul className="list" style={{ marginTop: 8 }}>{plan.optional.map((p) => <ProductLine key={p.id} p={p} />)}</ul></details>
+      )}
+      {plan.alternatives.length > 0 && (
+        <details><summary>Alternativas se não achar ({plan.alternatives.length})</summary>
+          <ul className="list" style={{ marginTop: 8 }}>{plan.alternatives.map((p) => <ProductLine key={p.id} p={p} />)}</ul></details>
+      )}
+      <details><summary>Como escolhi e limites</summary><ul>{CARE_PRODUCT_NOTES.map((n) => <li key={n}><small>{n}</small></li>)}</ul></details>
+      <p className="hint">Preços consultados em {PRICES_CHECKED_ON.split('-').reverse().join('/')}. Os links abrem o site da farmácia ou do comparador; o Titan não ganha nada com eles.</p>
+    </Card>
   );
 }

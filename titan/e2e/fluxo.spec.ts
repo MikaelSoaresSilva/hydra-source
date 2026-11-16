@@ -509,3 +509,31 @@ test('lembretes: ligar e escolher o horário fica salvo; topo cabe em tela estre
   await expect(page.getByLabel('Ligar lembretes')).toBeChecked();
   await expect(page.getByLabel('Horário da manhã')).toHaveValue('06:30');
 });
+
+test('cuidados: produtos baratos para a pele, com links, preço e teto de R$ 300', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Usar em modo local' }).click();
+  await page.getByLabel('Confirmo que estes dados estão atuais.').check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByLabel(/Conferi a lista/).check();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Pular' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Salvar e continuar' }).click();
+  await page.getByRole('button', { name: 'Gerar meu plano' }).click();
+  await page.getByRole('link', { name: 'Cuidados' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Produtos baratos para a sua pele' })).toBeVisible();
+  await expect(page.getByTestId('care-total')).toHaveText('R$ 97,75–135,77');
+  const actine = page.getByTestId('care-product-actine_bar');
+  await expect(actine).toContainText('Darrow Actine Sabonete em Barra');
+  await expect(actine).toContainText('R$ 28,80–44,99');
+  await expect(actine.getByRole('link', { name: 'Drogaria São Paulo' })).toHaveAttribute('href', /^https:\/\/www\.drogariasaopaulo\.com\.br\//);
+  await expect(actine.getByRole('link', { name: 'Buscar o menor preço hoje' })).toHaveAttribute('href', /google\.com\/search\?tbm=shop/);
+  await expect(page.getByTestId('care-product-nivea_sun_oily')).toBeVisible();
+  await page.screenshot({ path: `test-results/produtos-${info.project.name}.png`, fullPage: true });
+  // outro tipo de pele troca o kit e continua dentro do teto
+  await page.getByRole('radio', { name: 'Normal / seca / sensível' }).click();
+  await expect(page.getByTestId('care-product-cerave_cleanser')).toBeVisible();
+  await expect(page.getByTestId('care-product-actine_bar')).toHaveCount(0);
+  await expect(page.getByText(/Fica dentro do seu teto de R\$ 300/)).toBeVisible();
+});

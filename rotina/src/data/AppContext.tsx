@@ -5,6 +5,7 @@ import { addDays, minutesOf, todayISO } from '../domain/time';
 import { syncDayLog, toggleDone, unlockAchievements, type Achievement } from '../domain/progress';
 import type { State } from '../domain/types';
 import { loadState, saveState } from './store';
+import { findWork, syncWork, workSignature } from '../domain/work';
 import { reschedule, setupNotifications } from './notify';
 
 /**
@@ -48,7 +49,15 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
     setTimeout(() => setToastMsg((t) => (t?.msg === msg ? null : t)), 3200);
   }, []);
 
-  const commit = useCallback((next: State) => {
+  const commit = useCallback((next0: State) => {
+    // Trabalho mudou (horário, dias, deslocamento, ajuste do dia)? O resto da rotina acompanha.
+    const prev = stateRef.current;
+    let next = next0;
+    if (workSignature(next0) !== (prev ? workSignature(prev) : workSignature(next0)) || (!prev && findWork(next0))) {
+      const w = syncWork(prev, next0);
+      next = w.state;
+      w.notes.forEach((n, i) => setTimeout(() => toast(`💼 ${n}`), 900 + i * 3300));
+    }
     const today = planDayFor(next, new Date()).date;
     let s = syncDayLog(next, today);
     const r = unlockAchievements(s, today);

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { askClaude, apiKeyStore } from '../ai';
 import { useApp } from '../data/AppContext';
 import { interpret } from '../domain/interpreter';
-import { applyOps, describeOp, preview, type Op, type Preview } from '../domain/ops';
+import { describeOp, preview, type Op, type Preview } from '../domain/ops';
+import { syncWork } from '../domain/work';
 import { hm, longDate } from '../domain/time';
 import { Card } from '../ui/components';
 
@@ -34,7 +35,7 @@ export function Assistant() {
     if (!text.trim()) { setError('Escreva o que você precisa mudar.'); return; }
     const r = interpret(text, state, today);
     if (!r.ops.length) { setUnknown(r.unknown.length ? r.unknown : [text]); return; }
-    setResult({ ops: r.ops, pv: preview(state, r.ops, today), source: 'local', summary: r.ops.map((o) => describeOp(state, o, today)).join(' '), unknown: r.unknown });
+    setResult({ ops: r.ops, pv: preview(state, r.ops, today, syncWork), source: 'local', summary: r.ops.map((o) => describeOp(state, o, today)).join(' '), unknown: r.unknown });
   }
 
   async function runClaude() {
@@ -46,13 +47,13 @@ export function Assistant() {
     if (!r.ok) { setError(r.error); return; }
     if (!r.ops.length) { setError(r.summary || 'A IA não encontrou nada para mudar na rotina.'); return; }
     setUnknown(null);
-    setResult({ ops: r.ops, pv: preview(state, r.ops, today), source: 'claude', summary: r.summary + (r.dropped ? ` (${r.dropped} sugestão(ões) inválida(s) descartada(s))` : ''), unknown: [] });
+    setResult({ ops: r.ops, pv: preview(state, r.ops, today, syncWork), source: 'claude', summary: r.summary + (r.dropped ? ` (${r.dropped} sugestão(ões) inválida(s) descartada(s))` : ''), unknown: [] });
   }
 
   function apply() {
     if (!result) return;
     setUndo(state);
-    const next = applyOps(state, result.ops);
+    const next = result.pv.next;
     update(() => ({ ...next, aiLog: [{ at: new Date().toISOString(), text, summary: result.summary, source: result.source, applied: true }, ...next.aiLog].slice(0, 50) }));
     toast('✨ Rotina reorganizada');
     setResult(null); setText('');
@@ -97,6 +98,9 @@ export function Assistant() {
                 <small style={{ textAlign: 'right' }}>{c.before && <s>{c.before}</s>}{c.before && c.after && <br />}{c.after}</small></li>
             ))}</ul>
           ) : <p className="muted">Nenhum horário deste dia muda (a alteração vale para outros dias).</p>}
+          {result.pv.auto.length > 0 && (
+            <div className="banner ok" style={{ marginTop: 8 }} data-testid="auto-adjust"><strong>Ajustado junto, automaticamente:</strong>{result.pv.auto.map((n) => <div key={n}>• {n}</div>)}</div>
+          )}
           {result.pv.warnings.map((w) => <div key={w} className="banner warn" style={{ marginTop: 8 }}>{w}</div>)}
           <details style={{ marginTop: 10 }}>
             <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Ver a rotina completa depois da mudança</summary>

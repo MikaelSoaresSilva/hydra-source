@@ -9,7 +9,15 @@ export interface Category { id: string; name: string; emoji: string; color: stri
  * - wake: X minutos depois de acordar
  * - bed: começa X minutos antes do horário de dormir
  */
-export type Anchor = { type: 'time'; at: number } | { type: 'wake'; offset: number } | { type: 'bed'; offset: number };
+export type Anchor =
+  | { type: 'time'; at: number }
+  | { type: 'wake'; offset: number }
+  | { type: 'bed'; offset: number }
+  /**
+   * Encadeada: começa logo depois (ou termina logo antes) da primeira atividade da lista que acontecer no dia,
+   * com `gap` minutos de intervalo. Nos dias sem nenhuma delas, usa o horário `fallback`.
+   */
+  | { type: 'rel'; ids: string[]; side: 'after' | 'before'; gap: number; fallback: number };
 
 export type ActivityKind = 'wake' | 'bed' | 'normal';
 
@@ -71,6 +79,8 @@ export interface Profile {
   name: string; weightKg: number; kcal: number; protein: number; carbs: number; fat: number; waterMl: number;
   /** Almoço nos dias de trabalho (min desde 00:00 e duração). */
   workLunch: { at: number; duration: number };
+  /** Deslocamento até o trabalho (minutos, cada trecho). 0 = trabalha em casa / perto. */
+  commuteMin: number;
 }
 
 export interface AiLogEntry { at: string; text: string; summary: string; source: 'local' | 'claude'; applied: boolean }

@@ -31,9 +31,9 @@ const A = (title: string, categoryId: string, duration: number, anchor: Activity
 /** Rotina inicial pensada para os objetivos do Titan (físico, rosto, cabelo, sono 8–9 h). Tudo é editável. */
 export function defaultActivities(): Activity[] {
   n = 0;
-  return [
+  return chainBathAndSnack([
     A('Acordar', 'sleep', 5, { type: 'wake', offset: 0 }, 'Levante no primeiro alarme, abra a janela e beba um copo de água. Luz natural cedo ajuda a regular o sono.', { fixed: true, priority: 1, kind: 'wake' }),
-    A('Higiene pessoal', 'face', 15, { type: 'wake', offset: 5 }, 'Banho rápido, escovar os dentes (2 min) e fio dental.', { priority: 1 }),
+    A('Higiene pessoal', 'face', 15, { type: 'wake', offset: 5 }, HYGIENE_DESC, { priority: 1 }),
     A('Skincare matinal', 'face', 10, { type: 'wake', offset: 20 }, '1) Limpeza com sabonete facial suave. 2) Hidratante leve. 3) Protetor solar FPS 30+ em rosto, orelhas e pescoço (2 dedos de produto).', { priority: 1 }),
     A('Cabelo e barba', 'hair', 10, { type: 'wake', offset: 30 }, 'Finalização do cabelo (creme/pomada) e acabamento da barba. Nos dias de lavagem, use o bloco "Lavar e hidratar cabelo".'),
     A('Café da manhã', 'nutrition', 20, { type: 'wake', offset: 45 }, 'Proteína + carboidrato: ex. 2–3 ovos, pão ou cuscuz, fruta e leite. Comece o dia com 1 copo de água.', { priority: 1 }),
@@ -49,6 +49,7 @@ export function defaultActivities(): Activity[] {
     A('Recuperação ativa', 'body', 30, { type: 'time', at: 17 * 60 + 20 }, 'Caminhada leve ou mobilidade. Dia sem academia: deixe o músculo crescer.', { priority: 3, days: [3] }),
     A('Treino de luta (Boxe + MMA)', 'body', 85, { type: 'time', at: 10 * 60 }, 'Sábado: ataque, pés e reflexo. Domingo: defesa, MMA e aprender a apanhar. A corda do fim de semana fica dentro do treino.', { priority: 2, days: [0, 6] }),
     A('Lanche pós-treino', 'nutrition', 15, { type: 'time', at: 18 * 60 + 15 }, 'Proteína + carboidrato até 2 h depois do treino.', { priority: 2 }),
+    A('Banho', 'face', 15, { type: 'time', at: BATH_FALLBACK }, BATH_DESC, { priority: 1 }),
     A('Lavar e hidratar cabelo', 'hair', 20, { type: 'time', at: 18 * 60 + 35 }, 'Shampoo só no couro cabeludo, condicionador nas pontas; hidratação 1× por semana (domingo).', { priority: 3, days: [1, 3, 5, 0] }),
     A('Alongamento e mobilidade', 'body', 15, { type: 'time', at: 19 * 60 }, 'Peitoral, ombros, quadril, posterior e panturrilha: 30–45 s cada. Respiração lenta.', { priority: 2 }),
     A('Jantar', 'nutrition', 30, { type: 'time', at: 19 * 60 + 30 }, 'Refeição completa com proteína. Evite comer pesado nas 2 h antes de dormir.', { priority: 1 }),
@@ -56,7 +57,28 @@ export function defaultActivities(): Activity[] {
     A('Skincare noturno', 'face', 10, { type: 'bed', offset: 50 }, '1) Limpeza para tirar protetor e oleosidade. 2) Hidratante. Não esprema espinhas.', { priority: 1 }),
     A('Preparar para dormir', 'sleep', 30, { type: 'bed', offset: 30 }, 'Desacelerar: luz baixa, celular longe da cama, separar a roupa de amanhã, respiração 4-7-8. Quarto escuro e fresco.', { priority: 1, fixed: true }),
     A('Dormir', 'sleep', 0, { type: 'bed', offset: 0 }, 'Hora de apagar a luz. Meta: 8–9 h de sono.', { priority: 1, fixed: true, kind: 'bed' }),
-  ];
+  ]);
+}
+
+export const HYGIENE_DESC = 'Escovar os dentes (2 min), fio dental, água no rosto e desodorante. O banho tem horário próprio, logo depois do treino.';
+export const BATH_DESC = 'Logo depois do treino (academia ou luta). Água morna, não quente, para não ressecar a pele; 5–10 min. Nos dias sem treino, à noite, antes do skincare noturno.';
+export const BATH_FALLBACK = 21 * 60;
+const TRAINING_TITLES = /^(academia|treino de luta|recuperacao ativa)/;
+const nrm = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+/** Banho logo depois do treino do dia; lanche pós-treino logo depois do banho (dias sem treino: horários próprios). */
+export function chainBathAndSnack(list: Activity[]): Activity[] {
+  const training = list.filter((a) => TRAINING_TITLES.test(nrm(a.title))).map((a) => a.id);
+  const bath = list.find((a) => /^banho/.test(nrm(a.title)));
+  return list.map((a): Activity => {
+    if (bath && a.id === bath.id && a.anchor.type !== 'rel') {
+      return { ...a, anchor: { type: 'rel', ids: training, side: 'after', gap: 0, fallback: a.anchor.type === 'time' ? a.anchor.at : BATH_FALLBACK } };
+    }
+    if (/pos-treino/.test(nrm(a.title)) && a.anchor.type === 'time') {
+      return { ...a, anchor: { type: 'rel', ids: training, side: 'after', gap: bath?.duration ?? 15, fallback: a.anchor.at } };
+    }
+    return a;
+  });
 }
 
 export const DEFAULT_SLEEP: SleepSettings = {
@@ -67,7 +89,7 @@ export const DEFAULT_SLEEP: SleepSettings = {
   goalMax: 9 * 60,
 };
 
-export const DEFAULT_PROFILE: Profile = { name: '', weightKg: 75, kcal: 2450, protein: 150, carbs: 325, fat: 60, waterMl: 2600, workLunch: { at: 11 * 60 + 30, duration: 80 } };
+export const DEFAULT_PROFILE: Profile = { name: '', weightKg: 75, kcal: 2450, protein: 150, carbs: 325, fat: 60, waterMl: 2600, workLunch: { at: 11 * 60 + 30, duration: 80 }, commuteMin: 0 };
 
 export const DEFAULT_SETTINGS: Settings = { notifications: true, lateAlerts: true, lateAfterMin: 15, snoozeMin: 10, aiEnabled: false, theme: 'dark' };
 
@@ -91,6 +113,6 @@ export function defaultState(now = new Date()): State {
   };
 }
 
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);

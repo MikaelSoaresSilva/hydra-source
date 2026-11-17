@@ -68,6 +68,7 @@ function preferredStart(a: Activity, wake: number, bed: number): number {
     return a.anchor.at < wake && a.anchor.at + 1440 < bed ? a.anchor.at + 1440 : a.anchor.at;
   }
   if (a.anchor.type === 'wake') return wake + a.anchor.offset;
+  if (a.anchor.type === 'rel') return a.anchor.fallback < wake && a.anchor.fallback + 1440 < bed ? a.anchor.fallback + 1440 : a.anchor.fallback;
   return bed - a.anchor.offset;
 }
 
@@ -157,9 +158,9 @@ export function buildDay(state: State, date: string): DayPlan {
     }
     return best;
   };
-  const place = (a: Activity): boolean => {
+  const place = (a: Activity, prefOverride?: number): boolean => {
     const d = dur(a);
-    const p = Math.max(wake, Math.min(pref(a), bed - d));
+    const p = Math.max(wake, Math.min(prefOverride ?? pref(a), bed - d));
     const at = nearest(p, d);
     if (at !== null) { items.push({ activity: a, start: at, end: at + d, preferred: pref(a), fixed: false, todayOnly: todayOnly(a) }); busy.push([at, at + d]); return true; }
     const min = a.minDuration && a.minDuration < d ? a.minDuration : null;
@@ -173,12 +174,33 @@ export function buildDay(state: State, date: string): DayPlan {
   // mas antes do lazer). Se nem a duração mínima couber, fica de fora sem aviso.
   const rank = (a: Activity) => a.priority + (a.optional ? 0.5 : 0);
   const optionalOut: Activity[] = [];
-  const flex = normal.filter((a) => !isFixed(a)).sort((a, b) => rank(a) - rank(b) || pref(a) - pref(b));
-  for (const a of flex) {
-    if (place(a)) continue;
+  const fail = (a: Activity) => {
     if (a.optional) optionalOut.push(a);
     else unplaced.push({ activity: a, reason: 'não há espaço livre suficiente entre acordar e dormir' });
+  };
+  // Encadeadas ("logo depois de…"): a mãe é a primeira da lista que acontece no dia.
+  const relParent = (a: Activity) => (a.anchor.type === 'rel' ? a.anchor.ids.find((id) => id !== a.id && present.has(id) && !joinedIds.has(id)) : undefined);
+  const rel = normal.filter((a) => !isFixed(a) && relParent(a));
+  const pending = new Set(rel.map((a) => a.id));
+  const glue = (parentId: string) => {
+    const parent = items.find((i) => i.activity.id === parentId);
+    if (!parent) return;
+    for (const a of rel.filter((x) => pending.has(x.id) && relParent(x) === parentId).sort((x, y) => rank(x) - rank(y))) {
+      pending.delete(a.id);
+      const an = a.anchor as Extract<Activity['anchor'], { type: 'rel' }>;
+      const p = an.side === 'after' ? parent.end + an.gap : parent.start - an.gap - dur(a);
+      if (place(a, p)) glue(a.id); else fail(a);
+    }
+  };
+  // mães que já estão no lugar (fixas, como o Trabalho)
+  for (const it of [...items]) glue(it.activity.id);
+  const flex = normal.filter((a) => !isFixed(a) && !pending.has(a.id) && !items.some((i) => i.activity.id === a.id)).sort((a, b) => rank(a) - rank(b) || pref(a) - pref(b));
+  for (const a of flex) {
+    if (place(a)) glue(a.id);
+    else fail(a);
   }
+  // mãe não coube: a encadeada usa o horário próprio
+  for (const a of rel.filter((x) => pending.has(x.id))) { pending.delete(a.id); if (place(a)) glue(a.id); else fail(a); }
 
   // 4) Dentro da atividade-mãe.
   for (const a of joined) {

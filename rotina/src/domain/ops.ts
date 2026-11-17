@@ -128,6 +128,10 @@ export interface Preview {
   after: DayPlan;
   changes: Change[];
   warnings: string[];
+  /** Ajustes automáticos feitos junto (ex.: acordar acompanhando o trabalho). */
+  auto: string[];
+  /** Estado final (o que será salvo ao aplicar). */
+  next: State;
 }
 
 /** Dia que melhor mostra o efeito das operações. */
@@ -147,9 +151,12 @@ export function previewDate(ops: Op[], today: string): string {
 
 function addDay(iso: string) { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
 
-export function preview(state: State, ops: Op[], today: string): Preview {
+/** `post`: ajustes automáticos que rodam depois das operações (ex.: rotina acompanhando o trabalho). */
+export function preview(state: State, ops: Op[], today: string, post?: (prev: State, next: State) => { state: State; notes: string[] }): Preview {
   const date = previewDate(ops, today);
-  const next = applyOps(state, ops);
+  let next = applyOps(state, ops);
+  let notes: string[] = [];
+  if (post) { const r = post(state, next); next = r.state; notes = r.notes; }
   const before = buildDay(state, date);
   const after = buildDay(next, date);
   const changes: Change[] = [];
@@ -166,5 +173,5 @@ export function preview(state: State, ops: Op[], today: string): Preview {
   if (after.sleepMinutes < next.sleep.goalMin) warnings.push(`Sono previsto de ${durationLabel(after.sleepMinutes)}: abaixo da meta de 8–9 h.`);
   if (after.sleepMinutes > next.sleep.goalMax + 30) warnings.push(`Sono previsto de ${durationLabel(after.sleepMinutes)}: acima de 9 h.`);
   warnings.push(...after.conflicts);
-  return { date, before, after, changes, warnings };
+  return { date, before, after, changes, warnings, auto: notes, next };
 }

@@ -4,9 +4,9 @@ import { uid } from '../domain/defaults';
 import { durationLabel, hm, parseHM, spanMinutes, WEEKDAY_SHORT } from '../domain/time';
 import { PRIORITY_LABEL, type Activity, type Priority, type State } from '../domain/types';
 import { Chips, Modal } from '../ui/components';
-import { isLunchActivity, isWorkActivity, linkWorkLunch } from '../domain/migrate';
+import { isLunchActivity, isWorkActivity } from '../domain/migrate';
 
-type Timing = 'time' | 'wake' | 'bed';
+type Timing = 'time' | 'wake' | 'bed' | 'rel';
 
 export function newActivity(categoryId = 'life'): Activity {
   return { id: uid(), title: '', categoryId, description: '', duration: 30, anchor: { type: 'time', at: 15 * 60 }, fixed: false, priority: 2, days: [0, 1, 2, 3, 4, 5, 6], paused: false, notify: true, kind: 'normal' };
@@ -54,11 +54,13 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
     onClose();
   }
   const timing: Timing = a.anchor.type;
-  const offset = a.anchor.type === 'time' ? 0 : a.anchor.offset;
+  const offset = a.anchor.type === 'wake' || a.anchor.type === 'bed' ? a.anchor.offset : 0;
+  const relParents = state.activities.filter((x) => x.id !== a.id && x.kind === 'normal' && x.anchor.type !== 'rel');
 
   function setTiming(t: Timing) {
     if (t === 'time') setEndText(hm((parseHM(timeText) ?? 900) + a.duration));
-    setA({ ...a, anchor: t === 'time' ? { type: 'time', at: parseHM(timeText) ?? 900 } : { type: t, offset: t === 'bed' ? Math.max(a.duration, 30) : 30 } });
+    const here = parseHM(timeText) ?? 900;
+    setA({ ...a, fixed: t === 'rel' ? false : a.fixed, anchor: t === 'time' ? { type: 'time', at: here } : t === 'rel' ? { type: 'rel', ids: relParents[0] ? [relParents[0].id] : [], side: 'after', gap: 0, fallback: here } : { type: t, offset: t === 'bed' ? Math.max(a.duration, 30) : 30 } });
   }
   function toggleDay(d: number) {
     setA({ ...a, days: a.days.includes(d) ? a.days.filter((x) => x !== d) : [...a.days, d].sort() });
@@ -80,6 +82,7 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
       if (duration > 16 * 60) { setError('Duração máxima de 16 h.'); return; }
       anchor = { type: 'time', at };
     }
+    if (anchor.type === 'rel' && !anchor.ids.length) { setError('Escolha depois de qual atividade.'); return; }
     const final: Activity = { ...a, title: a.title.trim(), anchor, duration };
     if (joinOn) {
       const jat = parseHM(joinStart); const jen = parseHM(joinEnd);
@@ -87,15 +90,9 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
       if (!joinParent || jat === null || jd < 5) { setError('Escolha a atividade e um horário válido para "fazer junto".'); return; }
       final.join = { parentId: joinParent, at: jat, duration: jd };
     } else delete final.join;
-    let linked = false;
-    update((s) => {
-      let next: State = { ...s, activities: isNew ? [...s.activities, final] : s.activities.map((x) => (x.id === final.id ? final : x)) };
-      // Salvou um Trabalho: o almoço entra junto, no horário de almoço do trabalho.
-      if (isWorkActivity(final) && !next.activities.find(isLunchActivity)?.join) { const r = linkWorkLunch(next); next = r.state; linked = r.linked; }
-      return next;
-    });
+    // Se for o Trabalho, o resto da rotina (acordar, almoço, deslocamento) se ajusta sozinho ao salvar.
+    update((s): State => ({ ...s, activities: isNew ? [...s.activities, final] : s.activities.map((x) => (x.id === final.id ? final : x)) }));
     toast(isNew ? `➕ ${final.title} adicionada` : '💾 Atividade salva');
-    if (linked) setTimeout(() => toast('🍽️ Almoço colocado junto com o Trabalho'), 1200);
     onClose();
   }
 
@@ -137,7 +134,7 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
             <div>
               <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.85rem', fontWeight: 650 }}>Horário</p>
               <Chips<Timing> label="Tipo de horário" value={timing} onChange={setTiming}
-                options={[{ value: 'time', label: 'No relógio' }, { value: 'wake', label: 'Depois de acordar' }, { value: 'bed', label: 'Antes de dormir' }]} />
+                options={[{ value: 'time', label: 'No relógio' }, { value: 'wake', label: 'Depois de acordar' }, { value: 'bed', label: 'Antes de dormir' }, { value: 'rel', label: 'Logo depois de outra' }]} />
             </div>
             {timing === 'time'
               ? <>
@@ -157,9 +154,26 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
                 </div>
                 <small className="muted" data-testid="form-span">{(() => { const st = parseHM(timeText); const en = parseHM(endText); const d = st !== null && en !== null ? spanMinutes(st, en) : 0; return d >= 5 ? `${timeText} até ${endText} · ${durationLabel(d)}${en !== null && st !== null && en < st ? ' (termina no dia seguinte)' : ''}` : 'O término precisa ser depois do início.'; })()}</small>
               </>
+              : a.anchor.type === 'rel' ? (() => {
+                const an = a.anchor;
+                const setRel = (p: Partial<typeof an>) => setA({ ...a, anchor: { ...an, ...p } });
+                return (
+                  <div className="stack" style={{ gap: 8 }}>
+                    <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Marque uma ou mais. No dia, vale a primeira que acontecer (ex.: Academia ou Treino de luta).</p>
+                    <div className="chips" aria-label="Logo depois de">
+                      {relParents.map((p) => <button key={p.id} type="button" className={`chip ${an.ids.includes(p.id) ? 'on' : ''}`} aria-pressed={an.ids.includes(p.id)}
+                        onClick={() => setRel({ ids: an.ids.includes(p.id) ? an.ids.filter((x) => x !== p.id) : [...an.ids, p.id] })}>{p.title}</button>)}
+                    </div>
+                    <div className="grid2">
+                      <label className="field">Intervalo (min)<input type="number" inputMode="numeric" min={0} max={240} aria-label="Intervalo depois da outra" value={an.gap} onChange={(e) => setRel({ gap: Math.max(0, Number(e.target.value) || 0) })} /></label>
+                      <label className="field">Nos dias sem ela<input type="time" aria-label="Horário nos dias sem ela" value={hm(an.fallback)} onChange={(e) => { const v = parseHM(e.target.value); if (v !== null) setRel({ fallback: v }); }} /></label>
+                    </div>
+                  </div>
+                );
+              })()
               : <label className="field">{timing === 'wake' ? 'Minutos depois de acordar' : 'Começa quantos minutos antes de dormir'}
-                <input type="number" inputMode="numeric" min={0} max={900} value={offset} onChange={(e) => setA({ ...a, anchor: { type: timing, offset: Number(e.target.value) } })} /></label>}
-            <label className="check"><input type="checkbox" checked={a.fixed} onChange={(e) => setA({ ...a, fixed: e.target.checked })} /> Horário fixo: começa e termina exatamente nos horários escolhidos. Desmarcado: o app encaixa no horário livre mais próximo.</label>
+                <input type="number" inputMode="numeric" min={0} max={900} value={offset} onChange={(e) => setA({ ...a, anchor: { type: timing as 'wake' | 'bed', offset: Number(e.target.value) } })} /></label>}
+            {a.anchor.type !== 'rel' && <label className="check"><input type="checkbox" checked={a.fixed} onChange={(e) => setA({ ...a, fixed: e.target.checked })} /> Horário fixo: começa e termina exatamente nos horários escolhidos. Desmarcado: o app encaixa no horário livre mais próximo.</label>}
           </>
         )}
         <div>

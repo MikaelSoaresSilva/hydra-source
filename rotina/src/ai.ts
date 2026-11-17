@@ -4,6 +4,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { uid } from './domain/defaults';
 import type { Op, Scope } from './domain/ops';
+import { anchorLabel } from './domain/work';
 import { addDays, hm, parseHM } from './domain/time';
 import type { Activity, Priority, State } from './domain/types';
 
@@ -52,7 +53,7 @@ export interface AiOp { type: string; activityId: string | null; time: string | 
 export function aiContext(state: State, today: string): string {
   const acts = state.activities.map((a) => ({
     id: a.id, titulo: a.title, categoria: a.categoryId, duracao_min: a.duration, fixo: a.fixed, prioridade: a.priority, dias: a.days, pausado: a.paused,
-    horario: a.anchor.type === 'time' ? hm(a.anchor.at) : a.anchor.type === 'wake' ? `${a.anchor.offset} min após acordar` : `${a.anchor.offset} min antes de dormir`,
+    horario: anchorLabel(a, state.activities),
   }));
   return JSON.stringify({
     hoje: today,

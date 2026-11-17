@@ -1,5 +1,5 @@
 // Atualizações dos dados salvos entre versões do app.
-import { DEFAULT_PROFILE, STATE_VERSION, WEEKDAY_STUDY_DESC, WEEKEND_STUDY_DESC, uid } from './defaults';
+import { BATH_DESC, BATH_FALLBACK, DEFAULT_PROFILE, HYGIENE_DESC, STATE_VERSION, WEEKDAY_STUDY_DESC, WEEKEND_STUDY_DESC, chainBathAndSnack, uid } from './defaults';
 import { norm } from './interpreter';
 import type { Activity, State } from './types';
 
@@ -53,11 +53,29 @@ export function migrateToV3(s: State): State {
       paused: false, notify: true, kind: 'normal', minDuration: 45,
     });
   }
+  out.version = 3;
+  return out;
+}
+
+/** v4: banho com horário próprio (logo depois do treino), lanche pós-treino encadeado e deslocamento (0 = nenhum). */
+export function migrateToV4(s: State): State {
+  if ((s.version ?? 1) >= 4) return s;
+  const out: State = structuredClone(s);
+  out.profile.commuteMin ??= 0;
+  const hygiene = out.activities.find((a) => /^higiene/.test(norm(a.title)));
+  if (hygiene && /banho rapido/.test(norm(hygiene.description))) hygiene.description = HYGIENE_DESC;
+  if (!out.activities.some((a) => /^banho/.test(norm(a.title)))) {
+    out.activities.push({
+      id: uid(), title: 'Banho', categoryId: out.categories.some((c) => c.id === 'face') ? 'face' : out.categories[0].id, description: BATH_DESC,
+      duration: 15, anchor: { type: 'time', at: BATH_FALLBACK }, fixed: false, priority: 1, days: [0, 1, 2, 3, 4, 5, 6], paused: false, notify: true, kind: 'normal',
+    });
+  }
+  out.activities = chainBathAndSnack(out.activities);
   out.version = STATE_VERSION;
   return out;
 }
 
-export const migrateAll = (s: State) => migrateToV3(migrateToV2(s));
+export const migrateAll = (s: State) => migrateToV4(migrateToV3(migrateToV2(s)));
 
 export const isWorkActivity = (a: Activity) => /^trabalho/.test(norm(a.title)) && a.anchor.type === 'time' && !a.paused;
 export const isLunchActivity = (a: Activity) => /almoco/.test(norm(a.title));

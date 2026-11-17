@@ -81,3 +81,16 @@ describe('fase da dieta', () => {
     expect(g.protein_g).toBe(135);
   });
 });
+
+describe('treino facial: vídeo em cada exercício', () => {
+  it('todo exercício tem botão de vídeo (busca no YouTube) e páginas só verificadas, em https', async () => {
+    const { youtubeSearchUrl } = await import('./facePlan');
+    for (const s of FACE_ROUTINE) {
+      expect(s.video.query.length).toBeGreaterThan(10);
+      expect(youtubeSearchUrl(s.video.query)).toMatch(/^https:\/\/www\.youtube\.com\/results\?search_query=/);
+      if (s.video.page) expect(s.video.page.url).toMatch(/^https:\/\//);
+    }
+    expect(youtubeSearchUrl('chin tuck')).toBe('https://www.youtube.com/results?search_query=chin%20tuck');
+    expect(FACE_ROUTINE.find((s) => /Drenagem/.test(s.title))!.video.page!.url).toBe('https://www.tuasaude.com/como-fazer-drenagem-linfatica-no-rosto/');
+  });
+});

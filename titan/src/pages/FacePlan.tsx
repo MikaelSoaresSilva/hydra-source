@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useProfile, useRows, useStore } from '../data/AppContext';
 import { uuid } from '../data/store';
 import { todayISO } from '../domain/dates';
-import { FACE_CLEAN, FACE_FAT_PLAN, FACE_PUFFINESS, FACE_ROUTINE, FACE_SKIP, FACE_SYMMETRY, FACE_TRUTH } from '../domain/facePlan';
+import { FACE_CLEAN, FACE_FAT_PLAN, FACE_PUFFINESS, FACE_ROUTINE, FACE_SKIP, FACE_SYMMETRY, FACE_TRUTH, VIDEO_TIP, youtubeSearchUrl } from '../domain/facePlan';
 import type { CheckinRow, MetricRow, TargetRow } from '../domain/types';
 import { Card, fmt, useToast } from '../ui/components';
 
@@ -58,9 +58,17 @@ export function FacePlan() {
               <small>{s.how}</small><br />
               <small><strong>{s.dose}</strong></small>
               {s.caution && <><br /><small className="muted">{s.caution}</small></>}
+              <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {s.video.page
+                  ? <a className="btn primary sm" href={s.video.page.url} target="_blank" rel="noreferrer" aria-label={`Ver vídeo: ${s.title}`}>▶ {s.video.page.label}</a>
+                  : <a className="btn primary sm" href={youtubeSearchUrl(s.video.query)} target="_blank" rel="noreferrer" aria-label={`Ver vídeo: ${s.title}`}>▶ Ver vídeo de como fazer</a>}
+                {s.video.page && <a className="btn ghost sm" href={youtubeSearchUrl(s.video.query)} target="_blank" rel="noreferrer">Mais vídeos no YouTube</a>}
+              </div>
+              {s.video.page && <small className="muted">{s.video.page.note}</small>}
             </li>
           ))}
         </ul>
+        <p className="hint">▶ Os botões de vídeo abrem a busca daquele exercício no YouTube (no celular, direto no app). {VIDEO_TIP}</p>
         <button className={`btn ${doneToday ? '' : 'primary'} big`} style={{ marginTop: 10 }} onClick={() => void markRoutine(!doneToday)}>{doneToday ? 'Feito hoje ✓ (desmarcar)' : 'Marcar treino facial de hoje'}</button>
         <p className="hint">Conta na Missão do dia. Dor, tontura ou formigamento: pare e procure um profissional.</p>
       </Card>

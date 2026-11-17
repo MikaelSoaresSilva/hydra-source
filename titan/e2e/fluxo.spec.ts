@@ -133,6 +133,12 @@ test('aparência (questionário sem IA) + biblioteca/calculadora + IA desligada 
   await page.getByRole('link', { name: 'Aparência' }).click();
   // Plano do rosto é a primeira aba: treino facial marcado conta na Missão
   await expect(page.getByRole('heading', { name: '2. Treino facial (5–6 min por dia)' })).toBeVisible();
+  // Cada exercício tem um botão de vídeo que leva a um vídeo de como fazer
+  await expect(page.getByRole('link', { name: /^Ver vídeo:/ })).toHaveCount(5);
+  await expect(page.getByRole('link', { name: 'Ver vídeo: 1. Queixo recolhido (chin tuck)' })).toHaveAttribute('href', /^https:\/\/www\.youtube\.com\/results\?search_query=retra/);
+  await expect(page.getByRole('link', { name: 'Ver vídeo: 4. Drenagem do rosto (de manhã)' })).toHaveAttribute('href', 'https://www.tuasaude.com/como-fazer-drenagem-linfatica-no-rosto/');
+  await expect(page.getByRole('link', { name: 'Ver vídeo: 2. Pescoço isométrico (4 direções)' })).toHaveAttribute('target', '_blank');
+  await page.screenshot({ path: `test-results/videos-rosto-${info.project.name}.png`, fullPage: true });
   await page.getByRole('button', { name: 'Marcar treino facial de hoje' }).click();
   await expect(page.getByRole('button', { name: /Feito hoje/ })).toBeVisible();
   await page.getByRole('tab', { name: 'Corte' }).click();

@@ -98,6 +98,10 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Vídeos no treino facial — v3.6
+
+Aparência → Rosto → treino facial: cada exercício tem "▶ Ver vídeo de como fazer" (`FaceStep.video`). Por padrão abre a busca daquele exercício no YouTube (no APK, o Android abre o app do YouTube); quando há página conferida, ela vem primeiro (drenagem: vídeo com fisioterapeuta no Tua Saúde). Nenhum link de vídeo específico é usado sem ter sido aberto e conferido.
+
 ## Produtos de rosto baratos — v3.5
 
 Cuidados → Pele → **Produtos baratos para a sua pele** (`domain/careProducts.ts`): kit essencial (limpeza, hidratante, protetor) pelo tipo de pele do perfil, o mais barato de cada etapa entre marcas de farmácia, com faixa de preço e fonte (consulta de 16/11/2026), links reais de farmácias/comparadores, busca do menor preço do dia e o termo para pedir no balcão. Teto de R$ 300 (testado no preço mais alto). Não é diagnóstico; fotos só entram como observação da análise de aparência.

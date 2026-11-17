@@ -7,7 +7,18 @@ export const FACE_TRUTH = [
   'Todo rosto é assimétrico. Dá para reduzir a assimetria que se vê (cabelo, barba, sobrancelha, postura), não a dos ossos.',
 ];
 
-export interface FaceStep { title: string; how: string; dose: string; evidence: 'boa' | 'limitada' | 'postura/aparência'; caution?: string }
+export interface FaceVideo {
+  /** Busca no YouTube (sempre funciona; mostra vídeos atuais de como fazer). */
+  query: string;
+  /** Página verificada com vídeo (aberta e conferida antes de entrar no app). */
+  page?: { label: string; url: string; note: string };
+}
+export interface FaceStep { title: string; how: string; dose: string; evidence: 'boa' | 'limitada' | 'postura/aparência'; caution?: string; video: FaceVideo }
+
+/** Link da busca no YouTube; no celular abre o app do YouTube. */
+export const youtubeSearchUrl = (q: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+
+export const VIDEO_TIP = 'Na busca, prefira vídeos de fisioterapeuta (o registro CREFITO costuma aparecer no perfil ou na descrição) e confira se o movimento é igual ao descrito aqui: devagar, sem dor.';
 
 /** Treino facial de 5–6 minutos por dia. Entra na Missão como "Treino facial de 5 min". */
 export const FACE_ROUTINE: FaceStep[] = [
@@ -17,6 +28,7 @@ export const FACE_ROUTINE: FaceStep[] = [
     dose: '2 séries de 10 repetições, segurando 5 s',
     evidence: 'postura/aparência',
     caution: 'Sem dor nem formigamento; se aparecer, pare.',
+    video: { query: 'retração cervical chin tuck como fazer fisioterapia' },
   },
   {
     title: '2. Pescoço isométrico (4 direções)',
@@ -24,12 +36,14 @@ export const FACE_ROUTINE: FaceStep[] = [
     dose: '2 voltas de 15–20 s em cada direção',
     evidence: 'boa',
     caution: 'É músculo de verdade: um pescoço mais forte e a cabeça bem posicionada emolduram a mandíbula. Nunca force no limite nem gire a cabeça com carga.',
+    video: { query: 'isometria cervical com a mão 4 direções fisioterapia' },
   },
   {
     title: '3. Abertura de peito na parede',
     how: 'Costas na parede, braços em "W"; deslize para cima e para baixo mantendo cotovelos e punhos encostados. Ombros para trás tiram a cabeça da frente do corpo.',
     dose: '2 séries de 10 repetições lentas',
     evidence: 'postura/aparência',
+    video: { query: 'wall slide deslizamento na parede postura ombros fisioterapia' },
   },
   {
     title: '4. Drenagem do rosto (de manhã)',
@@ -37,6 +51,10 @@ export const FACE_ROUTINE: FaceStep[] = [
     dose: '1–2 min, 5 passadas em cada trajeto',
     evidence: 'limitada',
     caution: 'Só reduz o inchaço da manhã por algumas horas. Não passe sobre espinha inflamada.',
+    video: {
+      query: 'drenagem linfática facial passo a passo em casa fisioterapeuta',
+      page: { label: 'Vídeo com fisioterapeuta (Tua Saúde)', url: 'https://www.tuasaude.com/como-fazer-drenagem-linfatica-no-rosto/', note: 'Vídeo de 3:40 com a fisioterapeuta Marcelle Pinheiro e o passo a passo escrito. A versão do vídeo dura ~10 min; aqui basta 1–2 min, só os trajetos principais.' },
+    },
   },
   {
     title: '5. Língua no céu da boca, boca fechada, respirar pelo nariz',
@@ -44,6 +62,7 @@ export const FACE_ROUTINE: FaceStep[] = [
     dose: 'Hábito, não série',
     evidence: 'postura/aparência',
     caution: 'Melhora a postura da boca e do queixo na hora. Não há evidência de que mude o osso em adultos ("mewing").',
+    video: { query: 'posição correta da língua respiração nasal fonoaudióloga' },
   },
 ];
 

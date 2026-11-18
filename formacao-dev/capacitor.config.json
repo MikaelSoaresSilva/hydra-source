@@ -1,0 +1,9 @@
+{
+  "appId": "com.formacaodev.app",
+  "appName": "Formação Dev",
+  "webDir": "dist",
+  "android": { "adjustMarginsForEdgeToEdge": "force" },
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_icon", "iconColor": "#22c55e" }
+  }
+}

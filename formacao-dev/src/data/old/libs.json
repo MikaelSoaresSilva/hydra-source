@@ -1,0 +1,169 @@
+[
+ {
+  "id": "lib-cors",
+  "title": "CORS",
+  "level": "intermediário",
+  "stable": true,
+  "prereqs": [
+   "l-http"
+  ],
+  "competencies": [
+   "http"
+  ],
+  "summary": "Regra do navegador que controla quais sites podem chamar sua API.",
+  "full": "Navegadores bloqueiam, por padrão, que um site em um domínio leia respostas de uma API em outro domínio. O servidor libera origens específicas com o cabeçalho Access-Control-Allow-Origin. Em Express, use o pacote cors com uma lista explícita de origens. Evite \"*\" em APIs com credenciais. CORS não é autenticação: ferramentas fora do navegador (curl) ignoram CORS.",
+  "docs": [
+   {
+    "label": "MDN: CORS",
+    "url": "https://developer.mozilla.org/pt-BR/docs/Web/HTTP/CORS"
+   }
+  ]
+ },
+ {
+  "id": "lib-rate",
+  "title": "Limitação de requisições (rate limiting)",
+  "level": "intermediário",
+  "stable": true,
+  "prereqs": [
+   "l-first-api"
+  ],
+  "competencies": [
+   "auth"
+  ],
+  "summary": "Limitar quantas requisições um cliente pode fazer por período.",
+  "full": "Protege contra abuso, força bruta em login e custos excessivos. Responda 429 Too Many Requests com o cabeçalho Retry-After. Em Express, o pacote express-rate-limit resolve o caso simples; com vários servidores, guarde os contadores no Redis.",
+  "docs": [
+   {
+    "label": "MDN: 429",
+    "url": "https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/429"
+   }
+  ]
+ },
+ {
+  "id": "lib-openapi",
+  "title": "Documentação com OpenAPI / Swagger",
+  "level": "intermediário",
+  "stable": false,
+  "reviewedAt": "2026-10",
+  "prereqs": [
+   "l-crud"
+  ],
+  "competencies": [
+   "rest-crud"
+  ],
+  "summary": "Descrever sua API num arquivo padrão que gera documentação interativa.",
+  "full": "OpenAPI é uma especificação (YAML/JSON) que descreve rotas, parâmetros, corpos e respostas. Ferramentas como Swagger UI geram uma página interativa a partir dela. Ter docs/openapi.yaml no repositório é um ótimo sinal de profissionalismo.",
+  "docs": [
+   {
+    "label": "OpenAPI Initiative",
+    "url": "https://www.openapis.org/"
+   },
+   {
+    "label": "Swagger: Documentação",
+    "url": "https://swagger.io/docs/"
+   }
+  ]
+ },
+ {
+  "id": "lib-idempotencia",
+  "title": "Idempotência e webhooks",
+  "level": "avançado",
+  "stable": true,
+  "prereqs": [
+   "l-automation"
+  ],
+  "competencies": [
+   "automation"
+  ],
+  "summary": "Repetir a mesma operação não deve causar efeitos duplicados.",
+  "full": "GET, PUT e DELETE devem ser idempotentes. Para POST críticos (pagamentos), aceite um cabeçalho Idempotency-Key e guarde o resultado. Webhooks podem chegar duplicados ou fora de ordem: registre o id do evento, valide a assinatura e responda rápido (processe em fila).",
+  "docs": [
+   {
+    "label": "MDN: Idempotente",
+    "url": "https://developer.mozilla.org/pt-BR/docs/Glossary/Idempotent"
+   }
+  ]
+ },
+ {
+  "id": "lib-redis",
+  "title": "Redis: cache e dados em memória",
+  "level": "intermediário",
+  "stable": false,
+  "reviewedAt": "2026-10",
+  "prereqs": [
+   "l-db"
+  ],
+  "competencies": [
+   "db-basics"
+  ],
+  "summary": "Banco em memória muito rápido, usado para cache, filas e contadores.",
+  "full": "Use Redis quando a mesma consulta pesada é repetida muitas vezes (cache com expiração), para contadores de rate limit e como base de filas (BullMQ). Não use como banco principal para dados que não podem ser perdidos sem configurar persistência. Comece sem cache; adicione quando medir lentidão real.",
+  "docs": [
+   {
+    "label": "Redis Docs",
+    "url": "https://redis.io/docs/latest/"
+   }
+  ]
+ },
+ {
+  "id": "lib-nosql",
+  "title": "NoSQL e MongoDB: quando usar",
+  "level": "intermediário",
+  "stable": true,
+  "prereqs": [
+   "l-db"
+  ],
+  "competencies": [
+   "db-basics"
+  ],
+  "summary": "Bancos de documentos guardam JSON flexível; relacionais garantem integridade.",
+  "full": "MongoDB guarda documentos JSON sem esquema fixo, bom para dados muito variáveis. PostgreSQL (relacional) é a escolha padrão quando há relacionamentos e integridade importam — e também tem colunas JSONB. Para a maioria dos projetos de portfólio, PostgreSQL é suficiente.",
+  "docs": [
+   {
+    "label": "MongoDB Docs",
+    "url": "https://www.mongodb.com/docs/"
+   },
+   {
+    "label": "PostgreSQL: JSON",
+    "url": "https://www.postgresql.org/docs/current/datatype-json.html"
+   }
+  ]
+ },
+ {
+  "id": "lib-transacoes",
+  "title": "Transações, ACID e índices",
+  "level": "avançado",
+  "stable": true,
+  "prereqs": [
+   "l-joins"
+  ],
+  "competencies": [
+   "relations-joins"
+  ],
+  "summary": "Tudo-ou-nada para operações relacionadas; índices para buscas rápidas.",
+  "full": "ACID: Atomicidade (tudo ou nada), Consistência (regras respeitadas), Isolamento (transações não se atrapalham), Durabilidade (confirmado = salvo). Use BEGIN/COMMIT/ROLLBACK, ou client.query(\"BEGIN\") no pg. Índices (CREATE INDEX) aceleram WHERE/JOIN em colunas muito consultadas, mas deixam escritas um pouco mais lentas; use EXPLAIN ANALYZE para medir.",
+  "docs": [
+   {
+    "label": "PostgreSQL: Transações",
+    "url": "https://www.postgresql.org/docs/current/tutorial-transactions.html"
+   },
+   {
+    "label": "PostgreSQL: Índices",
+    "url": "https://www.postgresql.org/docs/current/indexes.html"
+   }
+  ]
+ },
+ {
+  "id": "lib-ia-dependencia",
+  "title": "Usar IA sem se tornar dependente",
+  "level": "iniciante",
+  "stable": true,
+  "prereqs": [],
+  "competencies": [
+   "ai-apis"
+  ],
+  "summary": "IA acelera, mas você precisa entender e testar o que ela gera.",
+  "full": "Regras práticas: 1) tente sozinho por alguns minutos antes de pedir ajuda; 2) peça dicas, não a resposta; 3) nunca cole código que você não consegue explicar linha por linha; 4) sempre rode e teste; 5) desconfie de APIs ou funções que você não encontra na documentação oficial — a IA pode inventá-las.",
+  "docs": []
+ }
+]

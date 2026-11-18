@@ -1,0 +1,440 @@
+[
+ {
+  "id": "p-tarefas-cli",
+  "level": 1,
+  "title": "Gerenciador de tarefas no terminal",
+  "summary": "Um programa Node.js que adiciona, lista e conclui tarefas, salvando num arquivo JSON.",
+  "competencies": [
+   "functions",
+   "data-structures",
+   "json",
+   "terminal"
+  ],
+  "requirements": [
+   "node tarefas.js add \"Estudar\"",
+   "node tarefas.js list",
+   "node tarefas.js done 1",
+   "Salvar em tarefas.json (fs)"
+  ],
+  "steps": [
+   "Crie a pasta e o arquivo tarefas.js",
+   "Leia os argumentos com process.argv",
+   "Implemente add/list/done como funções",
+   "Leia e grave o JSON com fs.readFileSync/writeFileSync",
+   "Trate comando desconhecido com uma mensagem de ajuda"
+  ],
+  "acceptance": [
+   "As tarefas continuam lá ao rodar de novo",
+   "Comando inválido mostra ajuda em vez de quebrar",
+   "done com id inexistente mostra erro amigável"
+  ],
+  "structure": "tarefas-cli/\n  tarefas.js\n  tarefas.json\n  README.md",
+  "tech": [
+   "Node.js",
+   "fs",
+   "JSON"
+  ],
+  "tests": [
+   "add duas tarefas e list mostra 2",
+   "done 1 marca a primeira",
+   "arquivo JSON ausente é criado"
+  ],
+  "improvements": [
+   "Comando remove",
+   "Prioridades",
+   "Testes com node:test"
+  ],
+  "portfolioPitch": "Mostra lógica, funções, manipulação de arquivos e tratamento de erros."
+ },
+ {
+  "id": "p-conversor",
+  "level": 1,
+  "title": "Conversor de unidades",
+  "summary": "Funções que convertem temperatura, distância e peso, com testes automatizados.",
+  "competencies": [
+   "functions",
+   "testing",
+   "conditionals"
+  ],
+  "requirements": [
+   "Converter C↔F, km↔milhas, kg↔libras",
+   "Rejeitar entradas não numéricas",
+   "Testes para cada conversão"
+  ],
+  "steps": [
+   "Crie conversor.js com uma função por conversão",
+   "Valide entradas com typeof e Number.isFinite",
+   "Crie conversor.test.js com node:test",
+   "Rode node --test"
+  ],
+  "acceptance": [
+   "Todos os testes passam",
+   "Entradas inválidas lançam erro com mensagem clara"
+  ],
+  "structure": "conversor/\n  conversor.js\n  conversor.test.js\n  README.md",
+  "tech": [
+   "Node.js",
+   "node:test"
+  ],
+  "tests": [
+   "0 °C = 32 °F",
+   "-40 °C = -40 °F",
+   "\"abc\" lança erro"
+  ],
+  "improvements": [
+   "CLI interativa",
+   "Publicar como pacote npm"
+  ],
+  "portfolioPitch": "Mostra testes desde o primeiro projeto — um diferencial."
+ },
+ {
+  "id": "p-api-tarefas",
+  "level": 2,
+  "title": "API de tarefas (CRUD)",
+  "summary": "API REST com Express para criar, listar, atualizar e remover tarefas, com validação.",
+  "competencies": [
+   "first-api",
+   "rest-crud",
+   "http",
+   "json"
+  ],
+  "requirements": [
+   "GET /tarefas (com filtro ?feita=)",
+   "GET /tarefas/:id",
+   "POST /tarefas com validação",
+   "PATCH /tarefas/:id",
+   "DELETE /tarefas/:id",
+   "Status HTTP corretos (200, 201, 204, 400, 404)"
+  ],
+  "steps": [
+   "Crie o projeto e instale express",
+   "Implemente GET /ping",
+   "Implemente POST com validação",
+   "Implemente GET (lista e por id)",
+   "Implemente PATCH e DELETE",
+   "Middleware de erro central",
+   "Teste cada rota com curl ou Bruno/Insomnia"
+  ],
+  "acceptance": [
+   "Todas as rotas respondem com os status corretos",
+   "Corpo inválido nunca derruba o servidor",
+   "README com exemplos de requisição"
+  ],
+  "structure": "api-tarefas/\n  src/\n    server.js\n    rotas/tarefas.js\n    validacao.js\n  package.json\n  README.md",
+  "tech": [
+   "Node.js",
+   "Express"
+  ],
+  "tests": [
+   "POST sem titulo → 400",
+   "GET id inexistente → 404",
+   "DELETE → 204 e depois GET → 404"
+  ],
+  "improvements": [
+   "Persistir no PostgreSQL",
+   "Paginação",
+   "Documentação OpenAPI"
+  ],
+  "portfolioPitch": "Mostra domínio de REST, HTTP e validação — a base de qualquer vaga backend."
+ },
+ {
+  "id": "p-api-postgres",
+  "level": 2,
+  "title": "API de produtos e categorias com PostgreSQL",
+  "summary": "API com duas tabelas relacionadas, consultas parametrizadas e migrações.",
+  "competencies": [
+   "db-basics",
+   "relations-joins",
+   "input-security",
+   "env-config"
+  ],
+  "requirements": [
+   "Tabelas categorias e produtos (FK)",
+   "CRUD de produtos",
+   "GET /categorias/:id/produtos com JOIN",
+   "Consultas parametrizadas",
+   "DATABASE_URL em .env"
+  ],
+  "steps": [
+   "Crie o banco (local ou gratuito na nuvem)",
+   "Escreva a migração SQL",
+   "Conecte com o pacote pg (Pool)",
+   "Implemente as rotas",
+   "Trate erros do banco sem expor detalhes"
+  ],
+  "acceptance": [
+   "Nenhuma consulta concatena texto",
+   "Produto com categoria inexistente → 400",
+   ".env.example documentado"
+  ],
+  "structure": "api-produtos/\n  migrations/001_init.sql\n  src/db.js\n  src/rotas/\n  .env.example",
+  "tech": [
+   "Node.js",
+   "Express",
+   "PostgreSQL",
+   "pg"
+  ],
+  "tests": [
+   "Criar categoria e produto",
+   "Listar produtos da categoria",
+   "Tentativa de SQL injection não retorna dados extras"
+  ],
+  "improvements": [
+   "Índices",
+   "Transações",
+   "Testes de integração com banco de teste"
+  ],
+  "portfolioPitch": "Mostra modelagem relacional e segurança no acesso a dados."
+ },
+ {
+  "id": "p-auth",
+  "level": 3,
+  "title": "Sistema de autenticação e autorização",
+  "summary": "Cadastro, login com bcrypt, JWT, papéis e rotas protegidas.",
+  "competencies": [
+   "auth",
+   "input-security",
+   "testing"
+  ],
+  "requirements": [
+   "POST /auth/registrar",
+   "POST /auth/login",
+   "Senhas com bcrypt",
+   "JWT com expiração",
+   "Papéis admin/usuario",
+   "Rate limit no login"
+  ],
+  "steps": [
+   "Tabela usuarios (email único, hash)",
+   "Registro com validação",
+   "Login emitindo JWT",
+   "Middleware exigirLogin",
+   "Middleware exigirPapel",
+   "Rate limiting",
+   "Testes"
+  ],
+  "acceptance": [
+   "Senha nunca aparece em logs ou respostas",
+   "Token inválido → 401; sem papel → 403",
+   "Mensagem de login não revela se o e-mail existe"
+  ],
+  "structure": "auth-api/\n  src/auth/\n  src/middlewares/\n  tests/",
+  "tech": [
+   "Express",
+   "PostgreSQL",
+   "bcrypt",
+   "jsonwebtoken"
+  ],
+  "tests": [
+   "Login correto/incorreto",
+   "Rota admin com usuário comum → 403",
+   "Token expirado → 401"
+  ],
+  "improvements": [
+   "Refresh tokens",
+   "Recuperação de senha por e-mail",
+   "Auditoria"
+  ],
+  "portfolioPitch": "Segurança é cobrada em entrevistas; este projeto mostra que você entende os riscos."
+ },
+ {
+  "id": "p-financeiro",
+  "level": 3,
+  "title": "API de controle financeiro com relatórios",
+  "summary": "Lançamentos de receitas/despesas com filtros, paginação, relatórios mensais e deploy.",
+  "competencies": [
+   "rest-crud",
+   "relations-joins",
+   "testing",
+   "devops"
+  ],
+  "requirements": [
+   "CRUD de lançamentos por usuário",
+   "Filtros por período e categoria",
+   "Paginação",
+   "GET /relatorios/mensal com GROUP BY",
+   "Testes automatizados",
+   "Deploy com CI"
+  ],
+  "steps": [
+   "Modelagem",
+   "Rotas",
+   "Relatórios em SQL",
+   "Testes",
+   "Dockerfile",
+   "GitHub Actions",
+   "Deploy"
+  ],
+  "acceptance": [
+   "Usuário só vê os próprios lançamentos",
+   "CI verde",
+   "API publicada com /health"
+  ],
+  "structure": "financeiro-api/\n  src/\n  tests/\n  Dockerfile\n  .github/workflows/ci.yml",
+  "tech": [
+   "Node.js",
+   "PostgreSQL",
+   "Docker",
+   "GitHub Actions"
+  ],
+  "tests": [
+   "Relatório soma corretamente",
+   "Paginação respeita limite máximo"
+  ],
+  "improvements": [
+   "Exportar CSV",
+   "Metas de gastos",
+   "Cache de relatórios com Redis"
+  ],
+  "portfolioPitch": "Projeto completo: dados, regras, testes e deploy."
+ },
+ {
+  "id": "p-classificador",
+  "level": 4,
+  "title": "Classificador automático de solicitações com IA",
+  "summary": "Recebe mensagens, classifica com um LLM, valida a saída e grava no banco; baixa confiança vai para revisão humana.",
+  "competencies": [
+   "ai-apis",
+   "automation",
+   "db-basics"
+  ],
+  "requirements": [
+   "POST /solicitacoes",
+   "Classificação com saída JSON validada",
+   "Fallback para revisão humana",
+   "Retry com backoff",
+   "Logs sem dados pessoais",
+   "Registro de custo/tokens"
+  ],
+  "steps": [
+   "Endpoint e tabela",
+   "Cliente da API de IA no servidor",
+   "Validação da resposta",
+   "Retry",
+   "Fila de revisão",
+   "Métricas de acerto"
+  ],
+  "acceptance": [
+   "JSON inválido da IA nunca quebra o sistema",
+   "Chave de API só no servidor",
+   "Conjunto de 20 exemplos com taxa de acerto medida"
+  ],
+  "structure": "classificador/\n  src/ia/cliente.js\n  src/ia/validar.js\n  src/rotas/\n  avaliacao/exemplos.json",
+  "tech": [
+   "Node.js",
+   "PostgreSQL",
+   "API de IA (compatível com OpenAI) ou Ollama"
+  ],
+  "tests": [
+   "Resposta com ``` é aceita",
+   "Categoria fora da lista → revisão",
+   "429 → retry"
+  ],
+  "improvements": [
+   "Fila com BullMQ",
+   "Painel de revisão",
+   "Comparar modelos"
+  ],
+  "portfolioPitch": "Mostra integração de IA com responsabilidade: validação, custos e falhas."
+ },
+ {
+  "id": "p-rag",
+  "level": 4,
+  "title": "Assistente de perguntas sobre documentos (RAG)",
+  "summary": "Indexa documentos com embeddings no PostgreSQL (pgvector) e responde citando fontes.",
+  "competencies": [
+   "rag",
+   "ai-apis",
+   "db-basics"
+  ],
+  "requirements": [
+   "Ingestão de textos em pedaços",
+   "Embeddings armazenados",
+   "Busca por similaridade",
+   "Resposta com citação",
+   "\"Não sei\" quando não houver contexto"
+  ],
+  "steps": [
+   "Dividir documentos",
+   "Gerar embeddings",
+   "pgvector",
+   "Busca top-k",
+   "Prompt com contexto",
+   "Avaliação com perguntas de teste"
+  ],
+  "acceptance": [
+   "Respostas citam o trecho usado",
+   "Pergunta fora do escopo → resposta honesta de que não sabe"
+  ],
+  "structure": "rag-docs/\n  ingest.js\n  src/busca.js\n  src/rotas/perguntar.js",
+  "tech": [
+   "Node.js",
+   "PostgreSQL + pgvector",
+   "API de embeddings"
+  ],
+  "tests": [
+   "Pergunta conhecida encontra o documento certo",
+   "Pergunta fora do tema não inventa"
+  ],
+  "improvements": [
+   "Busca híbrida (texto + vetor)",
+   "Interface web",
+   "Atualização incremental"
+  ],
+  "portfolioPitch": "RAG é um dos padrões mais pedidos em vagas de IA aplicada."
+ },
+ {
+  "id": "p-saas",
+  "level": 5,
+  "title": "Backend de SaaS com usuários, permissões e planos",
+  "summary": "Multiempresa (multi-tenant), papéis, planos com limites, pagamentos SIMULADOS em ambiente de teste, monitoramento e deploy.",
+  "competencies": [
+   "auth",
+   "relations-joins",
+   "testing",
+   "devops",
+   "automation"
+  ],
+  "requirements": [
+   "Organizações e membros",
+   "Papéis por organização",
+   "Planos com limites",
+   "Webhook de pagamento de teste com idempotência",
+   "Logs e métricas",
+   "Documentação OpenAPI",
+   "Instruções de instalação"
+  ],
+  "steps": [
+   "Modelagem multi-tenant",
+   "Autenticação",
+   "Autorização por organização",
+   "Planos e limites",
+   "Webhooks de teste",
+   "Observabilidade",
+   "Deploy"
+  ],
+  "acceptance": [
+   "Nenhum usuário acessa dados de outra organização (testado)",
+   "Webhook duplicado não duplica efeito",
+   "Documentação permite rodar do zero"
+  ],
+  "structure": "saas-backend/\n  src/modules/{auth,orgs,billing}/\n  migrations/\n  docs/openapi.yaml\n  tests/",
+  "tech": [
+   "Node.js + TypeScript",
+   "PostgreSQL",
+   "Docker",
+   "CI"
+  ],
+  "tests": [
+   "Isolamento entre organizações",
+   "Idempotência de webhook",
+   "Limite do plano bloqueia com 402/403"
+  ],
+  "improvements": [
+   "Filas para e-mails",
+   "Feature flags",
+   "Auditoria"
+  ],
+  "portfolioPitch": "Projeto de nível profissional que conecta tudo o que você aprendeu."
+ }
+]

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Formação Dev</string>
+    <string name="title_activity_main">Formação Dev</string>
+    <string name="package_name">com.formacaodev.app</string>
+    <string name="custom_url_scheme">com.formacaodev.app</string>
+</resources>

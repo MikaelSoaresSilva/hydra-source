@@ -47,12 +47,82 @@ function moveWindow(w: SleepWindow, newWake: number): SleepWindow {
 
 export interface WorkSync { state: State; notes: string[] }
 
+export const MIN_SLEEP = 7 * 60;
+
+/** Do fim do trabalho até dormir: deslocamento + jantar + passos "antes de dormir" (skincare, desacelerar). */
+export function eveningSpan(s: State, days: number[]): number {
+  let bedSpan = 0; let dinner = 0;
+  for (const a of s.activities) {
+    if (a.paused || !a.days.some((d) => days.includes(d))) continue;
+    if (a.anchor.type === 'bed') bedSpan = Math.max(bedSpan, a.anchor.offset);
+    if (/^jantar/.test(norm(a.title))) dinner = a.duration;
+  }
+  return s.profile.commuteMin + dinner + bedSpan;
+}
+
+/**
+ * Encaixa acordar/dormir no dia de trabalho, mantendo as horas de sono de `from`:
+ * acordar até `latestWake` (manhã antes do trabalho) e dormir só depois de caber a noite pós-trabalho.
+ * Se o dia for longo demais, prioriza a manhã e encurta o sono até no mínimo 7 h, com aviso.
+ */
+/**
+ * Tempo acordado que o dia exige só com o essencial e o prioritário (prioridade 0 e 1: refeições, academia,
+ * trabalho e deslocamento, estudos no dia de estudo, higiene, banho, skincare, desacelerar). Atividades "junto"
+ * com outra não contam (acontecem dentro dela). Para o trabalho, usa a duração informada.
+ */
+export function essentialDemand(s: State, wd: number, workDuration?: number): number {
+  const present = new Set(s.activities.filter((a) => !a.paused && a.days.includes(wd)).map((a) => a.id));
+  let need = 0;
+  for (const a of s.activities) {
+    if (!present.has(a.id) || a.kind === 'bed') continue;
+    if (a.join && present.has(a.join.parentId)) continue;
+    const pr = a.focusDays?.includes(wd) ? 0 : a.priority;
+    if (pr > 1 || a.optional && pr !== 0) continue;
+    need += isWork(a) && workDuration ? workDuration : a.duration;
+  }
+  return need;
+}
+
+export function fitDay(s: State, from: SleepWindow, wanted: number, start: number, duration: number, days: number[]): { wake: number; bed: number; keptSleep: boolean; note?: string } {
+  let len = (from.wake + 1440 - (from.bed <= from.wake ? from.bed + 1440 : from.bed)) % 1440 || 1440; // horas de sono (min)
+  // Se o essencial do dia não cabe acordado, o sono encurta — nunca abaixo da meta mínima (8 h).
+  const demand = Math.max(...days.map((d) => essentialDemand(s, d, duration)));
+  const floor = Math.min(len, s.sleep.goalMin);
+  let shortened = false;
+  if (1440 - len < demand) { const nl = Math.max(floor, 1440 - demand); shortened = nl < len; len = nl; }
+  const hi = latestWake(s, start, days);
+  const reqBed = start + duration + eveningSpan(s, days); // minutos do dia (pode passar de 1440)
+  const lo = reqBed - 1440 + len; // acordar mais cedo que isso deixaria a noite sem espaço
+  let note: string | undefined;
+  let wake = Math.min(wanted, hi);
+  if (wake < lo) wake = lo;
+  if (lo > hi) {
+    // não cabe tudo mantendo o sono: manhã primeiro, sono encurta (mín. 7 h)
+    wake = Math.max(hi, MIN_WAKE);
+    const bed = Math.min(reqBed, wake + 1440 - MIN_SLEEP);
+    note = `Com trabalho das ${hm(start)} às ${hm(start + duration)}, não cabem a manhã, a noite e ${Math.round(len / 6) / 10} h de sono. Acordar às ${hm(wake)} e dormir às ${hm(bed)}${bed < reqBed ? ': ainda falta tempo à noite — encurte o jantar, o skincare ou o deslocamento' : ''}.`;
+    return { wake: mod(wake), bed: mod(bed), keptSleep: false, note };
+  }
+  if (wake < MIN_WAKE) {
+    note = `Para caber a manhã antes do trabalho às ${hm(start)} seria preciso acordar às ${hm(wake)}. Ficou ${hm(MIN_WAKE)} (o mais cedo que o app usa): encurte a rotina da manhã ou o deslocamento.`;
+    wake = MIN_WAKE;
+  }
+  wake = r5(wake);
+  if (shortened) {
+    const bed = mod(wake + 1440 - len);
+    return { wake: mod(wake), bed, keptSleep: false, note: `Para caber trabalho, refeições, academia e o essencial, o sono desses dias ficou em ${Math.round(len / 6) / 10} h (o mínimo da sua meta).` };
+  }
+  const nw = moveWindow(from, wake);
+  return { ...nw, keptSleep: true, note };
+}
+
 /**
  * Ajusta a rotina ao trabalho. `prev` = estado antes da mudança (para saber quanto o trabalho andou).
  * Idempotente: rodar de novo sem mudança no trabalho não altera nada.
  */
 export function syncWork(prev: State | null, next: State): WorkSync {
   const notes: string[] = [];
+  const changed = !prev || workSignature(prev) !== workSignature(next);
   let s: State = structuredClone(next);
   const work = findWork(s);
 
@@ -83,6 +153,25 @@ export function syncWork(prev: State | null, next: State): WorkSync {
   if (lunch.linked && !s.activities.find((a) => /almoco/.test(norm(a.title)))?.join) { s = lunch.state; notes.push(`Almoço junto com o Trabalho (${hm(s.profile.workLunch.at)}–${hm(s.profile.workLunch.at + s.profile.workLunch.duration)}).`); }
   else if (lunch.linked) s = lunch.state;
 
+  // Lanche da tarde e jantar: se o horário deles cai dentro do expediente, acontecem no trabalho (junto).
+  const wStart = (work.anchor as { at: number }).at;
+  const wEnd = wStart + work.duration;
+  const lunchJoin = s.activities.find((a) => /almoco/.test(norm(a.title)))?.join;
+  for (const re of [/^lanche da tarde/, /^jantar/]) {
+    const meal = s.activities.find((a) => re.test(norm(a.title)));
+    if (!meal) continue;
+    const own = meal.anchor.type === 'time' ? meal.anchor.at : null;
+    const at = meal.join?.parentId === work.id ? meal.join.at : own;
+    const clashesLunch = lunchJoin && at !== null && at < lunchJoin.at + lunchJoin.duration && lunchJoin.at < at + meal.duration;
+    const inside = at !== null && at >= wStart && at + meal.duration <= wEnd && !clashesLunch;
+    if (inside && meal.join?.parentId !== work.id) {
+      s.activities = s.activities.map((a) => (a.id === meal.id ? { ...a, join: { parentId: work.id, at: at!, duration: meal.duration } } : a));
+      notes.push(`${meal.title} junto com o Trabalho às ${hm(at!)} (é uma das 4 refeições prioritárias).`);
+    } else if (!inside && meal.join?.parentId === work.id) {
+      s.activities = s.activities.map((a) => { if (a.id !== meal.id) return a; const { join: _j, ...rest } = a; void _j; return rest; });
+    }
+  }
+
   // Manhã: acordar acompanha o trabalho.
   const start = (work.anchor as { at: number }).at;
   const prevWork = prev ? findWork(prev) : undefined;
@@ -92,20 +181,15 @@ export function syncWork(prev: State | null, next: State): WorkSync {
   if (work.days.some((d) => d === 0 || d === 6)) types.push('weekend');
   for (const t of types) {
     const days = t === 'weekday' ? work.days.filter((d) => d >= 1 && d <= 5) : work.days.filter((d) => d === 0 || d === 6);
-    const latest = latestWake(s, start, days);
     const w = s.sleep[t];
     // O deslocamento parte do estado ANTERIOR: rodar de novo não move em dobro.
     const from = prevStart !== null && prevStart !== start && prev ? prev.sleep[t] : w;
-    let target = from === w ? w.wake : from.wake + (start - prevStart!);
-    target = Math.min(target, latest);
-    if (target < MIN_WAKE) {
-      notes.push(`Para caber a manhã antes do trabalho às ${hm(start)} seria preciso acordar às ${hm(target)}. Mantive ${hm(w.wake)}: encurte a rotina da manhã ou o deslocamento.`);
-      continue;
-    }
-    if (target !== w.wake) {
-      const nw = moveWindow(from, target);
-      notes.push(`${t === 'weekday' ? 'Dias de semana' : 'Fim de semana'}: acordar ${hm(w.wake)} → ${hm(nw.wake)} e dormir ${hm(w.bed)} → ${hm(nw.bed)} (mesmas horas de sono), para a rotina da manhã${s.profile.commuteMin ? ' e o deslocamento' : ''} caberem antes do trabalho às ${hm(start)}.`);
-      s.sleep[t] = nw;
+    const wanted = from === w ? w.wake : from.wake + (start - prevStart!);
+    const fit = fitDay(s, from, wanted, start, work.duration, days);
+    if (fit.note && changed) notes.push(fit.note);
+    if (fit.wake !== w.wake || fit.bed !== w.bed) {
+      notes.push(`${t === 'weekday' ? 'Dias de semana' : 'Fim de semana'}: acordar ${hm(w.wake)} → ${hm(fit.wake)} e dormir ${hm(w.bed)} → ${hm(fit.bed)}${fit.keptSleep ? ' (mesmas horas de sono)' : ''}, para a manhã caber antes do trabalho (${hm(start)}) e a noite depois dele.`);
+      s.sleep[t] = { wake: fit.wake, bed: fit.bed };
     }
   }
 
@@ -123,11 +207,10 @@ export function syncWork(prev: State | null, next: State): WorkSync {
     let from = cur; let target = cur.wake;
     if (prevDay === undefined) { from = winOf(p0); target = from.wake + (dayStart - prevStartBase); }
     else if (prevDay !== dayStart) { from = winOf(p0); target = from.wake + (dayStart - prevDay); }
-    target = Math.min(target, latestWake(s, dayStart, [wd]));
-    if (target >= MIN_WAKE && target !== cur.wake) {
-      const nw = moveWindow(from, target);
-      s.overrides[date] = { ...(s.overrides[date] ?? emptyOverride()), wake: nw.wake, bed: nw.bed };
-      notes.push(`Em ${date.slice(8, 10)}/${date.slice(5, 7)}: acordar às ${hm(nw.wake)} e dormir às ${hm(nw.bed)}, por causa do trabalho às ${hm(dayStart)}.`);
+    const fit = fitDay(s, from, target, dayStart, o.duration[work.id] ?? work.duration, [wd]);
+    if (fit.wake !== cur.wake || fit.bed !== cur.bed) {
+      s.overrides[date] = { ...(s.overrides[date] ?? emptyOverride()), wake: fit.wake, bed: fit.bed };
+      notes.push(`Em ${date.slice(8, 10)}/${date.slice(5, 7)}: acordar às ${hm(fit.wake)} e dormir às ${hm(fit.bed)}, por causa do trabalho às ${hm(dayStart)}.`);
     }
   }
   return { state: s, notes };

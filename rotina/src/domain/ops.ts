@@ -18,7 +18,8 @@ export type Op =
   | { type: 'remove'; id: string }
   | { type: 'pause'; id: string; paused: boolean }
   | { type: 'join'; id: string; parentId: string; at: number; duration: number }
-  | { type: 'unjoin'; id: string };
+  | { type: 'unjoin'; id: string }
+  | { type: 'focus'; id: string; days: number[] };
 
 const ov = (s: State, date: string): DayOverride => (s.overrides[date] ??= emptyOverride());
 
@@ -93,6 +94,7 @@ export function applyOps(state: State, ops: Op[]): State {
       case 'pause': { const a = s.activities.find((x) => x.id === op.id); if (a) a.paused = op.paused; break; }
       case 'join': { const a = s.activities.find((x) => x.id === op.id); if (a && op.parentId !== op.id) a.join = { parentId: op.parentId, at: op.at, duration: op.duration }; break; }
       case 'unjoin': { const a = s.activities.find((x) => x.id === op.id); if (a) delete a.join; break; }
+      case 'focus': { const a = s.activities.find((x) => x.id === op.id); if (a) { a.focusDays = [...op.days].sort(); a.days = [...new Set([...a.days, ...op.days])].sort(); } break; }
     }
   }
   return s;
@@ -118,6 +120,7 @@ export function describeOp(s: State, op: Op, today: string): string {
     case 'pause': return `${op.paused ? 'Pausar' : 'Retomar'} ${nameOf(s, op.id)}.`;
     case 'join': return `${nameOf(s, op.id)} junto com ${nameOf(s, op.parentId)}, das ${hm(op.at)} às ${hm(op.at + op.duration)} (nos dias em que ${nameOf(s, op.parentId)} acontece; nos outros, horário normal).`;
     case 'unjoin': return `${nameOf(s, op.id)} volta a ter horário próprio.`;
+    case 'focus': return op.days.length ? `Dias de estudo (prioridade máxima): ${op.days.map((d) => ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][d]).join(', ')}. Nos outros dias, ${nameOf(s, op.id)} entra só se sobrar espaço.` : `${nameOf(s, op.id)} sem dias de prioridade máxima.`;
   }
 }
 

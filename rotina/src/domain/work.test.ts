@@ -67,7 +67,10 @@ describe('trabalho puxa o resto da rotina', () => {
     const gym = at(b, MON, /Academia/)!;
     expect(gym.start).toBeGreaterThanOrEqual(18 * 60);
     expect(at(b, MON, /^Banho/)!.start).toBe(gym.end);
-    expect(at(b, MON, /Jantar/)!.start).toBeGreaterThanOrEqual(at(b, MON, /pós-treino/)!.end);
+    // jantar depois do banho; o lanche pós-treino sai porque o jantar já vem logo depois do treino
+    expect(at(b, MON, /Jantar/)!.start).toBeGreaterThanOrEqual(at(b, MON, /^Banho/)!.end);
+    expect(at(b, MON, /pós-treino/)).toBeFalsy();
+    expect(buildDay(b, MON).optionalOut.map((a) => a.title)).toContain('Lanche pós-treino');
     noOverlap(b, MON);
     // fim de semana não muda
     expect(hm(buildDay(b, SAT).wake)).toBe('08:00');
@@ -125,7 +128,7 @@ describe('migração v4', () => {
     v3.activities = v3.activities.filter((a) => a.title !== 'Banho').map((a) => (a.title === 'Higiene pessoal' ? { ...a, description: 'Banho rápido, escovar os dentes (2 min) e fio dental.' } : /pós-treino/.test(a.title) ? { ...a, anchor: { type: 'time' as const, at: 18 * 60 + 15 } } : a));
     delete (v3.profile as { commuteMin?: number }).commuteMin;
     const v4 = migrateAll(v3);
-    expect(v4.version).toBe(4);
+    expect(v4.version).toBeGreaterThanOrEqual(4);
     expect(v4.profile.commuteMin).toBe(0);
     expect(at(v4, MON, /^Banho/)!.start).toBe(at(v4, MON, /Academia/)!.end);
     expect(at(v4, MON, /pós-treino/)!.start).toBe(at(v4, MON, /^Banho/)!.end);

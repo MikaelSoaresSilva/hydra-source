@@ -17,8 +17,9 @@ function completeAll(s: State, date: string, frac = 1): State {
 describe('XP e níveis', () => {
   it('XP por prioridade + bônus no horário', () => {
     const it = buildDay(s0(), MON).items.find((i) => i.activity.title === 'Almoço')!;
-    expect(xpFor(it, it.start + 5)).toEqual({ xp: 25, onTime: true });
-    expect(xpFor(it, it.start + 300)).toEqual({ xp: 20, onTime: false });
+    // almoço é prioridade máxima: 25 XP (+5 no horário)
+    expect(xpFor(it, it.start + 5)).toEqual({ xp: 30, onTime: true });
+    expect(xpFor(it, it.start + 300)).toEqual({ xp: 25, onTime: false });
   });
   it('marcar e desmarcar', () => {
     const s = s0();

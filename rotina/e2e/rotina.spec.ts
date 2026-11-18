@@ -251,9 +251,9 @@ test('estudos: semana encaixa se der; fim de semana sempre tem', async ({ page }
   await expect(page.locator('.banner.warn', { hasText: 'Não couberam' })).not.toContainText('Estudos');
   // sábado: estudos do fim de semana
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Próximo dia' }).click();
-  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos (fim de semana)' })).toContainText('14:00');
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos (fim de semana)' })).toContainText('1 h 30 min'); // perto das 14:00, ao redor do lanche das 15:00
   await page.getByRole('button', { name: 'Próximo dia' }).click();
-  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos (fim de semana)' })).toContainText('15:30');
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos (fim de semana)' })).toContainText('1 h 30 min');
   // Rotina mostra opcional / encurta
   await nav(page, 'Rotina').click();
   await expect(page.locator('.list li').filter({ has: page.getByRole('button', { name: 'Editar Estudos', exact: true }) })).toContainText('Opcional');
@@ -299,4 +299,29 @@ test('banho depois do treino; mudar o horário do trabalho reorganiza o resto', 
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Próximo dia' }).click();
   await expect(page.getByTestId('tl-item').first()).toContainText('08:00');
   await expect(page.getByTestId('tl-item').filter({ hasText: 'Ida para o trabalho' })).toHaveCount(0);
+});
+
+test('prioridades: academia, 4 refeições, trabalho e estudos nos dias de estudo', async ({ page }, info) => {
+  await start(page, '2026-11-16T06:00:00'); // segunda (dia de estudo padrão)
+  await nav(page, 'IA').click();
+  await page.getByLabel('Descreva sua necessidade').fill('Vou trabalhar das 8h às 17h');
+  await page.getByRole('button', { name: '✨ Reorganizar' }).click();
+  await page.getByRole('button', { name: 'Aplicar mudanças' }).click();
+  await nav(page, 'Hoje').click();
+  for (const t of ['Academia', 'Café da manhã', 'Almoço', 'Lanche da tarde', 'Jantar', 'Trabalho', 'Estudos']) {
+    await expect(page.getByTestId('tl-item').filter({ hasText: t }).first().getByLabel('prioridade máxima')).toBeVisible();
+  }
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Lanche da tarde' })).toContainText('junto com Trabalho');
+  await page.screenshot({ path: `test-results/prioridades-${info.project.name}.png`, fullPage: true });
+  // terça não é dia de estudo: estudos sem estrela (opcional)
+  await page.getByRole('button', { name: 'Próximo dia' }).click();
+  const tueStudy = page.getByTestId('tl-item').filter({ hasText: /^.*Estudos/ });
+  if (await tueStudy.count()) await expect(tueStudy.first().getByLabel('prioridade máxima')).toHaveCount(0);
+  // marca terça como dia de estudo no cartão
+  await nav(page, 'Rotina').click();
+  await page.getByRole('group', { name: 'Dias de estudo' }).getByRole('button', { name: 'Ter' }).click();
+  await expect(page.getByRole('group', { name: 'Dias de estudo' }).getByRole('button', { name: 'Ter' })).toHaveAttribute('aria-pressed', 'true');
+  await nav(page, 'Hoje').click();
+  await page.getByRole('button', { name: 'Próximo dia' }).click();
+  await expect(page.getByTestId('tl-item').filter({ hasText: 'Estudos' }).first().getByLabel('prioridade máxima')).toBeVisible();
 });

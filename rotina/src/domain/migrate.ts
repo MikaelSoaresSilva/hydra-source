@@ -1,5 +1,5 @@
 // Atualizações dos dados salvos entre versões do app.
-import { BATH_DESC, BATH_FALLBACK, DEFAULT_PROFILE, HYGIENE_DESC, STATE_VERSION, WEEKDAY_STUDY_DESC, WEEKEND_STUDY_DESC, chainBathAndSnack, uid } from './defaults';
+import { BATH_DESC, BATH_FALLBACK, DEFAULT_PROFILE, HYGIENE_DESC, STATE_VERSION, WEEKDAY_STUDY_DESC, WEEKEND_STUDY_DESC, applyTopPriorities, chainBathAndSnack, uid } from './defaults';
 import { norm } from './interpreter';
 import type { Activity, State } from './types';
 
@@ -71,11 +71,20 @@ export function migrateToV4(s: State): State {
     });
   }
   out.activities = chainBathAndSnack(out.activities);
+  out.version = 4;
+  return out;
+}
+
+/** v5: prioridade máxima para academia, 4 refeições e trabalho; estudos com dias de foco (seg, qua, sex). */
+export function migrateToV5(s: State): State {
+  if ((s.version ?? 1) >= 5) return s;
+  const out: State = structuredClone(s);
+  out.activities = applyTopPriorities(out.activities);
   out.version = STATE_VERSION;
   return out;
 }
 
-export const migrateAll = (s: State) => migrateToV4(migrateToV3(migrateToV2(s)));
+export const migrateAll = (s: State) => migrateToV5(migrateToV4(migrateToV3(migrateToV2(s))));
 
 export const isWorkActivity = (a: Activity) => /^trabalho/.test(norm(a.title)) && a.anchor.type === 'time' && !a.paused;
 export const isLunchActivity = (a: Activity) => /almoco/.test(norm(a.title));

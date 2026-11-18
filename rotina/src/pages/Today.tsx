@@ -128,7 +128,7 @@ export function Today({ go }: { go: (tab: string) => void }) {
                 <div className="tl-time">{hm(it.start)}<small>{it.end > it.start ? hm(it.end) : ''}</small></div>
                 <div className="tl-main" onClick={() => setOpen(open === it.activity.id ? null : it.activity.id)} role="button" tabIndex={0} aria-expanded={open === it.activity.id}
                   onKeyDown={(e) => { if (e.key === 'Enter') setOpen(open === it.activity.id ? null : it.activity.id); }}>
-                  <div className="tl-title">{c.emoji} {it.activity.title}</div>
+                  <div className="tl-title">{c.emoji} {it.activity.title}{it.activity.priority === 0 && <span title="Prioridade máxima" aria-label="prioridade máxima" style={{ marginLeft: 6, color: 'var(--accent-2)' }}>★</span>}</div>
                   {it.parentId && <small className="pill violet" style={{ margin: '2px 0', whiteSpace: 'normal', maxWidth: '100%' }}>🔗 junto com {plan.items.find((p) => p.activity.id === it.parentId)?.activity.title}</small>}
                   <small>{it.end > it.start ? durationLabel(it.end - it.start) : 'meta 8–9 h de sono'}{it.shortenedFrom ? ` · encurtado (era ${durationLabel(it.shortenedFrom)})` : ''}{it.todayOnly ? ' · só hoje' : ''}{late ? ' · atrasada' : ''}{isNow && !isDone ? ' · agora' : ''}{state.snoozes[`${date}|${it.activity.id}`] && !isDone ? ' · adiada' : ''}</small>
                 </div>

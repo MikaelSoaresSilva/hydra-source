@@ -72,6 +72,8 @@ function preferredStart(a: Activity, wake: number, bed: number): number {
   return bed - a.anchor.offset;
 }
 
+const normTitle = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 type Busy = [number, number];
 const overlaps = (a: Busy, b: Busy) => a[0] < b[1] && b[0] < a[1];
 
@@ -89,11 +91,43 @@ function freeSlots(busy: Busy[], from: number, to: number): Busy[] {
   return out.filter(([s, e]) => e > s);
 }
 
+/**
+ * Horário de dormir do dia: o do próprio tipo de dia, mas cedo o bastante para ter a meta mínima de sono
+ * (8 h) até o horário de acordar do dia seguinte (ex.: domingo antes de uma segunda em que você acorda cedo).
+ * Ajuste "só hoje" manda.
+ */
+export function bedFor(state: State, date: string): number {
+  const win = windowFor(state, date);
+  const own = normBed(win);
+  if (state.overrides[date]?.bed !== undefined) return own;
+  const next = windowFor(state, nextDate(date));
+  if (next.wake === win.wake && next.bed === win.bed) return own; // mesmo horário amanhã: vale o que você escolheu
+  const latest = next.wake + 1440 - state.sleep.goalMin; // minutos deste dia
+  return Math.max(win.wake + 60, Math.min(own, latest));
+}
+
+/**
+ * Monta o dia. Primeiro no jeito natural (cada coisa perto do horário dela). Se alguma prioridade máxima
+ * ficar de fora (ex.: o jantar espremido depois da academia), monta de novo com as refeições primeiro e fica
+ * com o que encaixar mais prioridades máximas.
+ */
 export function buildDay(state: State, date: string): DayPlan {
+  const a = buildDayWith(state, date, false);
+  const topOut = (p: DayPlan) => p.unplaced.filter((u) => u.activity.priority === 0).length;
+  if (!topOut(a)) return a;
+  const b = buildDayWith(state, date, true);
+  return topOut(b) < topOut(a) ? b : a;
+}
+
+function buildDayWith(state: State, date: string, mealsFirst: boolean): DayPlan {
   const win = windowFor(state, date);
   const wake = win.wake;
-  const bed = normBed(win);
-  const { list, skipped, override } = activitiesFor(state, date);
+  const bed = bedFor(state, date);
+  const { list: list0, skipped, override } = activitiesFor(state, date);
+  // Dia de foco (ex.: dia de estudo): a atividade vira prioridade máxima e deixa de ser opcional só neste dia.
+  const wdToday = weekday(date);
+  const promoted = new Set<string>();
+  const list = list0.map((a) => { if (!a.focusDays?.includes(wdToday)) return a; promoted.add(a.id); return { ...a, priority: 0 as const, optional: false }; });
   const nextWin = windowFor(state, nextDate(date));
   const items: PlanItem[] = [];
   const unplaced: DayPlan['unplaced'] = [];
@@ -138,9 +172,11 @@ export function buildDay(state: State, date: string): DayPlan {
   }
 
   // 3) Flexíveis: essenciais primeiro, depois importantes, depois flexíveis; dentro de cada, pelo horário.
-  const nearest = (p: number, d: number): number | null => {
+  // Busca restrita a [lo, hi]: janelas das refeições (maxShift) e "só depois de" das encadeadas.
+  const nearest = (p: number, d: number, lo: number, hi: number): number | null => {
     let best: number | null = null;
-    for (const [s, e] of freeSlots(busy, wake, bed)) {
+    for (const [s0, e0] of freeSlots(busy, wake, bed)) {
+      const s = Math.max(s0, lo); const e = Math.min(e0, hi);
       if (e - s < d) continue;
       const cand = Math.max(s, Math.min(p, e - d));
       if (best === null || Math.abs(cand - p) < Math.abs(best - p) || (Math.abs(cand - p) === Math.abs(best - p) && cand < best)) best = cand;
@@ -148,9 +184,10 @@ export function buildDay(state: State, date: string): DayPlan {
     return best;
   };
   /** Maior espaço livre ≥ mínimo: devolve início e duração (encurtada, múltiplo de 5). */
-  const largest = (p: number, d: number, min: number): { start: number; d: number } | null => {
+  const largest = (p: number, d: number, min: number, lo: number, hi: number): { start: number; d: number } | null => {
     let best: { start: number; d: number } | null = null;
-    for (const [s, e] of freeSlots(busy, wake, bed)) {
+    for (const [s0, e0] of freeSlots(busy, wake, bed)) {
+      const s = Math.max(s0, lo); const e = Math.min(e0, hi);
       const dd = Math.min(d, Math.floor((e - s) / 5) * 5);
       if (dd < min) continue;
       const start = Math.max(s, Math.min(p, e - dd));
@@ -158,13 +195,16 @@ export function buildDay(state: State, date: string): DayPlan {
     }
     return best;
   };
-  const place = (a: Activity, prefOverride?: number): boolean => {
+  const place = (a: Activity, prefOverride?: number, bounds?: { lo?: number; hi?: number }): boolean => {
     const d = dur(a);
     const p = Math.max(wake, Math.min(prefOverride ?? pref(a), bed - d));
-    const at = nearest(p, d);
+    let lo = bounds?.lo ?? -Infinity; let hi = bounds?.hi ?? Infinity;
+    // Refeição (ou outra com maxShift) não vai para longe do horário dela: jantar não vira café da manhã.
+    if (a.maxShift !== undefined) { const base = prefOverride ?? pref(a); lo = Math.max(lo, base - a.maxShift); hi = Math.min(hi, base + a.maxShift + d); }
+    const at = nearest(p, d, lo, hi);
     if (at !== null) { items.push({ activity: a, start: at, end: at + d, preferred: pref(a), fixed: false, todayOnly: todayOnly(a) }); busy.push([at, at + d]); return true; }
     const min = a.minDuration && a.minDuration < d ? a.minDuration : null;
-    const sh = min ? largest(p, d, min) : null;
+    const sh = min ? largest(p, d, min, lo, hi) : null;
     if (!sh) return false;
     items.push({ activity: a, start: sh.start, end: sh.start + sh.d, preferred: pref(a), fixed: false, todayOnly: todayOnly(a), shortenedFrom: d });
     busy.push([sh.start, sh.start + sh.d]);
@@ -172,35 +212,72 @@ export function buildDay(state: State, date: string): DayPlan {
   };
   // Opcional fica logo depois da sua prioridade (ex.: estudos opcionais depois das refeições/treino,
   // mas antes do lazer). Se nem a duração mínima couber, fica de fora sem aviso.
-  const rank = (a: Activity) => a.priority + (a.optional ? 0.5 : 0);
+  // Dentro da mesma prioridade: refeições (têm janela de horário) primeiro, depois o resto, depois o que só
+  // subiu de prioridade no dia (dia de estudo); opcionais por último.
+  const rank = (a: Activity) => a.priority + (mealsFirst && a.maxShift !== undefined ? -0.1 : 0) + (promoted.has(a.id) ? 0.3 : 0) + (a.optional ? 0.5 : 0);
   const optionalOut: Activity[] = [];
   const fail = (a: Activity) => {
     if (a.optional) optionalOut.push(a);
     else unplaced.push({ activity: a, reason: 'não há espaço livre suficiente entre acordar e dormir' });
   };
   // Encadeadas ("logo depois de…"): a mãe é a primeira da lista que acontece no dia.
+  // Cada uma entra na vez da SUA prioridade (o lanche pós-treino não passa na frente do jantar);
+  // se a mãe ainda não foi encaixada, espera por ela e entra logo em seguida.
   const relParent = (a: Activity) => (a.anchor.type === 'rel' ? a.anchor.ids.find((id) => id !== a.id && present.has(id) && !joinedIds.has(id)) : undefined);
-  const rel = normal.filter((a) => !isFixed(a) && relParent(a));
-  const pending = new Set(rel.map((a) => a.id));
-  const glue = (parentId: string) => {
-    const parent = items.find((i) => i.activity.id === parentId);
-    if (!parent) return;
-    for (const a of rel.filter((x) => pending.has(x.id) && relParent(x) === parentId).sort((x, y) => rank(x) - rank(y))) {
-      pending.delete(a.id);
-      const an = a.anchor as Extract<Activity['anchor'], { type: 'rel' }>;
-      const p = an.side === 'after' ? parent.end + an.gap : parent.start - an.gap - dur(a);
-      if (place(a, p)) glue(a.id); else fail(a);
-    }
+  const placedIds = () => new Set(items.map((i) => i.activity.id));
+  const waiting = new Map<string, Activity[]>(); // mãe → filhas esperando
+  const placeRel = (a: Activity): boolean => {
+    const parent = items.find((i) => i.activity.id === relParent(a));
+    if (!parent) return place(a); // mãe não está no dia/ não coube: horário próprio
+    const an = a.anchor as Extract<Activity['anchor'], { type: 'rel' }>;
+    const p = an.side === 'after' ? parent.end + an.gap : parent.start - an.gap - dur(a);
+    // "Logo depois" nunca vai para antes da mãe (banho não antes da academia).
+    return place(a, p, an.side === 'after' ? { lo: parent.end } : { hi: parent.start });
   };
-  // mães que já estão no lugar (fixas, como o Trabalho)
-  for (const it of [...items]) glue(it.activity.id);
-  const flex = normal.filter((a) => !isFixed(a) && !pending.has(a.id) && !items.some((i) => i.activity.id === a.id)).sort((a, b) => rank(a) - rank(b) || pref(a) - pref(b));
-  for (const a of flex) {
-    if (place(a)) glue(a.id);
-    else fail(a);
+  const flex = normal.filter((a) => !isFixed(a)).sort((a, b) => rank(a) - rank(b) || pref(a) - pref(b));
+  const done = new Set<string>();
+  /** Filhas essenciais (deslocamento, banho) grudam na hora em que a mãe é encaixada. */
+  const glueNow = (parentId: string) => {
+    for (const c of flex.filter((x) => !done.has(x.id) && relParent(x) === parentId && x.priority <= 1)) placeOne(c);
+  };
+  function placeOne(a: Activity) {
+    done.add(a.id);
+    // Lanche pós-treino é dispensável quando o jantar já vem até 1h30 depois do treino: o jantar é a refeição pós-treino.
+    if (/pos-treino/.test(normTitle(a.title))) {
+      const parent = items.find((i) => i.activity.id === relParent(a));
+      // jantar já encaixado, ou jantar "junto com" o trabalho (entra depois, mas o horário já é conhecido)
+      const placedDinner = items.find((i) => /^jantar/.test(normTitle(i.activity.title)));
+      const joinedDinner = joined.find((x) => /^jantar/.test(normTitle(x.title)));
+      const dinnerParent = joinedDinner ? items.find((i) => i.activity.id === joinedDinner.join!.parentId) : undefined;
+      const dinner = placedDinner ?? (joinedDinner && dinnerParent ? { start: joinedDinner.join!.at + (dinnerParent.start - dinnerParent.preferred) } : undefined);
+      if (parent && dinner && dinner.start >= parent.end && dinner.start - parent.end <= 90) { optionalOut.push(a); return; }
+      // só entre o treino e o jantar; se não couber ali, sai do dia (comer depois do jantar não faz sentido)
+      if (parent && dinner && dinner.start >= parent.end) {
+        const an = a.anchor as Extract<Activity['anchor'], { type: 'rel' }>;
+        if (!place(a, parent.end + an.gap, { lo: parent.end, hi: dinner.start })) optionalOut.push(a);
+        return;
+      }
+    }
+    const ok = relParent(a) ? placeRel(a) : place(a);
+    if (!ok) { fail(a); return; }
+    glueNow(a.id);
+    for (const c of waiting.get(a.id) ?? []) if (!done.has(c.id)) placeOne(c);
+    waiting.delete(a.id);
   }
-  // mãe não coube: a encadeada usa o horário próprio
-  for (const a of rel.filter((x) => pending.has(x.id))) { pending.delete(a.id); if (place(a)) glue(a.id); else fail(a); }
+  // mães já encaixadas (fixas, como o Trabalho): deslocamento gruda antes de tudo
+  for (const it of [...items]) glueNow(it.activity.id);
+  const willPlace = new Set(flex.map((a) => a.id));
+  for (const a of flex) {
+    if (done.has(a.id)) continue;
+    const parentId = relParent(a);
+    if (parentId && willPlace.has(parentId) && !placedIds().has(parentId) && !unplaced.some((u) => u.activity.id === parentId) && !optionalOut.some((o) => o.id === parentId)) {
+      waiting.set(parentId, [...(waiting.get(parentId) ?? []), a]);
+      continue;
+    }
+    placeOne(a);
+  }
+  // mãe não coube: as filhas usam o horário próprio
+  for (const kids of waiting.values()) for (const c of kids) { if (done.has(c.id)) continue; done.add(c.id); if (place(c)) continue; fail(c); }
 
   // 4) Dentro da atividade-mãe.
   for (const a of joined) {

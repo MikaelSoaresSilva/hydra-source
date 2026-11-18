@@ -211,6 +211,13 @@ function clause(t: string, state: State, today: string, ops: Op[]) {
   }
   if (/\b(separar|separa|horario proprio)\b/.test(t) && acts.length) { for (const a of acts) if (a.join) ops.push({ type: 'unjoin', id: a.id }); if (acts.some((a) => a.join)) return; }
 
+  // DIAS DE ESTUDO: "vou estudar segunda e quarta", "dias de estudo: terça e quinta"
+  if (/\b(dias? de estudo|vou estudar|quero estudar|estudar (n)?[ao]s?|estudo (n)?[ao]s?|estudos (n)?[ao]s?)\b/.test(t) && !times.length && !negative) {
+    const days = weekdaysIn(t);
+    const study = state.activities.find((a) => /^estudos$/.test(norm(a.title)));
+    if (days.length && study) { ops.push({ type: 'focus', id: study.id, days }); return; }
+  }
+
   // PULAR / NÃO FAZER
   if (negative && acts.length) {
     const scope = scopeOf(t, today, true);
@@ -297,11 +304,21 @@ function workOps(state: State, start: number, end: number, scope: Scope, ops: Op
   }
   const work: Activity = {
     id: uid(), title: 'Trabalho', categoryId: 'work', description: 'Horário de trabalho. O almoço do trabalho acontece dentro dele; o resto se reorganiza em volta.', duration: spanMinutes(start, end) || 9 * 60,
-    anchor: { type: 'time', at: start }, fixed: true, priority: 1, days: scope.kind === 'date' ? [0, 1, 2, 3, 4, 5, 6] : days, paused: false, notify: true, kind: 'normal',
+    anchor: { type: 'time', at: start }, fixed: true, priority: 0, days: scope.kind === 'date' ? [0, 1, 2, 3, 4, 5, 6] : days, paused: false, notify: true, kind: 'normal',
   };
   ops.push({ type: 'add', activity: work, scope: scope.kind === 'date' ? scope : { kind: 'always', dayType: 'both' } });
   const wl = state.profile.workLunch;
   if (lunch && scope.kind === 'always' && wl.at >= start && wl.at + wl.duration <= start + work.duration) {
     ops.push({ type: 'join', id: lunch.id, parentId: work.id, at: wl.at, duration: wl.duration });
   }
+}
+
+// Só nomes completos: abreviações como "ter" e "sex" confundem com palavras comuns ("quero ter tempo").
+const WEEKDAY_WORDS: [RegExp, number][] = [
+  [/\bdomingos?\b/, 0], [/\bsegundas?(-feiras?)?\b/, 1], [/\btercas?(-feiras?)?\b/, 2], [/\bquartas?(-feiras?)?\b/, 3],
+  [/\bquintas?(-feiras?)?\b/, 4], [/\bsextas?(-feiras?)?\b/, 5], [/\bsabados?\b/, 6],
+];
+/** Dias da semana citados no texto ("segunda e quarta" → [1, 3]). */
+export function weekdaysIn(t: string): number[] {
+  return WEEKDAY_WORDS.filter(([re]) => re.test(t)).map(([, d]) => d).sort();
 }

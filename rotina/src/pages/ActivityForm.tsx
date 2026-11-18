@@ -127,7 +127,7 @@ export function ActivityForm({ initial, onClose, isNew }: { initial: Activity; o
               }} /></label>
               <label className="field">Prioridade
                 <select value={a.priority} onChange={(e) => setA({ ...a, priority: Number(e.target.value) as Priority })}>
-                  {([1, 2, 3] as Priority[]).map((p) => <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
+                  {([0, 1, 2, 3] as Priority[]).map((p) => <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
                 </select>
               </label>
             </div>

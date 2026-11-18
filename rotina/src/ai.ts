@@ -96,7 +96,7 @@ export function fromAi(ops: AiOp[], state: State, today: string): { ops: Op[]; d
         const cat = state.categories.some((c) => c.id === o.categoryId) ? o.categoryId! : 'life';
         const activity: Activity = {
           id: uid(), title, categoryId: cat, description: 'Criado pela IA a partir do seu pedido.', duration: mins ?? 30,
-          anchor: { type: 'time', at: t ?? 15 * 60 }, fixed: t !== null, priority: ([1, 2, 3].includes(o.priority ?? 0) ? o.priority : 2) as Priority,
+          anchor: { type: 'time', at: t ?? 15 * 60 }, fixed: t !== null, priority: ([0, 1, 2, 3].includes(o.priority ?? -1) ? o.priority : 2) as Priority,
           days: scope.kind === 'always' && scope.dayType === 'weekend' ? [0, 6] : scope.kind === 'always' && scope.dayType === 'weekday' ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6],
           paused: false, notify: true, kind: 'normal',
         };

@@ -243,15 +243,28 @@ describe('estudos', () => {
     expect(p.unplaced.some((u) => u.activity.title === 'Estudos')).toBe(false);
     noOverlap(s, MON);
   });
-  it('estudos opcionais não tiram refeições nem treino do lugar', () => {
+  it('terça (não é dia de estudo): estudos opcionais não tiram refeições, treino nem alongamento do lugar', () => {
+    const s = withWork(s0());
+    const p = buildDay(s, '2026-11-17');
+    for (const t of [/Academia/, /Jantar/, /Alongamento/]) expect(p.items.some((i) => t.test(i.activity.title)), String(t)).toBe(true);
+    // lanche pós-treino: ou entra, ou o jantar já vem até 1h30 depois do treino (e é a refeição pós-treino)
+    const gym = p.items.find((i) => /Academia/.test(i.activity.title))!; const dinner = p.items.find((i) => /Jantar/.test(i.activity.title))!;
+    expect(p.items.some((i) => /pós-treino/.test(i.activity.title)) || (dinner.start >= gym.end && dinner.start - gym.end <= 90 && p.optionalOut.some((a) => /pós-treino/.test(a.title)))).toBe(true);
+  });
+  it('segunda (dia de estudo): estudos entram com o tempo todo, junto com academia e as 4 refeições', () => {
     const s = withWork(s0());
     const p = buildDay(s, MON);
-    for (const t of [/Academia/, /Jantar/, /pós-treino/, /Alongamento/]) expect(p.items.some((i) => t.test(i.activity.title)), String(t)).toBe(true);
+    const st = p.items.find((i) => i.activity.title === 'Estudos')!;
+    expect(st.end - st.start).toBe(90);
+    expect(st.activity.priority).toBe(0);
+    for (const t of [/Academia/, /Café/, /Almoço/, /Lanche da tarde/, /Jantar/, /Trabalho/]) expect(p.items.some((i) => t.test(i.activity.title)), String(t)).toBe(true);
+    expect(p.unplaced.map((u) => u.activity.title)).not.toContain('Estudos');
   });
   it('dia lotado: estudos opcionais encurtam até 30 min no maior espaço', () => {
     const s = s0();
-    s.activities.push({ ...s.activities[0], id: 'x', title: 'Curso', kind: 'normal', categoryId: 'work', anchor: { type: 'time', at: 8 * 60 }, duration: 12 * 60 + 20, fixed: true, days: [1] });
-    const p = buildDay(s, MON);
+    const TUE = '2026-11-17';
+    s.activities.push({ ...s.activities[0], id: 'x', title: 'Curso', kind: 'normal', categoryId: 'work', anchor: { type: 'time', at: 8 * 60 }, duration: 12 * 60 + 20, fixed: true, days: [2] });
+    const p = buildDay(s, TUE);
     const st = p.items.find((i) => i.activity.title === 'Estudos');
     expect(st?.shortenedFrom === 90 || p.optionalOut.some((a) => a.title === 'Estudos')).toBe(true);
     if (st) expect(st.end - st.start).toBeGreaterThanOrEqual(30);
@@ -294,5 +307,53 @@ describe('estudos pelo pedido', () => {
     const next = applyOps(s, interpret('Preciso adicionar 1 hora de estudos.', s, MON).ops);
     expect(next.activities.find((a) => a.title === 'Estudos')!.duration).toBe(150);
     expect(next.activities.find((a) => a.title === 'Estudos (fim de semana)')!.duration).toBe(90);
+  });
+});
+
+describe('prioridades dos dias de semana', () => {
+  it('academia, 4 refeições e trabalho são prioridade máxima; estudos viram máxima só nos dias de estudo', () => {
+    const s = s0();
+    for (const t of ['Academia — musculação', 'Café da manhã', 'Almoço', 'Lanche da tarde', 'Jantar']) expect(s.activities.find((a) => a.title === t)!.priority, t).toBe(0);
+    const st = s.activities.find((a) => a.title === 'Estudos')!;
+    expect(st.focusDays).toEqual([1, 3, 5]);
+    expect(at(s, MON, /^Estudos$/)!.activity.priority).toBe(0); // segunda: dia de estudo
+    expect(at(s, '2026-11-17', /^Estudos$/)!.activity.priority).toBe(2); // terça: opcional
+    const w = applyOps(s, interpret('Vou trabalhar das 8h às 17h', s, MON).ops);
+    expect(w.activities.find((a) => /^Trabalho/.test(a.title))!.priority).toBe(0);
+  });
+  it('"vou estudar terça e quinta" muda os dias de estudo', () => {
+    const s = s0();
+    const r = interpret('Vou estudar terça e quinta', s, MON);
+    expect(r.ops).toEqual([{ type: 'focus', id: s.activities.find((a) => a.title === 'Estudos')!.id, days: [2, 4] }]);
+    const next = applyOps(s, r.ops);
+    expect(at(next, '2026-11-17', /^Estudos$/)!.activity.priority).toBe(0);
+    expect(at(next, MON, /^Estudos$/)?.activity.priority ?? 2).toBe(2);
+    expect(interpret('dias de estudo: segunda, quarta e sexta', s, MON).ops[0]).toMatchObject({ type: 'focus', days: [1, 3, 5] });
+    // não confunde com pular
+    expect(interpret('hoje sem estudos', s, MON).ops[0].type).toBe('skip');
+  });
+  it('domingo: dorme a tempo de 8 h antes da segunda; horário escolhido pelo usuário é respeitado', () => {
+    const s = s0();
+    const sun = buildDay(s, '2026-11-15');
+    expect(sun.sleepMinutes).toBeGreaterThanOrEqual(8 * 60); // antes eram 7h30 (dormia 23:30, acordava 07:00)
+    s.sleep.weekday.bed = 0; // usuário quer dormir à meia-noite nos dias de semana
+    expect(hm(buildDay(s, MON).bed)).toBe('00:00');
+  });
+  it('jantar nunca vai para de manhã e banho nunca antes do treino', () => {
+    const s = s0();
+    s.activities.push({ ...s.activities[0], id: 'blk', title: 'Compromisso', kind: 'normal', categoryId: 'work', anchor: { type: 'time', at: 17 * 60 }, duration: 5 * 60, fixed: true, days: [2] });
+    const p = buildDay(s, '2026-11-17');
+    const dinner = p.items.find((i) => i.activity.title === 'Jantar');
+    expect(!dinner || dinner.start >= 16 * 60 + 30).toBe(true);
+    const gym = p.items.find((i) => /Academia/.test(i.activity.title)); const bath = p.items.find((i) => i.activity.title === 'Banho');
+    if (gym && bath) expect(bath.start).toBeGreaterThanOrEqual(gym.end);
+  });
+});
+
+describe('dias da semana no texto', () => {
+  it('não confunde "ter" (verbo) com terça', async () => {
+    const { weekdaysIn } = await import('./interpreter');
+    expect(weekdaysIn(norm('quero ter tempo de estudar'))).toEqual([]);
+    expect(weekdaysIn(norm('segunda, terça-feira e sábado'))).toEqual([1, 2, 6]);
   });
 });

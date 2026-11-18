@@ -1,5 +1,5 @@
-export type Priority = 1 | 2 | 3; // 1 = essencial, 2 = importante, 3 = flexível
-export const PRIORITY_LABEL: Record<Priority, string> = { 1: 'Essencial', 2: 'Importante', 3: 'Flexível' };
+export type Priority = 0 | 1 | 2 | 3; // 0 = máxima, 1 = essencial, 2 = importante, 3 = flexível
+export const PRIORITY_LABEL: Record<Priority, string> = { 0: 'Máxima', 1: 'Essencial', 2: 'Importante', 3: 'Flexível' };
 
 export interface Category { id: string; name: string; emoji: string; color: string; builtin?: boolean }
 
@@ -47,6 +47,10 @@ export interface Activity {
   minDuration?: number;
   /** Opcional: entra só se sobrar espaço (no fim), sem aviso quando não cabe. */
   optional?: boolean;
+  /** Dias (0 = dom … 6 = sáb) em que esta atividade vira prioridade máxima e deixa de ser opcional (ex.: dias de estudo). */
+  focusDays?: number[];
+  /** Quanto pode sair do horário preferido, para mais ou para menos (min). Ex.: refeições. Sem isso, vai para o espaço livre mais próximo. */
+  maxShift?: number;
 }
 
 export interface SleepWindow { wake: number; bed: number }

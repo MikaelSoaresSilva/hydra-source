@@ -27,6 +27,8 @@ export function Routine() {
 
       <WorkLunchCard />
 
+      <StudyDaysCard />
+
       <Card title="Categorias" action={<button className="btn sm" onClick={() => setCatEdit({ id: uid(), name: '', emoji: '⭐', color: '#a78bfa' })}>➕ Nova</button>}>
         <div className="chips scroll-x">
           <button className={`chip ${cat === 'all' ? 'on' : ''}`} onClick={() => setCat('all')}>Todas ({state.activities.length})</button>
@@ -54,7 +56,7 @@ export function Routine() {
                   <div style={{ minWidth: 0 }}>
                     <strong>{c?.emoji} {a.title}</strong>{a.paused && <span className="pill" style={{ marginLeft: 6 }}>pausada</span>}
                     {a.join && <><br /><small>🔗 junto com <strong>{state.activities.find((x) => x.id === a.join!.parentId)?.title ?? '—'}</strong>: {hm(a.join.at)}–{hm(a.join.at + a.join.duration)} nesses dias; nos outros:</small></>}
-                    <br /><small>{anchorLabel(a, state.activities)}{a.kind === 'normal' ? ` · ${durationLabel(a.duration)}` : ''} · {daysText(a.days)} · {a.optional ? 'Opcional' : PRIORITY_LABEL[a.priority]}{a.minDuration ? ` · encurta até ${a.minDuration} min` : ''}{a.notify ? ' · 🔔' : ''}</small>
+                    <br /><small>{anchorLabel(a, state.activities)}{a.kind === 'normal' ? ` · ${durationLabel(a.duration)}` : ''} · {daysText(a.days)} · {a.optional ? 'Opcional' : PRIORITY_LABEL[a.priority]}{a.focusDays?.length ? ` · prioridade máxima: ${[1, 2, 3, 4, 5, 6, 0].filter((d) => a.focusDays!.includes(d)).map((d) => WEEKDAY_SHORT[d]).join(', ')}` : ''}{a.minDuration ? ` · encurta até ${a.minDuration} min` : ''}{a.notify ? ' · 🔔' : ''}</small>
                   </div>
                   <div className="row" style={{ gap: 6, flex: 'none' }}>
                     {a.kind === 'normal' && <button className="btn ghost sm" aria-label={`${a.paused ? 'Retomar' : 'Pausar'} ${a.title}`} onClick={() => { update((s) => ({ ...s, activities: s.activities.map((x) => x.id === a.id ? { ...x, paused: !x.paused } : x) })); toast(a.paused ? `▶️ ${a.title} retomada` : `⏸️ ${a.title} pausada`); }}>{a.paused ? '▶️' : '⏸️'}</button>}
@@ -198,6 +200,28 @@ function WorkLunchCard() {
           : work ? <>O almoço ainda não está junto com {work.title}. Toque em "Salvar trabalho e almoço".</> : <>Ainda não há atividade de Trabalho. Adicione uma (ex.: "Trabalho" 08:00–17:00, Seg–Sex) ou escreva na aba IA "vou trabalhar das 8h às 17h" — o resto da rotina se ajusta sozinho.</>}
       </div>
       <button className="btn primary sm" style={{ marginTop: 8 }} onClick={apply}>Salvar trabalho e almoço</button>
+    </Card>
+  );
+}
+
+/** Dias de estudo: nesses dias os estudos viram prioridade máxima (entram junto com academia, refeições e trabalho). */
+function StudyDaysCard() {
+  const { state, update, toast } = useApp();
+  const study = state.activities.find((a) => /^estudos$/i.test(a.title.trim()));
+  if (!study) return null;
+  const focus = study.focusDays ?? [];
+  function toggle(d: number) {
+    const next = focus.includes(d) ? focus.filter((x) => x !== d) : [...focus, d].sort();
+    update((s) => ({ ...s, activities: s.activities.map((a) => (a.id === study!.id ? { ...a, focusDays: next, days: [...new Set([...a.days, ...next])].sort() } : a)) }));
+    toast(focus.includes(d) ? `${WEEKDAY_SHORT[d]}: estudos voltam a ser opcionais` : `${WEEKDAY_SHORT[d]}: dia de estudo (prioridade máxima)`);
+  }
+  return (
+    <Card title="📚 Dias de estudo">
+      <p className="muted" style={{ marginTop: 0 }}><small>Nos dias marcados, os estudos entram com prioridade máxima, junto com academia, as 4 refeições e o trabalho (só as refeições e a academia passam na frente). Nos outros dias de semana, os estudos entram só se sobrar espaço. Fim de semana tem o bloco próprio de estudos.</small></p>
+      <div className="chips" role="group" aria-label="Dias de estudo">
+        {[1, 2, 3, 4, 5].map((d) => <button key={d} type="button" className={`chip ${focus.includes(d) ? 'on' : ''}`} aria-pressed={focus.includes(d)} onClick={() => toggle(d)}>{WEEKDAY_SHORT[d]}</button>)}
+      </div>
+      <p className="muted" style={{ marginBottom: 0 }}><small>Prioridade máxima nos dias de semana: ⭐ Academia · Café da manhã · Almoço · Lanche da tarde · Jantar · Trabalho{focus.length ? ' · Estudos (nos dias marcados)' : ''}.</small></p>
     </Card>
   );
 }

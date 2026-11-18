@@ -31,7 +31,7 @@ const A = (title: string, categoryId: string, duration: number, anchor: Activity
 /** Rotina inicial pensada para os objetivos do Titan (físico, rosto, cabelo, sono 8–9 h). Tudo é editável. */
 export function defaultActivities(): Activity[] {
   n = 0;
-  return chainBathAndSnack([
+  return applyTopPriorities(chainBathAndSnack([
     A('Acordar', 'sleep', 5, { type: 'wake', offset: 0 }, 'Levante no primeiro alarme, abra a janela e beba um copo de água. Luz natural cedo ajuda a regular o sono.', { fixed: true, priority: 1, kind: 'wake' }),
     A('Higiene pessoal', 'face', 15, { type: 'wake', offset: 5 }, HYGIENE_DESC, { priority: 1 }),
     A('Skincare matinal', 'face', 10, { type: 'wake', offset: 20 }, '1) Limpeza com sabonete facial suave. 2) Hidratante leve. 3) Protetor solar FPS 30+ em rosto, orelhas e pescoço (2 dedos de produto).', { priority: 1 }),
@@ -57,12 +57,30 @@ export function defaultActivities(): Activity[] {
     A('Skincare noturno', 'face', 10, { type: 'bed', offset: 50 }, '1) Limpeza para tirar protetor e oleosidade. 2) Hidratante. Não esprema espinhas.', { priority: 1 }),
     A('Preparar para dormir', 'sleep', 30, { type: 'bed', offset: 30 }, 'Desacelerar: luz baixa, celular longe da cama, separar a roupa de amanhã, respiração 4-7-8. Quarto escuro e fresco.', { priority: 1, fixed: true }),
     A('Dormir', 'sleep', 0, { type: 'bed', offset: 0 }, 'Hora de apagar a luz. Meta: 8–9 h de sono.', { priority: 1, fixed: true, kind: 'bed' }),
-  ]);
+  ]));
 }
 
 export const HYGIENE_DESC = 'Escovar os dentes (2 min), fio dental, água no rosto e desodorante. O banho tem horário próprio, logo depois do treino.';
 export const BATH_DESC = 'Logo depois do treino (academia ou luta). Água morna, não quente, para não ressecar a pele; 5–10 min. Nos dias sem treino, à noite, antes do skincare noturno.';
 export const BATH_FALLBACK = 21 * 60;
+
+/** Prioridade máxima: academia, as 4 refeições (café, almoço, lanche da tarde, jantar) e o trabalho. */
+export const TOP_PRIORITY = /^(academia|cafe da manha|almoco|lanche da tarde|jantar|trabalho)/;
+/** Dias de estudo padrão (estudos viram prioridade máxima): segunda, quarta e sexta. Editável em Rotina. */
+export const DEFAULT_STUDY_DAYS = [1, 3, 5];
+/** Janela das refeições: até quanto podem sair do horário (min). */
+export const MEAL_SHIFT: [RegExp, number][] = [[/^cafe da manha/, 120], [/^almoco/, 180], [/^lanche da tarde/, 180], [/^jantar/, 180]];
+
+export function applyTopPriorities(list: Activity[]): Activity[] {
+  return list.map((a): Activity => {
+    if (TOP_PRIORITY.test(nrm(a.title)) && a.kind === 'normal') {
+      const meal = MEAL_SHIFT.find(([re]) => re.test(nrm(a.title)));
+      return { ...a, priority: 0, ...(meal && a.maxShift === undefined ? { maxShift: meal[1] } : {}) };
+    }
+    if (/^estudos$/.test(nrm(a.title)) && !a.focusDays) return { ...a, focusDays: a.days.filter((d) => DEFAULT_STUDY_DAYS.includes(d)) };
+    return a;
+  });
+}
 const TRAINING_TITLES = /^(academia|treino de luta|recuperacao ativa)/;
 const nrm = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
@@ -113,6 +131,6 @@ export function defaultState(now = new Date()): State {
   };
 }
 
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);

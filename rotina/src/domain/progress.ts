@@ -7,7 +7,7 @@ export const DAY_GOAL = 0.8;
 export const WEEK_GOAL_DAYS = 5;
 export const ACHIEVEMENT_XP = 50;
 
-export const XP_BY_PRIORITY = { 1: 20, 2: 15, 3: 10 } as const;
+export const XP_BY_PRIORITY = { 0: 25, 1: 20, 2: 15, 3: 10 } as const;
 export const ON_TIME_BONUS = 5;
 
 /** No horário = concluído entre 30 min antes do início e 30 min depois do fim. */

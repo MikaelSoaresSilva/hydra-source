@@ -156,7 +156,7 @@ Executados com `./gradlew testDebugUnitTest` — **40 testes, 40 aprovados**.
 
 Capturas em [`docs/telas/`](docs/telas/). Também verificado: APK assinado (`apksigner verify`), nome do pacote, versão e Activity principal (`aapt2 dump badging`).
 
-**Limitação honesta:** este ambiente de desenvolvimento não tem aceleração de hardware para rodar um emulador Android rápido; os testes de interface foram feitos com Robolectric (Android simulado na JVM). Veja a seção abaixo sobre o teste no emulador.
+**Teste do APK num Android real (emulado):** o APK final foi instalado num emulador Android 11 (x86_64, emulação por software, sem aceleração de hardware): instalação `Success`, app aberto, tela de abertura → tela de cadastro, sem nenhum erro (`FATAL`) no log. Como esse emulador é muito lento, o percurso completo das telas foi testado com Robolectric (Android simulado na JVM). Ainda vale testar num celular físico.
 
 ## 8. Problemas encontrados e corrigidos
 

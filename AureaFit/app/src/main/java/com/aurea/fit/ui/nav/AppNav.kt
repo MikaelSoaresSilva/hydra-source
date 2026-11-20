@@ -55,17 +55,26 @@ fun AppNav(vm: AppViewModel, startRoute: String? = null, navController: NavHostC
     }) { pad ->
         NavHost(navController, startDestination = "splash", modifier = Modifier.padding(bottom = if (showBar) pad.calculateBottomPadding() else androidx.compose.ui.unit.Dp(0f))) {
             composable("splash") {
+                // Navega só quando a animação terminou E o destino já foi calculado (em qualquer ordem).
                 var target by remember { mutableStateOf<String?>(null) }
+                var animDone by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
                     val has = vm.hasAccount()
+                    val loggedIn = vm.settings.value.loggedIn
+                    val hasProfile = vm.repo.currentProfile() != null
                     target = when {
                         !has -> "auth/register"
-                        !vm.settings.value.loggedIn -> "auth/login"
-                        vm.repo.currentProfile() == null -> "onboarding"
+                        !loggedIn -> "auth/login"
+                        !hasProfile -> "onboarding"
                         else -> startRoute ?: "home"
                     }
                 }
-                SplashScreen { target?.let { t -> if (t == "home" || t.startsWith("auth") || t == "onboarding") goRoot(t) else { goRoot("home"); go(t) } } }
+                LaunchedEffect(target, animDone) {
+                    val t = target ?: return@LaunchedEffect
+                    if (!animDone) return@LaunchedEffect
+                    if (t == "home" || t.startsWith("auth") || t == "onboarding") goRoot(t) else { goRoot("home"); go(t) }
+                }
+                SplashScreen { animDone = true }
             }
             composable("auth/{mode}") { e ->
                 AuthScreen(vm, e.arguments?.getString("mode") == "register") {

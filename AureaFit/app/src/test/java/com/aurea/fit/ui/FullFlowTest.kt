@@ -124,6 +124,7 @@ class FullFlowTest {
         rule.onNodeWithText("Ganho de massa muscular").performClick(); rule.waitForIdle()
         tap("saveGoal")
         awaitDb { repo.db.plans().all().count { it.kind == "DIET" } == 2 }
+        awaitDb { TestNav.controller?.currentDestination?.route != "goal" }
         runBlocking {
             assertEquals(com.aurea.fit.domain.Goal.GAIN_MUSCLE, repo.currentProfile()!!.goal)
             assertEquals(2, repo.db.plans().all().count { it.kind == "DIET" })
@@ -144,7 +145,10 @@ class FullFlowTest {
     }
 
     private fun navigateTo(route: String) {
-        rule.runOnUiThread { navController()?.navigate(route) }
+        rule.runOnUiThread {
+            try { navController()?.navigate(route) } catch (t: Throwable) { println("NAVERR $route: $t") }
+            println("NAVDBG $route -> ${navController()?.currentDestination?.route} stack=${navController()?.currentBackStack?.value?.map { it.destination.route }}")
+        }
         rule.waitForIdle(); rule.mainClock.advanceTimeBy(800); rule.waitForIdle()
     }
 

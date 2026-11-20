@@ -50,7 +50,7 @@ cp /caminho/keystore.properties .
 Requisitos: JDK 17+, Android SDK (plataforma 35, build-tools 35). Abra a pasta `AureaFit` no Android Studio, ou:
 ```bash
 ./gradlew assembleDebug          # APK de testes
-./gradlew testDebugUnitTest      # executa os 41 testes automatizados
+./gradlew testDebugUnitTest      # executa os 40 testes automatizados
 ./gradlew assembleRelease        # APK final otimizado (R8)
 ```
 
@@ -140,7 +140,7 @@ app/src/main/java/com/aurea/fit/
 
 ## 7. Relatório de testes
 
-Executados com `./gradlew testDebugUnitTest` — **41 testes, 41 aprovados**.
+Executados com `./gradlew testDebugUnitTest` — **40 testes, 40 aprovados**.
 
 | Grupo | O que foi testado |
 |---|---|
@@ -168,7 +168,8 @@ Capturas em [`docs/telas/`](docs/telas/). Também verificado: APK assinado (`apk
 6. **Botão "Detalhes" quebrava letra por letra em telas pequenas** — layout do cartão de água refeito.
 7. **Baixo contraste do cartão de destaque no modo escuro** — gradiente com cores fixas da marca.
 8. **Animações**: braços atravessando o banco na mesa flexora, prancha lateral confusa e ponte com pouca elevação — poses corrigidas após inspeção visual.
-9. **Chave de assinatura**: o repositório é público, então a chave foi retirada do Git e passou a ser lida de um arquivo local.
+9. **Tela de abertura podia travar em celulares lentos** (encontrado ao rodar o APK num emulador sem aceleração): se a animação terminasse antes do banco responder, o app não avançava. Agora a navegação espera as duas coisas, em qualquer ordem.
+10. **Chave de assinatura**: o repositório é público, então a chave foi retirada do Git e passou a ser lida de um arquivo local.
 
 ## 9. Próximos passos sugeridos
 - Publicar na Google Play (exige conta de desenvolvedor, política de privacidade e App Bundle `.aab`: `./gradlew bundleRelease`).

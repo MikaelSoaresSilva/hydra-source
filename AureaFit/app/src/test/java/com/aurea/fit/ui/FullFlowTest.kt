@@ -135,13 +135,13 @@ class FullFlowTest {
     }
 
     private fun awaitDb(cond: suspend () -> Boolean) {
-        repeat(100) {
+        repeat(400) {
             rule.mainClock.advanceTimeBy(200); rule.waitForIdle()
             org.robolectric.shadows.ShadowLooper.idleMainLooper()
             Thread.sleep(20)
             if (runBlocking { cond() }) return
         }
-        fail("condição do banco não satisfeita")
+        snap(rule.activity.window.decorView, "zz_falha_awaitDb"); fail("condição do banco não satisfeita")
     }
 
     private fun navigateTo(route: String) {

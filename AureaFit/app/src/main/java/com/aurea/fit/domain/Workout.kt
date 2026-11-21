@@ -219,7 +219,7 @@ object WorkoutGenerator {
                 .thenByDescending { if (p.experience == Experience.BEGINNER) -it.minLevel.ordinal else 0 }
         )
         val preferred = sorted.filter { it.id in p.preferredExercises }
-        val count = usage.getOrDefault(slot, 0)
+        val count = (usage[slot] ?: 0)
         usage[slot] = count + 1
         return if (preferred.isNotEmpty()) preferred[count % preferred.size] else sorted[count % sorted.size]
     }
@@ -338,6 +338,6 @@ object Progression {
         }
     }
 
-    fun roundTo(v: Double, step: Double): Double = if (step <= 0) v else (Math.round(v / step) * step)
-    fun fmtKg(v: Double): String = if (v % 1.0 == 0.0) "${v.toInt()} kg" else "${"%.1f".format(v)} kg"
+    fun roundTo(v: Double, step: Double): Double = if (step <= 0) v else (roundHalfUp(v / step) * step)
+    fun fmtKg(v: Double): String = if (v % 1.0 == 0.0) "${v.toInt()} kg" else "${v.dec(1)} kg"
 }

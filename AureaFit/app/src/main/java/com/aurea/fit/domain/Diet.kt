@@ -154,7 +154,7 @@ object DietGenerator {
         }
         if (plan.monthlyCost > p.monthlyBudget) {
             plan = plan.copy(
-                notes = plan.notes + "Custo estimado (R$ %.0f/mês) acima do seu orçamento (R$ %d). Dicas: priorize ovos, frango, feijão, arroz, banana e aveia; compre a granel e congele porções.".format(plan.monthlyCost, p.monthlyBudget)
+                notes = plan.notes + "Custo estimado (R$ ${plan.monthlyCost.dec(0)}/mês) acima do seu orçamento (R$ ${p.monthlyBudget}). Dicas: priorize ovos, frango, feijão, arroz, banana e aveia; compre a granel e congele porções."
             )
         }
         return plan
@@ -254,7 +254,7 @@ object DietGenerator {
         }
         return chosen.mapIndexed { i, (c, f) ->
             val step = f.step.coerceAtLeast(1)
-            var v = (Math.round(g[i] / step) * step).toInt()
+            var v = (roundHalfUp(g[i] / step) * step).toInt()
             val min = if (c.optional) 0 else f.minG
             v = v.coerceIn(min, f.maxG)
             v
@@ -325,7 +325,7 @@ object DietGenerator {
                 val density = alt.macroFor(role)
                 val grams = if (density <= 0.01 || key <= 0.01) item.grams.toDouble() else key / density * 100
                 val step = alt.step.coerceAtLeast(1)
-                val g = (Math.round(grams / step) * step).toInt().coerceIn(maxOf(alt.minG, step), maxOf(alt.maxG, alt.minG) * 2)
+                val g = (roundHalfUp(grams / step) * step).toInt().coerceIn(maxOf(alt.minG, step), maxOf(alt.maxG, alt.minG) * 2)
                 MealItem(alt.id, g, item.role)
             }
             .sortedBy { abs(it.macros().kcal - item.macros().kcal) }
@@ -340,11 +340,11 @@ object DietGenerator {
             val raw = g * f.rawFactor
             val cost = raw / 1000.0 * f.pricePerKg
             val qty = when {
-                f.id.startsWith("ovo") -> "${Math.ceil(g / 50.0).toInt()} ovos"
-                f.unitName.startsWith("copo") || f.id == "cafe" -> "%.1f L".format(raw / 1000.0)
-                f.id in setOf("banana", "maca", "laranja") -> "${Math.ceil(g / f.unitGrams).toInt()} unidades"
-                raw >= 1000 -> "%.1f kg".format(raw / 1000.0)
-                else -> "${(Math.ceil(raw / 50.0) * 50).toInt()} g"
+                f.id.startsWith("ovo") -> "${kotlin.math.ceil(g / 50.0).toInt()} ovos"
+                f.unitName.startsWith("copo") || f.id == "cafe" -> "${(raw / 1000.0).dec(1)} L"
+                f.id in setOf("banana", "maca", "laranja") -> "${kotlin.math.ceil(g / f.unitGrams).toInt()} unidades"
+                raw >= 1000 -> "${(raw / 1000.0).dec(1)} kg"
+                else -> "${(kotlin.math.ceil(raw / 50.0) * 50).toInt()} g"
             }
             val label = if (f.rawFactor < 0.9) "${f.name.substringBefore(" cozid")} (cru/seco)" else f.name
             ShoppingItem(f.id, label, qty, raw.roundToInt(), cost)

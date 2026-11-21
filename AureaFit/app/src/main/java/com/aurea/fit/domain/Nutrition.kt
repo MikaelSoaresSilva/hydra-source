@@ -49,7 +49,7 @@ object Safety {
         val bmi = Nutrition.bmi(p)
         if (bmi < 18.5 && (p.goal == Goal.LOSE_FAT || p.goal == Goal.RECOMP)) {
             noDeficit = true
-            w += "Seu IMC (%.1f) já está abaixo da faixa recomendada. Não aplicamos déficit calórico; o foco passa a ser ganhar força e massa muscular.".format(bmi)
+            w += "Seu IMC (${bmi.dec(1)}) já está abaixo da faixa recomendada. Não aplicamos déficit calórico; o foco passa a ser ganhar força e massa muscular."
         }
         return SafetyAssessment(restrictDeficit = restrict, allowDeficit = !noDeficit, warnings = w)
     }
@@ -146,7 +146,7 @@ object Nutrition {
         val fatMin = (p.weightKg * 0.7)
         val fat = max(fatMin, kcal * 0.27 / 9).roundToInt()
         val carbs = max(0.0, (kcal - protein * 4 - fat * 9) / 4).roundToInt()
-        why += "Proteína: ${"%.1f".format(proteinPerKg)} g por kg de peso de referência (${refW.roundToInt()} kg) para preservar e construir músculo."
+        why += "Proteína: ${proteinPerKg.dec(1)} g por kg de peso de referência (${refW.roundToInt()} kg) para preservar e construir músculo."
         why += "Gorduras: cerca de 27% das calorias (importantes para hormônios). Carboidratos completam o restante e dão energia ao treino."
 
         val water = (35 * p.weightKg).roundToInt().let { ((it + 499) / 250) * 250 }

@@ -151,7 +151,7 @@ object AdjustmentEngine {
             when {
                 change < -1.0 -> r += Recommendation(
                     "Comer um pouco mais",
-                    "Você está perdendo mais de 1%% do peso por semana (%.1f%%). Uma perda rápida aumenta o risco de perder músculo. Vamos acrescentar 150 kcal.".format(change),
+                    "Você está perdendo mais de 1% do peso por semana (${change.dec(1)}%). Uma perda rápida aumenta o risco de perder músculo. Vamos acrescentar 150 kcal.",
                     ActionType.CALORIES_UP, value = 150
                 )
                 a.hunger >= 5 && change < -0.25 -> r += Recommendation(
@@ -161,7 +161,7 @@ object AdjustmentEngine {
                 )
                 change > -0.1 && a.dietAdherence >= 4 && p.goal == Goal.LOSE_FAT && safety.allowDeficit -> r += Recommendation(
                     "Pequeno ajuste nas calorias",
-                    "Com boa adesão, o peso está estável há mais de duas semanas (%.2f%%/semana). Reduzir 100 kcal ajuda a retomar a perda de forma gradual. Medidas de cintura também contam: se estiverem diminuindo, está funcionando!".format(change),
+                    "Com boa adesão, o peso está estável há mais de duas semanas (${change.dec(2)}%/semana). Reduzir 100 kcal ajuda a retomar a perda de forma gradual. Medidas de cintura também contam: se estiverem diminuindo, está funcionando!",
                     ActionType.CALORIES_DOWN, value = -100
                 )
                 change > -0.1 && a.dietAdherence < 4 -> r += Recommendation(
@@ -169,7 +169,7 @@ object AdjustmentEngine {
                     "O peso está estável, mas a adesão à dieta não está alta. Antes de reduzir calorias, vale seguir o plano atual com mais regularidade.",
                     ActionType.NONE
                 )
-                else -> r += Recommendation("Ritmo adequado", "Seu peso está mudando num ritmo saudável (%.2f%% por semana). Continue assim!".format(change), ActionType.NONE)
+                else -> r += Recommendation("Ritmo adequado", "Seu peso está mudando num ritmo saudável (${change.dec(2)}% por semana). Continue assim!", ActionType.NONE)
             }
         } else if (p.goal == Goal.GAIN_MUSCLE || p.goal == Goal.GAIN_WEIGHT) {
             when {
@@ -180,10 +180,10 @@ object AdjustmentEngine {
                 )
                 change > 0.6 -> r += Recommendation(
                     "Desacelerar o ganho",
-                    "O ganho de peso está acima de 0,5%% por semana (%.2f%%), o que tende a acumular mais gordura. Reduzir 100 kcal.".format(change),
+                    "O ganho de peso está acima de 0,5% por semana (${change.dec(2)}%), o que tende a acumular mais gordura. Reduzir 100 kcal.",
                     ActionType.CALORIES_DOWN, value = -100
                 )
-                else -> r += Recommendation("Ritmo adequado", "Ganho de peso gradual (%.2f%% por semana). Continue!".format(change), ActionType.NONE)
+                else -> r += Recommendation("Ritmo adequado", "Ganho de peso gradual (${change.dec(2)}% por semana). Continue!", ActionType.NONE)
             }
         }
 

@@ -195,5 +195,5 @@ fun minutesOf(t: String): Int = parseTime(t).let { it.first * 60 + it.second }
 
 fun formatMinutes(total: Int): String {
     val m = ((total % 1440) + 1440) % 1440
-    return "%02d:%02d".format(m / 60, m % 60)
+    return "${(m / 60).pad2()}:${(m % 60).pad2()}"
 }

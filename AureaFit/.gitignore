@@ -9,3 +9,6 @@ captures/
 keystore/
 keystore.properties
 *.jks
+.kotlin/
+web/build/
+.netlify/

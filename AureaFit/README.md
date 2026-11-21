@@ -5,12 +5,31 @@
 > O nome vem da **proporção áurea** — a ideia de equilíbrio entre cintura, quadril e pernas que inspirou a "Meta Áurea" (referência estética do app).
 
 - **APK pronto:** [`releases/Aurea-1.0.0.apk`](releases/Aurea-1.0.0.apk) (1,8 MB, Android 7.0 ou superior)
-- **Somente Android.** APK não funciona em iPhone.
+- **Android:** APK acima. **iPhone:** versão web instalável em <https://aurea-treino.netlify.app> (veja a seção "Versão para iPhone").
 - O app é **educativo** e não substitui médico(a), nutricionista ou educador(a) físico(a).
 
 <p>
 <img src="docs/telas/07_painel.png" width="180"> <img src="docs/telas/08_ficha_treino.png" width="180"> <img src="docs/telas/12_dieta.png" width="180"> <img src="docs/telas/17b_evolucao_com_dados.png" width="180">
 </p>
+
+
+## Versão para iPhone (web app instalável)
+
+Arquivos **APK só instalam em Android** — o iPhone recusa esse formato por regra da Apple. Para iPhone existe a versão **web app (PWA)**, com as mesmas telas e **exatamente as mesmas regras** de treino, dieta, segurança e ajustes: o código Kotlin da pasta `domain/` é compilado para JavaScript (módulo `web/`), então os cálculos são idênticos aos do Android.
+
+**Como instalar no iPhone:**
+1. Abra **<https://aurea-treino.netlify.app>** no **Safari** (precisa ser o Safari).
+2. Toque em **Compartilhar** (quadrado com seta ↑) → **Adicionar à Tela de Início** → **Adicionar**.
+3. Abra o Áurea pelo ícone criado. Ele funciona em tela cheia e, depois da primeira abertura, **sem internet**.
+
+**Diferenças em relação ao Android (limitações do iPhone):**
+- **Lembretes:** o iPhone não deixa web apps agendarem notificações sozinhos. Com o app aberto, os lembretes aparecem normalmente; para alarmes com o app fechado, use **Calendário → "Adicionar rotina ao Calendário"**, que envia a rotina para o app Calendário do iPhone com alertas.
+- **Dados:** ficam só no iPhone (armazenamento do navegador). Faça **backup** em Configurações (arquivo `.json`, pode salvar no iCloud Drive/Arquivos). Os dados do iPhone e do Android não se misturam.
+- **Bloqueio de capturas de tela** não existe na versão web.
+
+**Atualizar a versão web:** `./gradlew :web:assemblePwa` gera a pasta `web/dist`; publique essa pasta em qualquer hospedagem com HTTPS (Netlify, GitHub Pages, Cloudflare Pages). O app atualiza sozinho na próxima abertura com internet.
+
+**Testes da versão web:** percurso completo automatizado em navegador simulando iPhone 13, nos motores **Chromium e WebKit (o do Safari)**: cadastro, questionário, treino, troca de alimento, água, calendário (.ics com 17 lembretes), medidas, gráficos, check-in, troca de objetivo, backup, dados mantidos após recarregar e funcionamento **offline com o servidor desligado** — sem nenhum erro.
 
 ---
 

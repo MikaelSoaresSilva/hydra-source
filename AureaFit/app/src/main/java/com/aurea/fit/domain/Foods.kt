@@ -136,7 +136,7 @@ object FoodDb {
     fun measure(food: Food, grams: Int): String {
         if (grams <= 0) return "a gosto"
         val n = grams / food.unitGrams
-        val rounded = (Math.round(n * 2) / 2.0)
+        val rounded = (roundHalfUp(n * 2) / 2.0)
         val num = when {
             rounded <= 0.0 -> "½"
             rounded % 1.0 == 0.0 -> rounded.toInt().toString()

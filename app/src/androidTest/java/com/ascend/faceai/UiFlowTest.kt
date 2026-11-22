@@ -103,6 +103,7 @@ class UiFlowTest {
         // Projeção de 90 dias
         compose.onNodeWithTag("open_projection").performClick()
         waitText("O que mudou na simulação", 90_000); Thread.sleep(800); shot("09f_projection")
+        waitText("Notas medidas pelo app", 120_000); shot("09f2_projection_scores")
         compose.onNodeWithTag("share_projection").performScrollTo(); shot("09g_projection_bottom")
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         waitTag("solutions"); scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }

@@ -239,6 +239,7 @@ fun ProjectionScreen(nav: NavHostController, id: String) {
         busy = true; msg = null
         runCatching { c.repo.project90(id, fatLoss) }.onSuccess { out = it }.onFailure { msg = it.message ?: "Falha ao gerar a projeção." }
         busy = false
+        out?.let { first -> runCatching { c.repo.measureProjection(first) }.onSuccess { m -> if (out === first) out = m } }
     }
 
     Column(Modifier.fillMaxSize().background(Ac.Bg).navigationBarsPadding()) {
@@ -269,7 +270,10 @@ fun ProjectionScreen(nav: NavHostController, id: String) {
                 }
             }
             Spacer(Modifier.height(12.dp))
-            if (o.scoresBefore.isNotEmpty() && o.scoresAfter.isNotEmpty()) {
+            if (o.scoresBefore.isEmpty() || o.scoresAfter.isEmpty()) {
+                GlassCard(Modifier.fillMaxWidth()) { Text("Medindo as notas da foto projetada…", style = MaterialTheme.typography.bodySmall, color = Ac.TextMid) }
+                Spacer(Modifier.height(12.dp))
+            } else {
                 GlassCard(Modifier.fillMaxWidth()) {
                     Eyebrow("Notas medidas pelo app nas duas fotos")
                     Spacer(Modifier.height(6.dp))

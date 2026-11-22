@@ -266,10 +266,13 @@ object Projection {
         return DoubleArray(ch.size) { ma[it] * I[it] + mb[it] }
     }
 
-    // sRGB <-> CIELAB (D65)
-    private fun lin(c: Int): Double { val v = c / 255.0; return if (v <= 0.04045) v / 12.92 else ((v + 0.055) / 1.055).pow(2.4) }
-    private fun gam(v: Double): Int { val c = if (v <= 0.0031308) 12.92 * v else 1.055 * v.pow(1 / 2.4) - 0.055; return (c * 255).roundToInt().coerceIn(0, 255) }
-    private fun fl(t: Double) = if (t > 0.008856) t.pow(1.0 / 3) else 7.787 * t + 16.0 / 116
+    // sRGB <-> CIELAB (D65), com tabelas para ser rápido no celular
+    private val LIN = DoubleArray(256) { val v = it / 255.0; if (v <= 0.04045) v / 12.92 else ((v + 0.055) / 1.055).pow(2.4) }
+    private const val GN = 4096
+    private val GAM = IntArray(GN + 1) { val v = it.toDouble() / GN; val c = if (v <= 0.0031308) 12.92 * v else 1.055 * v.pow(1 / 2.4) - 0.055; (c * 255).roundToInt().coerceIn(0, 255) }
+    private fun lin(c: Int): Double = LIN[c]
+    private fun gam(v: Double): Int = GAM[(v * GN).roundToInt().coerceIn(0, GN)]
+    private fun fl(t: Double) = if (t > 0.008856) Math.cbrt(t) else 7.787 * t + 16.0 / 116
     private fun fi(t: Double) = if (t > 0.206893) t * t * t else (t - 16.0 / 116) / 7.787
 
     fun toLab(r: Int, g: Int, b: Int): DoubleArray {

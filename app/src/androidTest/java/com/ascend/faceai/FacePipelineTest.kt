@@ -122,7 +122,9 @@ class FacePipelineTest {
         val p = c.engine.prepare(portrait(), CaptureType.FRONTAL)
         val r = c.repo.analyzeAndSave(listOf(PreparedPhoto(p.type, p.frame, p.crop, p.quality.copy(ok = true, issues = emptyList()))))
         val t0 = System.currentTimeMillis()
-        val out = c.repo.project90(r.id, includeFatLoss = true)
+        val out0 = c.repo.project90(r.id, includeFatLoss = true)
+        log("projection image ms=${System.currentTimeMillis() - t0}")
+        val out = c.repo.measureProjection(out0)
         log("projection ms=${System.currentTimeMillis() - t0} size=${out.after.width}x${out.after.height}")
         out.changes.forEach { log(" change: $it") }
         log("scores before=${out.scoresBefore} after=${out.scoresAfter}")

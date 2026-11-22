@@ -78,7 +78,7 @@ fun statPages(r: FaceReport): List<List<Stat>> {
         listOf(
             Stat("Estrutura", cat("estrutura"), "estrutura"), Stat("Barba", cat("barba"), "barba"),
             Stat("Acne", met("pele", "spots"), "pele"), Stat("Olheiras", met("pele", "under_eye_skin") ?: met("olhos", "under_eye"), "olhos"),
-            Stat("Textura da pele", met("pele", "texture"), "pele"), Stat("Uniformidade do tom", met("pele", "tone") ?: met("pele", "tone_color"), "pele")
+            Stat("Textura da pele", met("pele", "texture"), "pele"), Stat("Tom da pele", met("pele", "tone") ?: met("pele", "tone_color"), "pele")
         )
     )
 }

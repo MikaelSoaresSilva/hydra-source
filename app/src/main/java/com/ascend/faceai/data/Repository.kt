@@ -94,7 +94,7 @@ class AnalysisRepository(
     class ProjectionOut(
         val before: Bitmap, val after: Bitmap, val changes: List<String>,
         /** Notas medidas pelo próprio app na foto atual e na foto projetada (mesmo processo para as duas). */
-        val scoresBefore: Map<String, Int?>, val scoresAfter: Map<String, Int?>
+        val scoresBefore: Map<String, Int?> = emptyMap(), val scoresAfter: Map<String, Int?> = emptyMap()
     )
 
     suspend fun project90(id: String, includeFatLoss: Boolean): ProjectionOut = withContext(Dispatchers.Default) {
@@ -105,13 +105,18 @@ class AnalysisRepository(
         val px = IntArray(w * h).also { before.getPixels(it, 0, w, 0, 0, w, h) }
         val res = com.ascend.faceai.analysis.Projection.project(px, w, h, r.frontalLandmarks, com.ascend.faceai.analysis.Projection.optionsFor(r, includeFatLoss))
         val after = Bitmap.createBitmap(res.argb, w, h, Bitmap.Config.ARGB_8888)
+        ProjectionOut(before, after, res.changes)
+    }
+
+    /** Passa as duas fotos pelo MESMO processo de análise (mais lento: roda o MediaPipe duas vezes). */
+    suspend fun measureProjection(o: ProjectionOut): ProjectionOut = withContext(Dispatchers.Default) {
         fun measure(b: Bitmap): Map<String, Int?> = runCatching {
             val p = engine.prepare(b, CaptureType.FRONTAL)
             val f = p.frame ?: return@runCatching emptyMap<String, Int?>()
             val rep = FaceAnalyzer.analyze("proj", System.currentTimeMillis(), mapOf(CaptureType.FRONTAL to f), mapOf(CaptureType.FRONTAL to p.quality))
             mapOf("geral" to rep.overall) + rep.categories.associate { it.id to it.score }
         }.getOrElse { emptyMap() }
-        ProjectionOut(before, after, res.changes, measure(before), measure(after))
+        ProjectionOut(o.before, o.after, o.changes, measure(o.before), measure(o.after))
     }
 
     /** Salva a imagem (antes | depois) em cache/exports para compartilhar. Não vai para a galeria. */

@@ -83,6 +83,7 @@ fun statPages(r: FaceReport): List<List<Stat>> {
     )
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 /** Cartão de resultado: foto circular, 6 notas grandes com barras coloridas, páginas deslizáveis. */
 @Composable
 fun ResultCards(r: FaceReport, photo: Bitmap?, onStat: (Stat) -> Unit, modifier: Modifier = Modifier) {

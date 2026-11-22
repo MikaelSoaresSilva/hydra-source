@@ -333,19 +333,19 @@ object FaceAnalyzer {
             fun mScore(zz: Double) = 100.0 / (1.0 + exp(-1.4 * zz))
             val mm = ArrayList<M>()
             val zs = ArrayList<Pair<Double, Double>>()
-            fun add(key: String, label: String, v: Double, neutral: Double, tol: Double, sign: Double, w: Double, refTxt: String, note: String = "") {
+            fun addM(key: String, label: String, v: Double, neutral: Double, tol: Double, sign: Double, w: Double, refTxt: String, note: String = "") {
                 val zz = z(v, neutral, tol, sign); zs += zz to w
                 mm += M(key, label, v, f2(v), refTxt, mScore(zz), w, note)
             }
-            add("m_jaw", "Largura da mandíbula ÷ largura do rosto", jawRatio, 0.775, 0.04, 1.0, 1.5, "Média 0,78 · mais largo = mais masculino")
-            add("m_brow", "Altura das sobrancelhas acima dos olhos", browEye, 0.885, 0.12, -1.0, 1.2, "Média 0,89 · mais baixa = mais masculino",
+            addM("m_jaw", "Largura da mandíbula ÷ largura do rosto", jawRatio, 0.775, 0.04, 1.0, 1.5, "Média 0,78 · mais largo = mais masculino")
+            addM("m_brow", "Altura das sobrancelhas acima dos olhos", browEye, 0.885, 0.12, -1.0, 1.2, "Média 0,89 · mais baixa = mais masculino",
                 "Muda com a expressão: sobrancelhas levantadas reduzem esta nota.")
-            add("m_chin", "Altura do queixo (boca→queixo ÷ largura)", chinH, 0.335, 0.03, 1.0, 1.0, "Média 0,34 · mais alto = mais masculino")
-            add("m_lower", "Terço inferior ÷ (médio + inferior)", lowerShare, 0.512, 0.025, 1.0, 0.8, "Média 0,51 · maior = mais masculino")
-            add("m_lips", "Espessura dos lábios ÷ largura da boca", lipH, 0.399, 0.06, -1.0, 0.8, "Média 0,40 · mais finos = mais masculino",
+            addM("m_chin", "Altura do queixo (boca→queixo ÷ largura)", chinH, 0.335, 0.03, 1.0, 1.0, "Média 0,34 · mais alto = mais masculino")
+            addM("m_lower", "Terço inferior ÷ (médio + inferior)", lowerShare, 0.512, 0.025, 1.0, 0.8, "Média 0,51 · maior = mais masculino")
+            addM("m_lips", "Espessura dos lábios ÷ largura da boca", lipH, 0.399, 0.06, -1.0, 0.8, "Média 0,40 · mais finos = mais masculino",
                 "Sorriso ou boca entreaberta alteram esta medida.")
-            add("m_eyes", "Tamanho do olho ÷ largura do rosto", eyeW / faceW, 0.169, 0.015, -1.0, 0.7, "Média 0,17 · menor = mais masculino")
-            add("m_fwhr", "Índice largura/altura facial (fWHR)", fwhr, 1.80, 0.12, 1.0, 0.5, "Média 1,80 · maior = mais masculino")
+            addM("m_eyes", "Tamanho do olho ÷ largura do rosto", eyeW / faceW, 0.169, 0.015, -1.0, 0.7, "Média 0,17 · menor = mais masculino")
+            addM("m_fwhr", "Índice largura/altura facial (fWHR)", fwhr, 1.80, 0.12, 1.0, 0.5, "Média 1,80 · maior = mais masculino")
             val cov = beard.metrics.firstOrNull { it.key == "beard_cov" }?.value ?: 0.0
             if (beard.present) {
                 val zz = ((cov - 0.15) / 0.15).coerceIn(0.0, 3.0); zs += zz to 0.8

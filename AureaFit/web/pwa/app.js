@@ -16,6 +16,9 @@ const dec = (v, n = 1) => (v == null || isNaN(v) ? '—' : (Math.round(v * 10 **
 const fmt1 = (v) => (v == null ? '—' : (v % 1 === 0 ? String(v) : dec(v, 1)));
 const brl = (v) => 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// App nativo de iPhone (Capacitor): plugins nativos disponíveis em window.Capacitor.Plugins
+const NATIVE = !!window.Capacitor?.isNativePlatform?.();
+const CAP = window.Capacitor?.Plugins || {};
 const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
 /* ======================================================================== ações e navegação */
@@ -113,6 +116,7 @@ function logoSvg(size) {
 }
 
 function installHint() {
+  if (NATIVE) return '';
   if (!isIOS || standalone()) return '';
   return card(`<b>📲 Instale no seu iPhone</b><p>No <b>Safari</b>, toque em <b>Compartilhar</b> (quadrado com seta ↑) e depois em <b>“Adicionar à Tela de Início”</b>. O Áurea vira um ícone e funciona como app, inclusive sem internet.</p>`, 'tint');
 }
@@ -502,7 +506,7 @@ routes.shopping = () => {
   const total = items.reduce((a, i) => a + i.cost, 0);
   const share = async () => {
     const text = `Lista de compras da semana — Áurea\n${items.map((i) => `☐ ${i.name}: ${i.quantity}`).join('\n')}\nCusto estimado: ${brl(total)}`;
-    try { if (navigator.share) await navigator.share({ title: 'Lista de compras', text }); else { await navigator.clipboard.writeText(text); toast('Lista copiada!'); } } catch (e) {}
+    try { if (NATIVE && CAP.Share) await CAP.Share.share({ title: 'Lista de compras', text }); else if (navigator.share) await navigator.share({ title: 'Lista de compras', text }); else { await navigator.clipboard.writeText(text); toast('Lista copiada!'); } } catch (e) {}
   };
   return `${top('Lista de compras', { back: true, actions: `<button class="icon" ${act(share)} aria-label="Compartilhar">⤴</button>` })}<main class="stack">
     ${card(`<h2>Semana: ${brl(total)}</h2><b>Mês (≈ 4,3 semanas): ${brl(total * 4.3)}</b><small>Estimativa com preços médios de supermercado. Quantidades já convertidas para o peso cru/seco quando necessário.</small>`)}
@@ -585,8 +589,8 @@ routes.calendar = () => {
 };
 
 /** Exporta a rotina como arquivo .ics (eventos semanais com alerta) para o app Calendário. */
-async function exportIcs() {
-  if (ONLINE_HOST && navigator.onLine) { location.href = icsLink(); return; }
+/** Rotina no formato de calendário (.ics), com alerta no horário de cada lembrete. */
+function buildIcs() {
   const BY = ['', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
   const d = new Date(); const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -597,7 +601,13 @@ async function exportIcs() {
     return ['BEGIN:VEVENT', `UID:aurea-${s.id}@aurea.app`, `DTSTAMP:${stamp}`, `DTSTART:${ymd}T${hh}${mm}00`, 'DURATION:PT10M', `RRULE:FREQ=WEEKLY;BYDAY=${days}`, `SUMMARY:${esc('Áurea: ' + s.label)}`,
       'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc(s.label)}`, 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT'].join('\r\n');
   });
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Aurea//Rotina//PT', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Áurea — Rotina', ...events, 'END:VCALENDAR'].join('\r\n');
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Aurea//Rotina//PT', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Áurea — Rotina', ...events, 'END:VCALENDAR'].join('\r\n');
+}
+
+async function exportIcs() {
+  if (NATIVE) { try { await nativeShareFile('aurea-rotina.ics', buildIcs()); } catch (e) { if (!String(e).includes('cancel')) toast('Não foi possível compartilhar.'); } return; }
+  if (ONLINE_HOST && navigator.onLine) { location.href = icsLink(); return; }
+  const ics = buildIcs();
   const file = new File([ics], 'aurea-rotina.ics', { type: 'text/calendar' });
   try {
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'Rotina Áurea' }); return; }
@@ -828,6 +838,7 @@ routes.settings = () => {
     const photos = {};
     for (const p of S.photos) { const b = await photoGet(p.id); if (b) photos[p.id] = await blobToDataUrl(b); }
     const data = JSON.stringify({ app: 'aurea', version: 1, exportedAt: Date.now(), state: S, photos });
+    if (NATIVE) { S.lastBackupAt = Date.now(); save(); try { await nativeShareFile(`aurea-backup-${new Date().toISOString().slice(0, 10)}.json`, data); } catch (e) {} return; }
     S.lastBackupAt = Date.now(); save();
     const file = new File([data], `aurea-backup-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
     try { if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'Backup Áurea' }); return; } } catch (e) { if (e.name === 'AbortError') return; }
@@ -883,6 +894,7 @@ const blobToDataUrl = (b) => new Promise((res) => { const r = new FileReader(); 
 /* ======================================================================== lembretes push (iPhone 16.4+) */
 const isPushCapable = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 function pushStatus() {
+  if (NATIVE) return S.push?.enabled && S.push?.native ? 'active' : S.push?.denied ? 'denied' : 'off';
   if (S.push?.enabled && isPushCapable() && Notification.permission === 'granted') return 'active';
   if (isIOS && !standalone()) return 'install';
   if (!isPushCapable()) return 'unsupported';
@@ -892,6 +904,7 @@ function pushStatus() {
 const b64uToBytes = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, (c) => c.charCodeAt(0)); };
 const pushPayload = (extra = {}) => ({ id: S.push.id, subscription: S.push.subscription, schedule: S.schedule, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo', ...extra });
 async function enablePush() {
+  if (NATIVE) return enableNative();
   try {
     const perm = await Notification.requestPermission(); // precisa vir direto do toque (regra do iPhone)
     if (perm !== 'granted') { toast('Permissão negada. Ative em Ajustes → Notificações → Áurea.'); render(); return; }
@@ -910,16 +923,19 @@ async function enablePush() {
   render();
 }
 async function disablePush() {
+  if (NATIVE) { try { await cancelNative(); } catch (e) {} S.push = { enabled: false }; rawSave(); toast('Lembretes desativados.'); render(); return; }
   try { await fetch('/api/push', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: S.push.id }) }); } catch (e) {}
   try { const reg = await navigator.serviceWorker.ready; (await reg.pushManager.getSubscription())?.unsubscribe(); } catch (e) {}
   S.push = { enabled: false, id: S.push?.id }; rawSave(); toast('Lembretes com o app fechado desativados.'); render();
 }
 async function testPush() {
+  if (NATIVE) { await nativeTest(); return; }
   try { const r = await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pushPayload({ test: true })) }); toast(r.ok ? 'Teste enviado — a notificação chega em alguns segundos.' : 'Falha no teste (' + r.status + ').'); } catch (e) { toast('Sem internet para enviar o teste.'); }
 }
 let pushTimer;
 function maybeSyncPush() {
   if (!S?.push?.enabled) return;
+  if (NATIVE) { clearTimeout(pushTimer); pushTimer = setTimeout(() => { if (JSON.stringify(S.schedule) !== S.push.lastSync) scheduleNative().catch(console.error); }, 800); return; }
   clearTimeout(pushTimer);
   pushTimer = setTimeout(async () => {
     const snap = JSON.stringify(S.schedule);
@@ -933,7 +949,7 @@ window.addEventListener('online', () => { if (S?.push) { S.push.lastSync = ''; m
 function pushCard(compact = false) {
   const st = pushStatus();
   const body = {
-    active: `<b>✅ Lembretes ativos, mesmo com o app fechado</b><p class="small">Refeições, treino, água, pausa, sono e check-in chegam como notificação no horário da sua rotina. Ao editar horários no Calendário, os lembretes são atualizados (precisa de internet).</p><div class="row wrap"><button class="btn tonal" ${act(testPush)}>Enviar teste</button><button class="btn text" ${act(disablePush)}>Desativar</button></div>`,
+    active: `<b>✅ Lembretes ativos, mesmo com o app fechado</b><p class="small">Refeições, treino, água, pausa, sono e check-in chegam como notificação no horário da sua rotina. Ao editar horários no Calendário, os lembretes são atualizados${NATIVE ? ' automaticamente — funcionam até sem internet' : ' (precisa de internet)'}.</p><div class="row wrap"><button class="btn tonal" ${act(testPush)}>Enviar teste</button><button class="btn text" ${act(disablePush)}>Desativar</button></div>`,
     off: `<b>🔔 Receba os lembretes da sua rotina</b><p class="small">Ative para receber notificações de refeições, treino, água e sono — inclusive com o app fechado.</p><button class="btn" ${act(enablePush)}>Ativar lembretes</button>`,
     install: `<b>🔔 Para receber lembretes no iPhone</b><p class="small">1. No <b>Safari</b>, toque em <b>Compartilhar</b> (↑) → <b>Adicionar à Tela de Início</b>.<br>2. Abra o Áurea pelo <b>ícone</b> criado.<br>3. Volte aqui e toque em <b>Ativar lembretes</b>.</p><p class="small muted">O iPhone só permite notificações de apps instalados na Tela de Início (iOS 16.4 ou mais novo). Seus dados continuam neste aparelho.</p>`,
     unsupported: `<b>🔔 Lembretes</b><p class="small">Este aparelho/navegador não aceita notificações de web apps. No iPhone, atualize para o <b>iOS 16.4 ou mais novo</b> e use o app pela Tela de Início. Enquanto isso, use <b>Adicionar rotina ao Calendário</b>.</p>`,
@@ -941,6 +957,52 @@ function pushCard(compact = false) {
   }[st];
   if (compact && st === 'active') return '';
   return card(body, st === 'active' ? '' : 'tint');
+}
+
+
+/* ======================================================================== lembretes nativos (app de iPhone) */
+const nativeWeekday = (d) => (d % 7) + 1; // nosso 1=segunda..7=domingo → iOS 1=domingo..7=sábado
+async function cancelNative() {
+  const LN = CAP.LocalNotifications; if (!LN) return;
+  const pend = await LN.getPending();
+  if (pend?.notifications?.length) await LN.cancel({ notifications: pend.notifications.map((n) => ({ id: n.id })) });
+}
+async function scheduleNative() {
+  const LN = CAP.LocalNotifications; if (!LN) return;
+  await cancelNative();
+  const list = []; let id = 1;
+  for (const s of S.schedule) {
+    if (!s.enabled) continue;
+    const [hour, minute] = s.time.split(':').map(Number);
+    const [title, body] = (REM[s.type] || ((l) => ['Áurea', l]))(s.label);
+    if ((s.daysMask & 127) === 127) list.push({ id: id++, title, body, schedule: { on: { hour, minute }, allowWhileIdle: true } });
+    else for (let d = 1; d <= 7; d++) if (s.daysMask & (1 << (d - 1))) list.push({ id: id++, title, body, schedule: { on: { weekday: nativeWeekday(d), hour, minute }, allowWhileIdle: true } });
+  }
+  if (list.length > 60) list.length = 60; // o iOS guarda até 64 lembretes agendados por app
+  if (list.length) await LN.schedule({ notifications: list });
+  S.push.lastSync = JSON.stringify(S.schedule); rawSave();
+}
+async function nativeTest() {
+  await CAP.LocalNotifications?.schedule({ notifications: [{ id: 9001, title: 'Lembretes ativados ✨', body: 'É assim que o Áurea vai lembrar você das refeições, treinos e hidratação.', schedule: { at: new Date(Date.now() + 4000) } }] });
+  toast('Teste agendado — chega em alguns segundos.');
+}
+async function enableNative() {
+  const LN = CAP.LocalNotifications;
+  if (!LN) { toast('Lembretes indisponíveis neste aparelho.'); return; }
+  try {
+    const perm = await LN.requestPermissions();
+    if (perm.display !== 'granted') { S.push = { enabled: false, denied: true }; rawSave(); toast('Permissão negada. Ative em Ajustes → Notificações → Áurea.'); render(); return; }
+    S.push = { enabled: true, native: true, lastSync: '' };
+    await scheduleNative();
+    await nativeTest();
+    toast('Lembretes ativados! Funcionam mesmo sem internet.');
+  } catch (e) { console.error(e); toast('Não foi possível ativar os lembretes: ' + (e.message || e)); }
+  render();
+}
+/** Compartilha um arquivo pelo menu do iOS (Salvar em Arquivos, iCloud Drive, AirDrop, Calendário…). */
+async function nativeShareFile(name, text) {
+  const r = await CAP.Filesystem.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8' });
+  await CAP.Share.share({ title: name, url: r.uri, dialogTitle: name });
 }
 
 /** Abre a rotina no app Calendário (no iPhone, o Safari oferece "Adicionar Todos"). */
@@ -1036,7 +1098,7 @@ async function start() {
   render();
   setInterval(checkReminders, 30000); checkReminders();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkReminders(); if (['home', 'diet', 'water'].includes(location.hash.split('/')[1])) render(); } });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!NATIVE && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   try { if (S.account) navigator.storage?.persist?.(); } catch (e) {}
   maybeSyncPush();
 }

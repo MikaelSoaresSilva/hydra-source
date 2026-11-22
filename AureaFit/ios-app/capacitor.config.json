@@ -1,0 +1,13 @@
+{
+  "appId": "com.aurea.fit",
+  "appName": "Áurea",
+  "webDir": "www",
+  "backgroundColor": "#FFF8F5",
+  "ios": {
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "LocalNotifications": { "iconColor": "#B4436C" }
+  }
+}

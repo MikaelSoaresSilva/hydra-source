@@ -1,5 +1,5 @@
 // Service worker: guarda o app no aparelho para funcionar sem internet.
-const VERSION = 'aurea-1795355729241';
+const VERSION = 'aurea-1795359930790';
 const FILES = [
   "./",
   "./anim.js",

@@ -1,0 +1,4 @@
+two faces -> faces=2 issues=[Foram detectados 2 rostos. Envie uma foto com apenas você.]
+dark -> faces=1 brightness=33.05042287461855 issues=[Foto muito escura. Fique de frente para uma janela ou luz.]
+blur -> faces=1 sharp=4.003691938395478 vs original=417.1499521621517 issues=[Foto desfocada ou tremida. Segure firme e toque para focar.]
+no face -> issues=[Nenhum rosto detectado. Aproxime-se, melhore a luz e mostre o rosto inteiro.]

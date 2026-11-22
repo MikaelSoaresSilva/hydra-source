@@ -1,0 +1,9 @@
+projection image ms=12092
+projection ms=61479 size=723x810
+ change: Textura e poros suavizados em 13% (como após 90 dias de rotina de pele), mantendo barba e sobrancelhas.
+ change: Vermelhidão e manchas reduzidas em ~56% em relação ao tom médio da sua pele.
+ change: Olheiras clareadas 60% em direção ao tom da bochecha (sono, hidratação e cuidados).
+ change: Contorno da mandíbula 1.2% da largura do rosto mais para dentro, simulando menos gordura e inchaço.
+ change: Não foram alterados: olhos, nariz, boca, ossos, cabelo, barba e expressão.
+scores before={geral=88, harmonia=71, simetria=94, estrutura=88, mandibula=99, macas=86, olhos=78, nariz=96, pele=88, cabelo=92, sobrancelhas=100, barba=null, masculinidade=76} after={geral=89, harmonia=73, simetria=95, estrutura=87, mandibula=99, macas=87, olhos=88, nariz=96, pele=93, cabelo=87, sobrancelhas=99, barba=null, masculinidade=75}
+changed sample pixels=8251

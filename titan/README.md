@@ -98,6 +98,10 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Luta reorganizada + abdômen — v3.7
+
+`domain/fight.ts` reescrito em exercícios estruturados (séries, tempo de trabalho, descanso, por lado, foco de cada round) e `blockSteps`, que gera o roteiro completo com tempo (preparar, cada série/round/lado, descansos, trocas de exercício e de bloco). Página Luta com abas Treino · Abdômen · Golpes · Dicas; **cronômetro guiado em tela cheia** (bipe ao começar/descansar, 3-2-1, pausar/voltar/pular, "como fazer" e sinais de reflexo) e botão de cronômetro em cada exercício. Boxe + **Muay Thai** (teep, chute circular, joelhada, cotovelada, clinch, checar) com fase de retorno (semanas 1–2, 60–70%). Biblioteca de 19 golpes (3 passos + erro comum). **Abdômen A/B/C** (reto, infra, oblíquos, transverso e lombar), A no sábado e B no domingo dentro da luta, C na quarta. Sessões de 62 a 89 min.
+
 ## Vídeos no treino facial — v3.6
 
 Aparência → Rosto → treino facial: cada exercício tem "▶ Ver vídeo de como fazer" (`FaceStep.video`). Por padrão abre a busca daquele exercício no YouTube (no APK, o Android abre o app do YouTube); quando há página conferida, ela vem primeiro (drenagem: vídeo com fisioterapeuta no Tua Saúde). Nenhum link de vídeo específico é usado sem ter sido aberto e conferido.

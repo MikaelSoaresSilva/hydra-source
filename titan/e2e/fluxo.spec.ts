@@ -438,23 +438,65 @@ test('luta: sábado e domingo até 90 min, reflexo por som e cardápio de R$ 500
   await page.getByRole('button', { name: 'Começar o treino de luta' }).click();
   await expect(page.getByText(/semana 1 de 8/)).toBeVisible();
 
+  // Domingo: defesa, clinch e quedas
   await page.getByRole('radio', { name: /Domingo/ }).click();
-  await expect(page.getByRole('heading', { name: /Aprender a apanhar \(do jeito seguro\)/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Fundamentos de MMA/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Aprender a apanhar \(seguro\)/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Clinch e base de MMA/ })).toBeVisible();
   const sun = Number((await page.getByTestId('fight-total').textContent())!.replace(/\D/g, ''));
   expect(sun).toBeLessThanOrEqual(90);
 
+  // Sábado: boxe, Muay Thai, reflexo; todo exercício tem cronômetro e "como fazer"
   await page.getByRole('radio', { name: /Sábado/ }).click();
-  await expect(page.getByRole('heading', { name: /Reflexo por som e visão/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Muay Thai: chutes, joelhos e cotovelos/ })).toBeVisible();
   const sat = Number((await page.getByTestId('fight-total').textContent())!.replace(/\D/g, ''));
   expect(sat).toBeLessThanOrEqual(90);
-  const reflex = page.locator('.card').filter({ has: page.getByRole('heading', { name: /Reflexo por som e visão/ }) });
-  await reflex.getByRole('button', { name: /Iniciar rounds/ }).click();
-  await expect(reflex.getByRole('timer')).toContainText('LUTE');
-  await expect(reflex.getByRole('timer')).toContainText('Round 1/4');
-  await expect(reflex.getByTestId('reflex-cue')).toBeVisible();
-  await page.screenshot({ path: `test-results/luta-${info.project.name}.png`, fullPage: true });
-  await reflex.getByRole('button', { name: 'Parar' }).click();
+  const exercises = page.locator('[data-testid^="ex-"]');
+  const n = await exercises.count();
+  expect(n).toBeGreaterThan(15);
+  expect(await page.getByRole('button', { name: /^Cronômetro: / }).count()).toBe(n); // cronômetro em TODOS
+  const mt = page.getByTestId('ex-muaythai');
+  await mt.getByRole('button', { name: 'Como fazer' }).click();
+  await mt.getByText(/Golpes deste exercício/).click();
+  await expect(mt.getByText('Teep (chute frontal empurrando)')).toBeVisible();
+
+  // Cronômetro de um exercício só (aquecimento: polichinelo)
+  await page.getByRole('button', { name: 'Cronômetro: Polichinelo' }).click();
+  const dialog = page.getByRole('dialog', { name: /Cronômetro/ });
+  await expect(dialog.getByTestId('gt-phase')).toContainText('PREPARE-SE');
+  await expect(dialog.getByTestId('gt-clock')).toHaveText('0:10');
+  await dialog.getByRole('button', { name: '▶ Iniciar' }).click();
+  await expect(dialog.getByTestId('gt-clock')).not.toHaveText('0:10', { timeout: 3000 });
+  await dialog.getByRole('button', { name: 'Próximo passo' }).click();
+  await expect(dialog.getByTestId('gt-phase')).toContainText('AGORA');
+  await expect(dialog.getByTestId('gt-clock')).toHaveText(/^(1:00|0:59|0:58)$/);
+  await dialog.getByRole('button', { name: '⏸ Pausar' }).click();
+  await dialog.getByRole('button', { name: '✕ Encerrar' }).click();
+
+  // Treino guiado completo: começa preparando e mostra o reflexo com sinais no bloco certo
+  await page.getByRole('button', { name: /Começar treino guiado/ }).click();
+  await expect(dialog.getByText(/passo 1 de \d+/)).toBeVisible();
+  for (let i = 0; i < 80; i++) {
+    if (await dialog.getByTestId('reflex-cue').isVisible()) break;
+    await dialog.getByRole('button', { name: 'Próximo passo' }).click();
+  }
+  await expect(dialog.getByTestId('reflex-cue')).toBeVisible();
+  await page.screenshot({ path: `test-results/luta-${info.project.name}.png` });
+  await dialog.getByRole('button', { name: '✕ Encerrar' }).click();
+
+  // Abdômen: A, B e C cobrindo todos os músculos
+  await page.getByRole('tab', { name: 'Abdômen' }).click();
+  await page.getByRole('radio', { name: 'C' }).click();
+  await expect(page.getByRole('heading', { name: 'Abdômen C · Força e lombar' }).first()).toBeVisible();
+  await expect(page.getByText('Oblíquos (laterais da cintura)')).toBeVisible();
+  await page.getByRole('button', { name: /Começar abdômen C/ }).click();
+  await expect(dialog.getByTestId('gt-cue')).toBeVisible();
+  await page.screenshot({ path: `test-results/abdomen-${info.project.name}.png` });
+  await dialog.getByRole('button', { name: '✕ Encerrar' }).click();
+
+  // Golpes: explicação de cada movimento
+  await page.getByRole('tab', { name: 'Golpes' }).click();
+  await expect(page.getByText('Chute circular (canela)')).toBeVisible();
+  await expect(page.getByText(/Erro comum/).first()).toBeVisible();
 
   // Cardápio econômico com preço teto
   await page.getByRole('link', { name: 'Nutrição' }).first().click();

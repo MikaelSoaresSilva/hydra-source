@@ -1,0 +1,5 @@
+-keepattributes *Annotation*, InnerClasses, Signature
+-keep,includedescriptorclasses class com.aurea.fit.**$$serializer { *; }
+-keepclassmembers class com.aurea.fit.** { *** Companion; }
+-keepclasseswithmembers class com.aurea.fit.** { kotlinx.serialization.KSerializer serializer(...); }
+-dontwarn org.slf4j.**

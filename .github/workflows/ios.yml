@@ -1,0 +1,108 @@
+# Compila o app Áurea para iPhone (arquivo .ipa) num Mac do GitHub,
+# testa no simulador de iPhone e publica o resultado numa "Release".
+name: Áurea para iPhone (IPA)
+
+on:
+  push:
+    branches: ['ccr-*']
+    paths:
+      - 'AureaFit/ios-app/**'
+      - 'AureaFit/web/server/public/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-build
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: AureaFit/ios-app
+    env:
+      VERSION: '1.1.0'
+      BUILD_NUMBER: '2'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar Capacitor e plugins
+        run: npm install --no-audit --no-fund
+
+      - name: Copiar o app (mesma versão publicada na web)
+        run: npm run prepare-web && ls www
+
+      - name: Criar o projeto iOS
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Ícone, nome e permissões
+        run: |
+          cp resources/icon-1024.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+          PL=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Áurea" "$PL"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Para tirar fotos de progresso. Elas ficam somente no seu iPhone." "$PL" || true
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Para escolher fotos de progresso. Elas ficam somente no seu iPhone." "$PL" || true
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PL" || true
+          /usr/libexec/PlistBuddy -c "Print" "$PL"
+
+      - name: Compilar para o simulador
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION=$VERSION CURRENT_PROJECT_VERSION=$BUILD_NUMBER build | tail -n 30
+
+      - name: Testar no simulador de iPhone (abrir o app e fotografar a tela)
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          echo "Simulador: $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/sim/Build/Products/Debug-iphonesimulator/App.app
+          xcrun simctl launch "$UDID" com.aurea.fit
+          sleep 25
+          xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/simulador-iphone.png"
+          echo "----- registros do app (console) -----"
+          xcrun simctl spawn "$UDID" log show --last 2m --style compact --predicate 'process == "App"' | grep -iE "⚡️|error|exception|\[log\]|\[error\]" | tail -n 60 || true
+
+      - name: Gerar o arquivo .ipa (sem assinatura)
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -archivePath build/Aurea.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION=$VERSION CURRENT_PROJECT_VERSION=$BUILD_NUMBER archive | tail -n 30
+          mkdir -p build/Payload
+          cp -R build/Aurea.xcarchive/Products/Applications/App.app build/Payload/
+          (cd build && zip -qry "$GITHUB_WORKSPACE/Aurea-$VERSION.ipa" Payload)
+          ls -la "$GITHUB_WORKSPACE"/*.ipa
+
+      - name: Publicar na página de Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          gh release delete ios-latest --yes --cleanup-tag || true
+          gh release create ios-latest "Aurea-$VERSION.ipa" simulador-iphone.png \
+            --prerelease --target "$GITHUB_SHA" --title "Áurea $VERSION para iPhone (IPA)" \
+            --notes "App nativo do Áurea para iPhone (arquivo .ipa sem assinatura). Instale com Sideloadly ou AltStore usando o seu Apple ID — instruções no README (AureaFit/README.md). A imagem mostra o app aberto no simulador de iPhone."
+
+      - name: Guardar artefatos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurea-ios
+          path: |
+            ${{ github.workspace }}/*.ipa
+            ${{ github.workspace }}/simulador-iphone.png
+          if-no-files-found: warn

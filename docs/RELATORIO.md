@@ -58,3 +58,13 @@ ajustes → simulador (indisponível, sem fingir) → exclusão de todos os dado
 - IA externa, simulador e nuvem têm código e testes com respostas simuladas, mas não foram testados contra as APIs reais (precisam das suas chaves).
 - Fotos de perfil completo (90°) podem não ser detectadas pelo MediaPipe; 60–75° funciona melhor.
 - Referências de proporção vêm do rosto médio canônico do MediaPipe e de convenções estéticas; não representam todas as etnias. Por isso a largura do nariz não entra na nota.
+
+## Versão 1.1.0 (22/11/2026)
+
+Novidades:
+- Cartão de resultado em 3 páginas deslizáveis: Geral, Potencial, Masculinidade, Qualidade da pele, Mandíbula, Maçãs do rosto, Olhos, Nariz, Simetria, Harmonia, Sobrancelhas, Cabelo, Estrutura, Barba, Acne, Olheiras, Textura e Tom da pele.
+- Nota de Masculinidade (9 sinais de dimorfismo facial; não entra na nota geral).
+- "Defeitos e soluções": cada ponto fraco medido vira um cartão com soluções (massagem, skin care, grooming, hábitos, treino, profissional), passo a passo, frequência, prazo, custo, cuidados, força da evidência e links de vídeos (YouTube) e produtos (Mercado Livre/Amazon).
+- "Você em 90 dias": projeção da foto feita no aparelho (pele, manchas, olheiras e, opcionalmente, contorno por perda de gordura) com comparação arrastável e notas medidas nas duas fotos. Versão por IA opcional se o backend estiver configurado.
+
+Testes (GitHub Actions, emulador Android 14): 17 testes unitários, 4 testes de pipeline com foto real e o fluxo completo de UI — todos aprovados. Projeção no emulador: ~12 s para a imagem (emulador x86 sem aceleração; no celular é bem mais rápido).

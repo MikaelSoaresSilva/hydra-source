@@ -4,7 +4,7 @@
 
 > O nome vem da **proporção áurea** — a ideia de equilíbrio entre cintura, quadril e pernas que inspirou a "Meta Áurea" (referência estética do app).
 
-- **APK pronto:** [`releases/Aurea-1.0.0.apk`](releases/Aurea-1.0.0.apk) (1,8 MB, Android 7.0 ou superior)
+- **APK pronto:** [`releases/Aurea-1.1.0.apk`](releases/Aurea-1.1.0.apk) (1,8 MB, Android 7.0 ou superior)
 - **Android:** APK acima. **iPhone:** versão web instalável em <https://aurea-treino.netlify.app> (veja a seção "Versão para iPhone").
 - O app é **educativo** e não substitui médico(a), nutricionista ou educador(a) físico(a).
 
@@ -40,7 +40,7 @@ Arquivos **APK só instalam em Android** — o iPhone recusa esse formato por re
 
 ## 1. Como instalar (passo a passo, sem conhecimento técnico)
 
-1. No celular Android, abra este repositório no navegador e toque em `releases/Aurea-1.0.0.apk` → **Download** (ou receba o arquivo pelo WhatsApp/Drive/cabo USB).
+1. No celular Android, abra este repositório no navegador e toque em `releases/Aurea-1.1.0.apk` → **Download** (ou receba o arquivo pelo WhatsApp/Drive/cabo USB).
 2. Toque no arquivo baixado. O Android pode avisar *"Por segurança, seu telefone não tem permissão para instalar apps desta fonte"* → toque em **Configurações** → ative **Permitir desta fonte** → volte.
 3. Toque em **Instalar** e depois em **Abrir**.
 4. Crie sua conta (nome, e-mail e senha — tudo fica salvo só no celular), responda o questionário (≈5 min) e pronto.

@@ -13,6 +13,24 @@
 </p>
 
 
+## App nativo para iPhone (arquivo .ipa)
+
+Além da versão web, existe um **app nativo de iPhone** (`AureaFit/ios-app`), gerado automaticamente num **Mac do GitHub** a cada atualização (workflow `.github/workflows/ios.yml`). Ele usa o mesmo app e as mesmas regras, e tem **lembretes locais do próprio iOS** — funcionam sem internet e sem servidor.
+
+**Baixar:** página **Releases** do repositório → `ios-latest` → `Aurea-1.1.0.ipa` (https://github.com/MikaelSoaresSilva/hydra-source/releases/tag/ios-latest).
+
+**Por que precisa de um passo extra:** a Apple só deixa instalar no iPhone apps **assinados** com uma conta Apple. O `.ipa` é gerado sem assinatura; a assinatura é feita na hora de instalar:
+
+**Opção A — grátis, com um computador (Windows ou Mac) e o Apple ID dela:**
+1. Instale o **Sideloadly** (sideloadly.io) no computador (no Windows, instale também o iTunes e o iCloud do site da Apple).
+2. Conecte o iPhone por cabo, abra o Sideloadly, arraste o `Aurea-1.1.0.ipa`, digite o **Apple ID** e clique em **Start**.
+3. No iPhone: **Ajustes → Geral → VPN e Gerenciamento de Dispositivos** → toque no Apple ID → **Confiar**. No iOS 16+, ative também **Ajustes → Privacidade e Segurança → Modo de Desenvolvedor** (o iPhone reinicia).
+4. Com Apple ID gratuito, a Apple exige **reinstalar a cada 7 dias** (os dados ficam). O **AltStore** (altstore.io) faz essa renovação automaticamente pelo Wi-Fi.
+
+**Opção B — sem renovações, com conta de desenvolvedor Apple (US$ 99/ano):** com a conta, o app pode ser distribuído pelo **TestFlight** (convite por e-mail, instala como app normal) ou publicado na App Store. É preciso configurar os certificados da conta no workflow (podemos fazer isso quando a conta existir).
+
+**Sem nada disso:** a versão web (abaixo) funciona no iPhone hoje, com as mesmas telas, offline e com lembretes.
+
 ## Versão para iPhone (web app instalável)
 
 Arquivos **APK só instalam em Android** — o iPhone recusa esse formato por regra da Apple. Para iPhone existe a versão **web app (PWA)**, com as mesmas telas e **exatamente as mesmas regras** de treino, dieta, segurança e ajustes: o código Kotlin da pasta `domain/` é compilado para JavaScript (módulo `web/`), então os cálculos são idênticos aos do Android.

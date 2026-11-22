@@ -3,6 +3,7 @@ package com.ascend.faceai.analysis
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -321,11 +322,62 @@ object FaceAnalyzer {
             recs = { _ -> beard.recs + listOf("Para o formato $shape: ${shapeBeardAdvice(shape)}") },
             unavailable = if (!beard.present) "Barba não detectada (ou clara demais para a câmera). Dicas de estilo abaixo." else null)
 
+        // Masculinidade (dimorfismo facial) — não entra na nota geral
+        run {
+            val lipH = dist(lm[LM.UPPER_LIP], lm[LM.LOWER_LIP]) / mouthW
+            val lowerShare = lower / (lower + middle)
+            val chinH = dist(stomion, menton) / faceW
+            val browEye = (bhA + bhB) / 2
+            // z > 0 = na direção típica masculina. Referência neutra = rosto médio canônico do MediaPipe.
+            fun z(v: Double, neutral: Double, tol: Double, sign: Double) = (sign * (v - neutral) / tol).coerceIn(-3.0, 3.0)
+            fun mScore(zz: Double) = 100.0 / (1.0 + exp(-1.4 * zz))
+            val mm = ArrayList<M>()
+            val zs = ArrayList<Pair<Double, Double>>()
+            fun add(key: String, label: String, v: Double, neutral: Double, tol: Double, sign: Double, w: Double, refTxt: String, note: String = "") {
+                val zz = z(v, neutral, tol, sign); zs += zz to w
+                mm += M(key, label, v, f2(v), refTxt, mScore(zz), w, note)
+            }
+            add("m_jaw", "Largura da mandíbula ÷ largura do rosto", jawRatio, 0.775, 0.04, 1.0, 1.5, "Média 0,78 · mais largo = mais masculino")
+            add("m_brow", "Altura das sobrancelhas acima dos olhos", browEye, 0.885, 0.12, -1.0, 1.2, "Média 0,89 · mais baixa = mais masculino",
+                "Muda com a expressão: sobrancelhas levantadas reduzem esta nota.")
+            add("m_chin", "Altura do queixo (boca→queixo ÷ largura)", chinH, 0.335, 0.03, 1.0, 1.0, "Média 0,34 · mais alto = mais masculino")
+            add("m_lower", "Terço inferior ÷ (médio + inferior)", lowerShare, 0.512, 0.025, 1.0, 0.8, "Média 0,51 · maior = mais masculino")
+            add("m_lips", "Espessura dos lábios ÷ largura da boca", lipH, 0.399, 0.06, -1.0, 0.8, "Média 0,40 · mais finos = mais masculino",
+                "Sorriso ou boca entreaberta alteram esta medida.")
+            add("m_eyes", "Tamanho do olho ÷ largura do rosto", eyeW / faceW, 0.169, 0.015, -1.0, 0.7, "Média 0,17 · menor = mais masculino")
+            add("m_fwhr", "Índice largura/altura facial (fWHR)", fwhr, 1.80, 0.12, 1.0, 0.5, "Média 1,80 · maior = mais masculino")
+            val cov = beard.metrics.firstOrNull { it.key == "beard_cov" }?.value ?: 0.0
+            if (beard.present) {
+                val zz = ((cov - 0.15) / 0.15).coerceIn(0.0, 3.0); zs += zz to 0.8
+                mm += M("m_beard", "Pelos faciais (barba)", cov, pct(cov), "Barba visível soma pontos", mScore(zz), 0.8, "Grooming: modificável.")
+            }
+            run {
+                val zz = ((browDensity - 15.0) / 8.0).coerceIn(-2.0, 2.0); zs += zz to 0.6
+                mm += M("m_brow_dens", "Densidade das sobrancelhas", browDensity, f1(browDensity), "≥ 15 = sobrancelha marcada", mScore(zz), 0.6, "Afinar demais reduz esta medida.")
+            }
+            val zMean = zs.sumOf { it.first * it.second } / zs.sumOf { it.second }
+            val mFinal = mScore(zMean)
+            val cat = category("masculinidade", "Masculinidade", mm, q * 0.65, norm(lm[LM.GONION_A]),
+                listOf(Modifiability.LOW, Modifiability.GROOMING, Modifiability.SELF_CARE),
+                limits = listOf(
+                    "Mede quanto os traços se afastam do rosto médio na direção que estudos de dimorfismo facial associam a rostos masculinos. Não mede caráter, hormônios nem valor pessoal.",
+                    "Referências calibradas no rosto médio do modelo MediaPipe; as faixas de variação são aproximadas, não vêm de uma população brasileira.",
+                    "Expressão (sorriso, sobrancelhas levantadas) e lente grande-angular alteram as medidas. Não entra na nota geral."
+                ),
+                recs = { s -> buildList {
+                    if ((s ?: 100) < 60) add("Os fatores que você controla: percentual de gordura mais baixo (mandíbula e queixo aparecem mais), barba bem desenhada (se crescer), sobrancelhas naturais sem afinar e corte com laterais mais curtas.")
+                    add("Estrutura óssea (largura da mandíbula, altura do queixo) não muda com exercícios faciais em adultos.")
+                } })
+            // A nota final usa a média dos desvios (z), não a média das notas parciais.
+            cats += cat.copy(score = mFinal.roundToInt().coerceIn(0, 100),
+                justification = "Média ponderada de ${zs.size} sinais de dimorfismo facial (z médio ${f2(zMean)}; 0 = rosto médio). " + cat.justification.substringAfter(". ", ""))
+        }
+
         // ---------- Nota geral e potencial ----------
         val weights = mapOf("harmonia" to 0.14, "simetria" to 0.10, "estrutura" to 0.08, "mandibula" to 0.10, "macas" to 0.06,
             "olhos" to 0.10, "nariz" to 0.07, "pele" to 0.14, "cabelo" to 0.09, "sobrancelhas" to 0.06, "barba" to 0.06)
         val improvable = mapOf("pele" to 0.6, "cabelo" to 0.7, "sobrancelhas" to 0.6, "barba" to 0.7, "olhos" to 0.1, "mandibula" to 0.15, "macas" to 0.1)
-        val scored = cats.filter { it.available && it.score != null }
+        val scored = cats.filter { it.available && it.score != null && it.id != "masculinidade" }
         val wsum = scored.sumOf { weights[it.id] ?: 0.05 }
         val overall = (scored.sumOf { it.score!! * (weights[it.id] ?: 0.05) } / wsum).roundToInt()
         val potential = (scored.sumOf { (100 - it.score!!) * (weights[it.id] ?: 0.05) * (improvable[it.id] ?: 0.0) } / wsum).roundToInt()

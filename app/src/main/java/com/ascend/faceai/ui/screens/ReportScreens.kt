@@ -36,6 +36,8 @@ import androidx.navigation.NavHostController
 import com.ascend.faceai.LocalContainer
 import com.ascend.faceai.analysis.CategoryResult
 import com.ascend.faceai.analysis.FaceReport
+import com.ascend.faceai.analysis.Solutions
+import com.ascend.faceai.ui.components.ResultCards
 import com.ascend.faceai.data.PdfExporter
 import com.ascend.faceai.ui.Routes
 import com.ascend.faceai.ui.components.BulletList
@@ -82,6 +84,23 @@ fun ReportScreen(nav: NavHostController, id: String) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 18.dp).testTag("report")) {
             Eyebrow(ptDate.format(Date(r.createdAt)) + " · metodologia v${r.methodologyVersion}")
             Spacer(Modifier.height(10.dp))
+            ResultCards(r, photo, onStat = { st -> st.categoryId?.let { nav.navigate(Routes.category(id, it)) } })
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PrimaryButton("Defeitos e soluções", Modifier.weight(1f).testTag("open_solutions")) { nav.navigate(Routes.solutions(id)) }
+                SecondaryButton("Você em 90 dias", Modifier.weight(1f).testTag("open_projection_report")) { nav.navigate(Routes.projection(id)) }
+            }
+            Spacer(Modifier.height(14.dp))
+            val defects = remember(r) { Solutions.forReport(r) }
+            if (defects.isNotEmpty()) {
+                Eyebrow("Prioridades (${defects.size} pontos a melhorar)", Ac.Warn)
+                Spacer(Modifier.height(8.dp))
+                defects.take(3).forEach { d -> DefectCard(d); Spacer(Modifier.height(10.dp)) }
+                if (defects.size > 3) SecondaryButton("Ver todos os ${defects.size} pontos e soluções", Modifier.fillMaxWidth()) { nav.navigate(Routes.solutions(id)) }
+                Spacer(Modifier.height(14.dp))
+            }
+            Eyebrow("Mapa do rosto")
+            Spacer(Modifier.height(8.dp))
             if (photo != null) {
                 FaceMap(photo, r.frontalLandmarks, r.categories, onRegion = { nav.navigate(Routes.category(id, it.id)) }, modifier = Modifier.fillMaxWidth())
                 Text("Toque nos pontos coloridos para ver cada região.", style = MaterialTheme.typography.bodySmall, color = Ac.TextLow, modifier = Modifier.padding(top = 6.dp))
@@ -223,6 +242,13 @@ fun CategoryScreen(nav: NavHostController, id: String, catId: String) {
             if (cat.strengths.isNotEmpty()) Section("Ponto forte", cat.strengths, Ac.Good)
             if (cat.opportunities.isNotEmpty()) Section("Oportunidade", cat.opportunities, Ac.Warn)
             if (cat.recommendations.isNotEmpty()) Section("Recomendação", cat.recommendations, Ac.Violet)
+            val catDefects = remember(r) { r?.let { rep -> Solutions.forReport(rep).filter { it.categoryId == catId } }.orEmpty() }
+            if (catDefects.isNotEmpty()) {
+                Eyebrow("Soluções para esta região", Ac.Good)
+                Spacer(Modifier.height(8.dp))
+                catDefects.forEach { d -> DefectCard(d, startExpanded = true); Spacer(Modifier.height(10.dp)) }
+                Spacer(Modifier.height(4.dp))
+            }
             GlassCard(Modifier.fillMaxWidth()) {
                 Eyebrow("Medições")
                 Spacer(Modifier.height(6.dp))

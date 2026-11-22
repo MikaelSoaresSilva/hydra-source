@@ -64,7 +64,11 @@ class FacePipelineTest {
             log("CAT ${cat.id} score=${cat.score} conf=${"%.2f".format(cat.confidence)} available=${cat.available} ${cat.unavailableReason ?: ""}")
             cat.metrics.forEach { m -> log("   ${m.key}: ${m.display} (ref ${m.reference}) -> ${m.score}") }
         }
-        assertEquals(11, report.categories.size)
+        assertEquals(12, report.categories.size)
+        val masc = report.category("masculinidade")!!; assertNotNull(masc.score); assertTrue(masc.score!! in 0..100)
+        val defects = com.ascend.faceai.analysis.Solutions.forReport(report)
+        log("defects=${defects.size} " + defects.joinToString { "${it.id}(${it.severity})" })
+        assertTrue(defects.all { d -> d.solutions.isNotEmpty() && d.solutions.all { it.steps.isNotEmpty() } })
         assertTrue(report.overall in 1..100)
         listOf("harmonia", "simetria", "olhos", "nariz", "mandibula").forEach { id ->
             val s = report.category(id)?.score
@@ -109,6 +113,33 @@ class FacePipelineTest {
         assertEquals(0, pNone.quality.facesDetected)
         log("no face -> issues=${pNone.quality.issues}")
         flush("quality")
+    }
+
+    @Test
+    fun projection90Days_changesSkinNotIdentity() = runBlocking {
+        val c = app.container
+        c.repo.deleteAllLocal()
+        val p = c.engine.prepare(portrait(), CaptureType.FRONTAL)
+        val r = c.repo.analyzeAndSave(listOf(PreparedPhoto(p.type, p.frame, p.crop, p.quality.copy(ok = true, issues = emptyList()))))
+        val t0 = System.currentTimeMillis()
+        val out = c.repo.project90(r.id, includeFatLoss = true)
+        log("projection ms=${System.currentTimeMillis() - t0} size=${out.after.width}x${out.after.height}")
+        out.changes.forEach { log(" change: $it") }
+        log("scores before=${out.scoresBefore} after=${out.scoresAfter}")
+        assertEquals(out.before.width, out.after.width)
+        // Fundo (canto da imagem) intacto; rosto alterado
+        assertEquals(out.before.getPixel(2, 2), out.after.getPixel(2, 2))
+        var changed = 0; val w = out.before.width; val h = out.before.height
+        for (y in 0 until h step 4) for (x in 0 until w step 4) if (out.before.getPixel(x, y) != out.after.getPixel(x, y)) changed++
+        log("changed sample pixels=$changed")
+        assertTrue(changed > 200)
+        // A foto projetada continua sendo reconhecida como o mesmo rosto (landmarks detectados)
+        assertTrue(out.scoresAfter.isNotEmpty())
+        val f = c.repo.exportProjection(out.before, out.after)
+        val dir = inst.targetContext.getExternalFilesDir("results")!!
+        f.copyTo(File(dir, "projection_90.jpg"), overwrite = true)
+        c.repo.deleteAllLocal()
+        flush("projection")
     }
 
     @Test

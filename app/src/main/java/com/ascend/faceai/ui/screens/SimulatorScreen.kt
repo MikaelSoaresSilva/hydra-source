@@ -47,6 +47,7 @@ import com.ascend.faceai.LocalContainer
 import com.ascend.faceai.data.AppSettings
 import com.ascend.faceai.ui.Routes
 import com.ascend.faceai.ui.components.EmptyState
+import com.ascend.faceai.ui.components.BeforeAfter
 import com.ascend.faceai.ui.components.Eyebrow
 import com.ascend.faceai.ui.components.GlassCard
 import com.ascend.faceai.ui.components.PrimaryButton
@@ -135,23 +136,5 @@ fun SimulatorScreen(nav: NavHostController) {
             error?.let { Text(it, color = Ac.Bad, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
             Spacer(Modifier.height(28.dp))
         }
-    }
-}
-
-@Composable
-private fun BeforeAfter(before: Bitmap, after: Bitmap) {
-    var split by remember { mutableFloatStateOf(0.5f) }
-    Column {
-        BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(before.width.toFloat() / before.height).clip(RoundedCornerShape(22.dp))) {
-            val mw = maxWidth
-            Image(after.asImageBitmap(), "Simulação", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            Box(Modifier.fillMaxHeight().width(mw * split).clipToBounds()) {
-                Image(before.asImageBitmap(), "Atual", contentScale = ContentScale.Crop, alignment = androidx.compose.ui.Alignment.CenterStart,
-                    modifier = Modifier.wrapContentWidth(androidx.compose.ui.Alignment.Start, unbounded = true).width(mw).fillMaxHeight())
-            }
-            Box(Modifier.offset(x = mw * split - 1.dp).fillMaxHeight().width(2.dp).background(Ac.TextHi))
-        }
-        Slider(split, { split = it }, colors = SliderDefaults.colors(thumbColor = Ac.Blue, activeTrackColor = Ac.Blue, inactiveTrackColor = Ac.SurfaceHi))
-        Text("Arraste: esquerda = atual · direita = simulação", style = MaterialTheme.typography.bodySmall, color = Ac.TextLow)
     }
 }

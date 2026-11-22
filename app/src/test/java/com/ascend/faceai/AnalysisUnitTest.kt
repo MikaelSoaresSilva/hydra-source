@@ -122,4 +122,55 @@ class AnalysisUnitTest {
     }
 
     @Test fun captureTypes_haveInstructions() = CaptureType.entries.forEach { assertTrue(it.instruction.length > 10) }
+
+    // ---------- Soluções e projeção ----------
+    private fun weakReport(): FaceReport {
+        fun m(key: String, sc: Double) = MetricResult(key, key, 0.0, "x", "ref", sc)
+        fun c(id: String, sc: Int, vararg ms: MetricResult) = CategoryResult(id, id, sc, 0.6, metrics = ms.toList())
+        return FaceReport("t", 0, overall = 50, potential = 10, overallConfidence = 0.6, faceShape = "Oval", faceShapeExplanation = "", summary = "",
+            categories = listOf(
+                c("pele", 38, m("spots", 30.0), m("redness", 50.0), m("texture", 40.0), m("shine", 45.0), m("under_eye_skin", 35.0)),
+                c("mandibula", 32, m("jaw_def", 30.0)), c("macas", 37), c("masculinidade", 55), c("cabelo", 90)),
+            strengths = emptyList(), improvements = emptyList(), photos = emptyList(), descriptive = emptyList(), profileAvailable = false, beardDetected = false)
+    }
+
+    @Test fun solutions_coverWeakPointsWithStepsAndValidLinks() {
+        val d = com.ascend.faceai.analysis.Solutions.forReport(weakReport())
+        val ids = d.map { it.id }
+        assertTrue(ids.containsAll(listOf("acne", "mandibula", "macas", "olheiras", "oleosidade", "masculinidade")))
+        assertTrue("cabelo bom não vira defeito", "cabelo" !in ids)
+        assertEquals(3, d.first().severity)
+        d.forEach { def ->
+            assertTrue(def.solutions.isNotEmpty())
+            def.solutions.forEach { s -> assertTrue(s.steps.isNotEmpty()); s.links.forEach { l -> assertTrue(l.url, l.url.matches(Regex("https://[A-Za-z0-9./?=&+%_-]+"))) } }
+        }
+        val kinds = d.flatMap { it.solutions }.map { it.kind }.toSet()
+        assertTrue(com.ascend.faceai.analysis.SolKind.MASSAGEM in kinds && com.ascend.faceai.analysis.SolKind.SKINCARE in kinds)
+        assertTrue(d.first { it.id == "mandibula" }.honestNote!!.contains("não aumentam o osso"))
+    }
+
+    @Test fun solutions_goodReportHasNoDefects() {
+        val r = weakReport().let { r -> r.copy(categories = r.categories.map { c -> c.copy(score = 92, metrics = c.metrics.map { it.copy(score = 95.0) }) }) }
+        assertTrue(com.ascend.faceai.analysis.Solutions.forReport(r).isEmpty())
+    }
+
+    @Test fun projection_onlyTouchesFace_andKeepsSize() {
+        val w = 200; val h = 240
+        val px = IntArray(w * h) { i -> val x = i % w; val y = i / w; if ((x * 7 + y * 13) % 11 == 0) 0xFFB07060.toInt() else 0xFFD8A890.toInt() }
+        // rosto sintético: pontos espalhados numa elipse (só os índices usados importam)
+        val lm = FloatArray(478 * 2)
+        for (k in 0 until 478) { val a = k * 2.399; val rr = 0.15 + 0.2 * ((k * 37) % 100) / 100.0; lm[2 * k] = (0.5 + rr * kotlin.math.cos(a) * 0.8).toFloat(); lm[2 * k + 1] = (0.5 + rr * kotlin.math.sin(a)).toFloat() }
+        com.ascend.faceai.analysis.LM.FACE_OVAL.forEachIndexed { j, idx -> val a = 2 * Math.PI * j / com.ascend.faceai.analysis.LM.FACE_OVAL.size; lm[2 * idx] = (0.5 + 0.38 * kotlin.math.sin(a)).toFloat(); lm[2 * idx + 1] = (0.5 - 0.42 * kotlin.math.cos(a)).toFloat() }
+        val res = com.ascend.faceai.analysis.Projection.project(px, w, h, lm.toList(), com.ascend.faceai.analysis.Projection.Options(0.7, 0.7, 0.0, 0.0))
+        assertEquals(px.size, res.argb.size)
+        assertEquals("canto fora do rosto intacto", px[0], res.argb[0])
+        assertTrue("pele foi suavizada", (0 until px.size).count { px[it] != res.argb[it] } > 1000)
+        assertTrue(res.changes.isNotEmpty())
+    }
+
+    @Test fun lab_roundTrip() {
+        val lab = com.ascend.faceai.analysis.Projection.toLab(200, 150, 120)
+        val back = com.ascend.faceai.analysis.Projection.fromLab(lab[0], lab[1], lab[2])
+        assertTrue(abs(back[0] - 200) <= 1 && abs(back[1] - 150) <= 1 && abs(back[2] - 120) <= 1)
+    }
 }

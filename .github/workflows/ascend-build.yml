@@ -79,6 +79,7 @@ jobs:
           cp -r ../app/build/reports/androidTests reports/android 2>/dev/null || true
           mkdir -p wrapper; cp ../gradlew ../gradlew.bat wrapper/ 2>/dev/null || true; cp ../gradle/wrapper/gradle-wrapper.jar wrapper/ 2>/dev/null || true
           ls -la ../app/build/outputs/apk/debug/ > apk-ls.txt 2>&1 || true
+          cp ../app/build/outputs/apk/debug/app-debug.apk AscendFaceAI-debug.apk 2>/dev/null || true
           echo "build=${{ steps.build.outcome }} backend=${{ steps.backend.outcome }} emu=${{ steps.emu.outcome }} sha=${{ github.sha }} run=${{ github.run_id }}" > status.txt
           git init -q && git checkout -q -b ascend-ci-logs && git add -A && git -c user.name=ci -c user.email=ci@example.com commit -qm "logs ${{ github.sha }} [skip ci]"
           git push -f -q https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} ascend-ci-logs

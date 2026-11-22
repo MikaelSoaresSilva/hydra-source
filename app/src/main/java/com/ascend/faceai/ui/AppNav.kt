@@ -42,6 +42,8 @@ import com.ascend.faceai.ui.screens.MethodologyScreen
 import com.ascend.faceai.ui.screens.OnboardingScreen
 import com.ascend.faceai.ui.screens.PlanScreen
 import com.ascend.faceai.ui.screens.PrivacyScreen
+import com.ascend.faceai.ui.screens.ProjectionScreen
+import com.ascend.faceai.ui.screens.SolutionsScreen
 import com.ascend.faceai.ui.screens.ProcessingScreen
 import com.ascend.faceai.ui.screens.ReportScreen
 import com.ascend.faceai.ui.screens.ScanScreen
@@ -68,6 +70,10 @@ object Routes {
     const val SIMULATOR = "simulator"
     const val PRIVACY = "privacy"
     const val METHODOLOGY = "methodology"
+    const val SOLUTIONS = "solutions/{id}"
+    const val PROJECTION = "projection/{id}"
+    fun solutions(id: String) = "solutions/$id"
+    fun projection(id: String) = "projection/$id"
     fun report(id: String) = "report/$id"
     fun category(id: String, cat: String) = "category/$id/$cat"
     fun compare(a: String, b: String) = "compare/$a/$b"
@@ -154,6 +160,12 @@ fun AppRoot() {
                     CompareScreen(nav, it.arguments?.getString("a").orEmpty(), it.arguments?.getString("b").orEmpty())
                 }
                 composable(Routes.SIMULATOR) { SimulatorScreen(nav) }
+                composable(Routes.SOLUTIONS, arguments = listOf(navArgument("id") { type = NavType.StringType })) {
+                    SolutionsScreen(nav, it.arguments?.getString("id").orEmpty())
+                }
+                composable(Routes.PROJECTION, arguments = listOf(navArgument("id") { type = NavType.StringType })) {
+                    ProjectionScreen(nav, it.arguments?.getString("id").orEmpty())
+                }
                 composable(Routes.PRIVACY) { PrivacyScreen { nav.popBackStack() } }
                 composable(Routes.METHODOLOGY) { MethodologyScreen { nav.popBackStack() } }
                 composable("cloud") { LoginScreen(onDone = { nav.popBackStack() }, onBack = { nav.popBackStack() }) }

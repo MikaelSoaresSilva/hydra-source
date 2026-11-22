@@ -90,6 +90,45 @@ class AnalysisRepository(
         return msg
     }
 
+    // ---- Projeção de 90 dias ----
+    class ProjectionOut(
+        val before: Bitmap, val after: Bitmap, val changes: List<String>,
+        /** Notas medidas pelo próprio app na foto atual e na foto projetada (mesmo processo para as duas). */
+        val scoresBefore: Map<String, Int?>, val scoresAfter: Map<String, Int?>
+    )
+
+    suspend fun project90(id: String, includeFatLoss: Boolean): ProjectionOut = withContext(Dispatchers.Default) {
+        val r = get(id) ?: error("Análise não encontrada.")
+        val before = photo(id) ?: error("A foto desta análise foi apagada.")
+        if (r.frontalLandmarks.size < 468 * 2) error("Esta análise não tem os pontos do rosto salvos.")
+        val w = before.width; val h = before.height
+        val px = IntArray(w * h).also { before.getPixels(it, 0, w, 0, 0, w, h) }
+        val res = com.ascend.faceai.analysis.Projection.project(px, w, h, r.frontalLandmarks, com.ascend.faceai.analysis.Projection.optionsFor(r, includeFatLoss))
+        val after = Bitmap.createBitmap(res.argb, w, h, Bitmap.Config.ARGB_8888)
+        fun measure(b: Bitmap): Map<String, Int?> = runCatching {
+            val p = engine.prepare(b, CaptureType.FRONTAL)
+            val f = p.frame ?: return@runCatching emptyMap<String, Int?>()
+            val rep = FaceAnalyzer.analyze("proj", System.currentTimeMillis(), mapOf(CaptureType.FRONTAL to f), mapOf(CaptureType.FRONTAL to p.quality))
+            mapOf("geral" to rep.overall) + rep.categories.associate { it.id to it.score }
+        }.getOrElse { emptyMap() }
+        ProjectionOut(before, after, res.changes, measure(before), measure(after))
+    }
+
+    /** Salva a imagem (antes | depois) em cache/exports para compartilhar. Não vai para a galeria. */
+    fun exportProjection(before: Bitmap, after: Bitmap): java.io.File {
+        val out = Bitmap.createBitmap(before.width * 2 + 24, before.height, Bitmap.Config.ARGB_8888)
+        val cv = android.graphics.Canvas(out)
+        cv.drawColor(android.graphics.Color.BLACK)
+        cv.drawBitmap(before, 0f, 0f, null); cv.drawBitmap(after, before.width + 24f, 0f, null)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = before.width / 16f; setShadowLayer(6f, 0f, 2f, android.graphics.Color.BLACK) }
+        cv.drawText("Hoje", 24f, paint.textSize + 20f, paint)
+        cv.drawText("90 dias (simulação)", before.width + 48f, paint.textSize + 20f, paint)
+        val dir = java.io.File(context.cacheDir, "exports").apply { mkdirs() }
+        val f = java.io.File(dir, "ascend-projecao-90-dias.jpg")
+        f.outputStream().use { out.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+        return f
+    }
+
     // ---- Nuvem ----
     suspend fun syncNow(): String {
         val local = all()

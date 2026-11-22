@@ -10,6 +10,8 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -90,7 +92,21 @@ class UiFlowTest {
         inst.runOnMainSync { app.scan.photos[CaptureType.FRONTAL] = PreparedPhoto(p.type, p.frame, p.crop, p.quality.copy(ok = true, issues = emptyList())) }
         compose.waitForIdle(); shot("08_scanner_ready")
         compose.onNodeWithTag("analyze").performClick()
-        waitTag("report", 60_000); shot("09_report")
+        waitTag("report", 60_000); Thread.sleep(1500); shot("09_report")
+        // Cartão de resultado: página 2 e 3
+        compose.onNodeWithTag("result_cards").performTouchInput { swipeLeft() }; compose.waitForIdle(); Thread.sleep(1300); shot("09b_card_page2")
+        compose.onNodeWithTag("result_cards").performTouchInput { swipeLeft() }; compose.waitForIdle(); Thread.sleep(1300); shot("09c_card_page3")
+        // Defeitos e soluções
+        compose.onNodeWithTag("open_solutions").performScrollTo().performClick()
+        waitTag("solutions"); Thread.sleep(800); shot("09d_solutions")
+        compose.onNodeWithTag("open_projection").performScrollTo(); shot("09e_solutions_bottom")
+        // Projeção de 90 dias
+        compose.onNodeWithTag("open_projection").performClick()
+        waitText("O que mudou na simulação", 90_000); Thread.sleep(800); shot("09f_projection")
+        compose.onNodeWithTag("share_projection").performScrollTo(); shot("09g_projection_bottom")
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitTag("solutions"); scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitTag("report")
         compose.onNodeWithTag("cat_pele").performScrollTo(); shot("10_report_ranking")
         compose.onNodeWithTag("cat_pele").performClick()
         waitText("Medido:"); shot("11_category_skin")

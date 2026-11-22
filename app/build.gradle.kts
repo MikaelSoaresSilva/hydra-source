@@ -21,8 +21,8 @@ android {
         applicationId = "com.ascend.faceai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // MediaPipe não publica binário x86_64; aparelhos x86_64 usam a versão x86 (32 bits) ou tradução ARM.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86") }

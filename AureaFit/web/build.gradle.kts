@@ -22,10 +22,10 @@ kotlin {
     }
 }
 
-/** Monta a pasta web/dist (pronta para publicar): interface + núcleo compilado + lista offline. */
+/** Monta a pasta web/server/public (pronta para publicar): interface + núcleo compilado + lista offline. */
 val assemblePwa by tasks.registering {
     dependsOn("compileProductionExecutableKotlinJs")
-    val dist = layout.projectDirectory.dir("dist").asFile
+    val dist = layout.projectDirectory.dir("server/public").asFile
     val pwa = layout.projectDirectory.dir("pwa").asFile
     val coreDir = layout.buildDirectory.dir("compileSync/js/main/productionExecutable/kotlin").get().asFile
     doLast {

@@ -1,11 +1,14 @@
 // Áurea — versão web instalável (PWA) para iPhone e qualquer navegador.
 // As regras (treino, dieta, segurança, ajustes) vêm do mesmo código Kotlin do app Android.
 import { api, EX, EXERCISES, FOOD, FOOD_CHOICES, RECIPES, OPTIONS, label, itemMacros, mealMacros, dayMacros, WEEKDAY, WD, minutesOf, buildSchedule } from './core.js';
-import { loadState, getState, save, saveNow, replaceState, uid, today, epochLabel, weekdayOf, dateOfEpoch, newSalt, hashPassword, photoGet, photoSet, photoDel, clearAll } from './store.js';
+import { loadState, getState, save as rawSave, saveNow, replaceState, uid, today, epochLabel, weekdayOf, dateOfEpoch, newSalt, hashPassword, photoGet, photoSet, photoDel, clearAll } from './store.js';
 import { mountAnimations } from './anim.js';
 import { lineChart, barChart, bindCharts } from './charts.js';
 
 let S; // estado
+const ONLINE_HOST = !['localhost', '127.0.0.1'].includes(location.hostname);
+if (location.hostname.endsWith('netlify.app')) document.documentElement.classList.add('nl-host');
+function save() { rawSave(); maybeSyncPush(); }
 const app = document.getElementById('app');
 const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const r0 = (v) => Math.round(v);
@@ -286,6 +289,8 @@ routes.home = () => {
     <button class="icon badge-wrap" ${act(() => go('notifications'))} aria-label="Notificações">🔔${unread ? `<b class="badge">${unread}</b>` : ''}</button><button class="icon" ${act(() => go('profile'))} aria-label="Perfil">👤</button></header>`}
   <main class="stack">
     ${installHint()}
+    ${pushStatus() === 'off' || pushStatus() === 'denied' ? pushCard(true) : ''}
+    ${backupDue() ? card(`<div class="row"><span class="grow"><b>💾 Faça um backup dos seus dados</b><small>Seus registros ficam só neste aparelho. Guarde uma cópia no iCloud Drive ou Arquivos.</small></span>›</div>`, 'tint click', act(() => go('settings'))) : ''}
     ${card(tw ? `<small>Treino de hoje</small><h2>${h(tw.title)}</h2><p>${h(tw.focus)} • ~${api.minutes(tw)} min</p>${done ? '<p><b>✓ Treino concluído hoje. Parabéns!</b></p>' : `<button class="btn white" ${act(() => go('session/' + tw.index))}>▶ Começar treino</button>`}`
       : `<small>Treino de hoje</small><h2>Dia de descanso</h2><p>Descansar também faz o músculo crescer. Caminhe, alongue-se e hidrate-se.</p><button class="btn outline-white" ${act(() => go('workout'))}>Ver minha ficha</button>`, 'hero')}
     ${checkDue ? card(`<div class="row"><span class="grow"><b>💗 Hora do check-in semanal</b><small>Conte como você está para ajustarmos seu plano.</small></span>›</div>`, 'tint click', act(() => go('checkin'))) : ''}
@@ -300,6 +305,10 @@ routes.home = () => {
     <p class="small muted">Lembrete: o Áurea é educativo e não substitui profissionais de saúde.</p>
   </main>`;
 };
+function backupDue() {
+  const hasData = S.sessions.length + S.measurements.length + S.photos.length > 0;
+  return hasData && (!S.lastBackupAt || Date.now() - S.lastBackupAt > 30 * 86400000) && Date.now() - (S.account?.createdAt || 0) > 7 * 86400000;
+}
 const tile = (lbl, value, icon, route) => `<button class="tile" ${act(() => go(route))}><span>${icon}</span>${value ? `<b>${h(value)}</b>` : ''}<small>${h(lbl)}</small></button>`;
 function addWater(ml) { if (ml > 0) { S.water.push({ id: uid(), epochDay: today(), ml, time: Date.now() }); save(); render(); } }
 
@@ -570,12 +579,14 @@ routes.calendar = () => {
     <h3>${WEEKDAY[dow]}, ${calSel.getDate()}/${String(calSel.getMonth() + 1).padStart(2, '0')} • ${w ? h(w.title) : 'descanso'}</h3>
     ${items.length ? items.map((s) => card(`<div class="row"><span class="ic">${ICON[s.type] || '📌'}</span><span class="grow click" ${act(() => edit(s, false))}><b>${s.time}</b><small>${h(s.label)}</small></span><input type="checkbox" class="toggle" ${s.enabled ? 'checked' : ''} ${act(() => { s.enabled = !s.enabled; save(); })} aria-label="Ativar"></div>`)).join('') : '<p class="muted">Nenhum compromisso neste dia.</p>'}
     <button class="btn tonal" ${act(() => edit({ id: uid(), type: 'CUSTOM', label: 'Novo lembrete', time: '12:00', daysMask: 127, enabled: true }, true))}>+ Adicionar lembrete</button>
-    ${card(`<b>🔔 Lembretes no iPhone</b><p class="small">O iPhone não permite que apps de navegador agendem notificações sozinhos. Para receber os alarmes mesmo com o app fechado, adicione sua rotina ao <b>Calendário do iPhone</b> (com alertas):</p><button class="btn" ${act(exportIcs)}>📅 Adicionar rotina ao Calendário</button><p class="small muted">Com o app aberto, os lembretes também aparecem aqui dentro e na Central de notificações.</p>`, 'tint')}
+    ${pushCard()}
+    ${card(`<b>📅 Também no Calendário (opcional)</b><p class="small">Copia a rotina para o app Calendário com alertas — funciona até sem internet depois de adicionada. No iPhone, toque em <b>Adicionar Todos</b>.</p><button class="btn tonal" ${act(exportIcs)}>Adicionar rotina ao Calendário</button>`)}
   </main>`;
 };
 
 /** Exporta a rotina como arquivo .ics (eventos semanais com alerta) para o app Calendário. */
 async function exportIcs() {
+  if (ONLINE_HOST && navigator.onLine) { location.href = icsLink(); return; }
   const BY = ['', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
   const d = new Date(); const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -795,7 +806,7 @@ routes.notifications = () => {
   setTimeout(() => { if (S.notifications.some((n) => !n.read)) { S.notifications.forEach((n) => (n.read = true)); save(); } }, 600);
   return `${top('Notificações', { back: true, actions: `<button class="icon" ${act(() => go('calendar'))} aria-label="Configurar lembretes">⚙️</button>${S.notifications.length ? `<button class="icon" ${act(() => { S.notifications = []; save(); render(); })} aria-label="Limpar">🧹</button>` : ''}` })}<main class="stack">
     ${S.notifications.length ? [...S.notifications].reverse().map((n) => card(`<b>${h(n.title)}</b><p>${h(n.body)}</p><small class="muted">${new Date(n.time).toLocaleString('pt-BR')}</small>`, n.read ? '' : 'tint')).join('')
-      : card(`<p><b>Nenhuma notificação ainda.</b></p><p class="small">Com o app aberto, os lembretes da sua rotina aparecem aqui. Para alarmes com o app fechado, use “Adicionar rotina ao Calendário” na tela Calendário.</p><button class="btn" ${act(testNotification)}>Enviar notificação de teste</button>`)}
+      : card(`<p><b>Nenhuma notificação ainda.</b></p><p class="small">Os lembretes da sua rotina aparecem aqui quando o app está aberto. Para recebê-los com o app fechado, ative os lembretes em Configurações.</p><button class="btn" ${act(testNotification)}>Enviar notificação de teste</button>`)}
   </main>`;
 };
 
@@ -817,6 +828,7 @@ routes.settings = () => {
     const photos = {};
     for (const p of S.photos) { const b = await photoGet(p.id); if (b) photos[p.id] = await blobToDataUrl(b); }
     const data = JSON.stringify({ app: 'aurea', version: 1, exportedAt: Date.now(), state: S, photos });
+    S.lastBackupAt = Date.now(); save();
     const file = new File([data], `aurea-backup-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
     try { if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'Backup Áurea' }); return; } } catch (e) { if (e.name === 'AbortError') return; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); toast('Backup gerado.');
@@ -847,25 +859,98 @@ routes.settings = () => {
   return `${top('Configurações', { back: true })}<main class="stack">
     <h3>Aparência</h3>${chips([{ id: 0, label: 'Automático' }, { id: 1, label: 'Claro' }, { id: 2, label: 'Escuro' }], st.themeMode, (v) => { st.themeMode = v; applyTheme(); save(); render(); })}
     <h3>Lembretes</h3>
-    ${row('🔔', 'Lembretes com o app aberto', 'Avisos dentro do app e notificações do sistema (quando permitido)', null, `<input type="checkbox" class="toggle" ${st.notifications ? 'checked' : ''} ${act(() => { st.notifications = !st.notifications; save(); if (st.notifications) askNotifications(); })}>`)}
-    ${row('📅', 'Adicionar rotina ao Calendário do iPhone', 'Alarmes confiáveis mesmo com o app fechado', exportIcs)}
-    ${row('🧪', 'Enviar notificação de teste', 'Confere se os avisos aparecem', testNotification)}
+    ${pushCard()}
+    ${row('🔔', 'Avisos com o app aberto', 'Mostra os lembretes dentro do app quando ele está aberto', null, `<input type="checkbox" class="toggle" ${st.notifications ? 'checked' : ''} ${act(() => { st.notifications = !st.notifications; save(); if (st.notifications) askNotifications(); })}>`)}
+    ${row('📅', 'Adicionar rotina ao Calendário', 'Cópia da rotina com alertas no app Calendário', exportIcs)}
+    
     <h3>Privacidade e bem-estar</h3>
     ${row('🙈', 'Ocultar calorias', 'Mostra só porções e macronutrientes', null, `<input type="checkbox" class="toggle" ${st.hideCalories ? 'checked' : ''} ${act(() => { st.hideCalories = !st.hideCalories; save(); })}>`)}
     <h3>Backup e exportação</h3>
     ${card(`<p class="small">Seus dados ficam só neste aparelho. Para ter uma cópia de segurança, exporte um arquivo e salve onde quiser (Arquivos, iCloud Drive, Google Drive…). Nenhum envio automático é feito.</p><button class="btn" ${act(exportData)}>💾 Exportar meus dados / fazer backup</button><button class="btn outline" ${act(importData)}>♻️ Restaurar backup</button>`)}
+    <p class="small muted" id="persistInfo"></p>
     <h3>Conta</h3>
     ${row('🔑', 'Alterar senha', '', changePw)}
     ${row('🚪', 'Sair da conta', 'Seus dados continuam salvos neste aparelho', () => { S.loggedIn = false; save(); go('auth/login'); })}
     ${row('🗑', 'Excluir conta e todos os dados', 'Apaga permanentemente perfil, planos, registros, fotos e lembretes', async () => {
-      if (await confirmBox('Excluir tudo?', 'Esta ação não pode ser desfeita. Faça um backup antes, se quiser guardar seus dados.', 'Excluir definitivamente', true)) { await clearAll(); location.hash = ''; location.reload(); }
+      if (await confirmBox('Excluir tudo?', 'Esta ação não pode ser desfeita. Faça um backup antes, se quiser guardar seus dados.', 'Excluir definitivamente', true)) { if (S.push?.enabled) await disablePush(); await clearAll(); location.hash = ''; location.reload(); }
     })}
     <h3>Sobre</h3><p class="small muted">Áurea 1.0 (web) — aplicativo educativo de treino e alimentação. Não substitui médico(a), nutricionista ou educador(a) físico(a). Cálculos: Mifflin-St Jeor (gasto basal), proteína 1,6–2,0 g/kg, tabela TACO (alimentos). Mesmas regras do app Android.</p>
   </main>`;
 };
 const blobToDataUrl = (b) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
 
-/* ======================================================================== lembretes */
+
+/* ======================================================================== lembretes push (iPhone 16.4+) */
+const isPushCapable = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+function pushStatus() {
+  if (S.push?.enabled && isPushCapable() && Notification.permission === 'granted') return 'active';
+  if (isIOS && !standalone()) return 'install';
+  if (!isPushCapable()) return 'unsupported';
+  if (Notification.permission === 'denied') return 'denied';
+  return 'off';
+}
+const b64uToBytes = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, (c) => c.charCodeAt(0)); };
+const pushPayload = (extra = {}) => ({ id: S.push.id, subscription: S.push.subscription, schedule: S.schedule, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo', ...extra });
+async function enablePush() {
+  try {
+    const perm = await Notification.requestPermission(); // precisa vir direto do toque (regra do iPhone)
+    if (perm !== 'granted') { toast('Permissão negada. Ative em Ajustes → Notificações → Áurea.'); render(); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const { publicKey } = await (await fetch('/api/push')).json();
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(publicKey) });
+    }
+    S.push = { enabled: true, id: S.push?.id || (uid() + uid()).replace(/[^a-z0-9]/g, '').slice(0, 24), subscription: sub.toJSON(), lastSync: JSON.stringify(S.schedule) };
+    const r = await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pushPayload({ test: true })) });
+    if (!r.ok) { S.push.enabled = false; throw new Error('servidor ' + r.status); }
+    rawSave();
+    toast('Lembretes ativados! Você vai receber uma notificação de teste agora.');
+  } catch (e) { console.error(e); toast('Não foi possível ativar os lembretes (' + (e.message || e) + '). Verifique a internet e tente novamente.'); }
+  render();
+}
+async function disablePush() {
+  try { await fetch('/api/push', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: S.push.id }) }); } catch (e) {}
+  try { const reg = await navigator.serviceWorker.ready; (await reg.pushManager.getSubscription())?.unsubscribe(); } catch (e) {}
+  S.push = { enabled: false, id: S.push?.id }; rawSave(); toast('Lembretes com o app fechado desativados.'); render();
+}
+async function testPush() {
+  try { const r = await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pushPayload({ test: true })) }); toast(r.ok ? 'Teste enviado — a notificação chega em alguns segundos.' : 'Falha no teste (' + r.status + ').'); } catch (e) { toast('Sem internet para enviar o teste.'); }
+}
+let pushTimer;
+function maybeSyncPush() {
+  if (!S?.push?.enabled) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    const snap = JSON.stringify(S.schedule);
+    if (snap === S.push.lastSync) return;
+    try { const r = await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pushPayload()) }); if (r.ok) { S.push.lastSync = snap; rawSave(); } } catch (e) { /* sincroniza na próxima vez que houver internet */ }
+  }, 1500);
+}
+window.addEventListener('online', () => { if (S?.push) { S.push.lastSync = ''; maybeSyncPush(); } });
+
+/** Cartão explicando e ativando os lembretes, conforme a situação do aparelho. */
+function pushCard(compact = false) {
+  const st = pushStatus();
+  const body = {
+    active: `<b>✅ Lembretes ativos, mesmo com o app fechado</b><p class="small">Refeições, treino, água, pausa, sono e check-in chegam como notificação no horário da sua rotina. Ao editar horários no Calendário, os lembretes são atualizados (precisa de internet).</p><div class="row wrap"><button class="btn tonal" ${act(testPush)}>Enviar teste</button><button class="btn text" ${act(disablePush)}>Desativar</button></div>`,
+    off: `<b>🔔 Receba os lembretes da sua rotina</b><p class="small">Ative para receber notificações de refeições, treino, água e sono — inclusive com o app fechado.</p><button class="btn" ${act(enablePush)}>Ativar lembretes</button>`,
+    install: `<b>🔔 Para receber lembretes no iPhone</b><p class="small">1. No <b>Safari</b>, toque em <b>Compartilhar</b> (↑) → <b>Adicionar à Tela de Início</b>.<br>2. Abra o Áurea pelo <b>ícone</b> criado.<br>3. Volte aqui e toque em <b>Ativar lembretes</b>.</p><p class="small muted">O iPhone só permite notificações de apps instalados na Tela de Início (iOS 16.4 ou mais novo). Seus dados continuam neste aparelho.</p>`,
+    unsupported: `<b>🔔 Lembretes</b><p class="small">Este aparelho/navegador não aceita notificações de web apps. No iPhone, atualize para o <b>iOS 16.4 ou mais novo</b> e use o app pela Tela de Início. Enquanto isso, use <b>Adicionar rotina ao Calendário</b>.</p>`,
+    denied: `<b>🔕 Notificações bloqueadas</b><p class="small">Abra <b>Ajustes → Notificações → Áurea</b> e ative <b>Permitir Notificações</b>. Depois volte aqui e toque em Ativar.</p><button class="btn tonal" ${act(enablePush)}>Tentar novamente</button>`
+  }[st];
+  if (compact && st === 'active') return '';
+  return card(body, st === 'active' ? '' : 'tint');
+}
+
+/** Abre a rotina no app Calendário (no iPhone, o Safari oferece "Adicionar Todos"). */
+function icsLink() {
+  const json = JSON.stringify(S.schedule.map(({ id, type, label, time, daysMask, enabled }) => ({ id, type, label, time, daysMask, enabled })));
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return '/api/ics?d=' + b64;
+}
+
+/* ======================================================================== lembretes (app aberto) */
 async function askNotifications() {
   try { if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch (e) {}
 }
@@ -881,7 +966,7 @@ async function notify(title, body) {
   save();
   toast(title + ' — ' + body);
   try {
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if ('Notification' in window && Notification.permission === 'granted' && pushStatus() !== 'active') {
       const reg = await navigator.serviceWorker?.getRegistration();
       if (reg) reg.showNotification(title, { body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' });
       else new Notification(title, { body });
@@ -918,6 +1003,7 @@ function render() {
   app.innerHTML = `<div class="screen ${showTabs ? 'with-tabs' : ''}">${html}</div>${showTabs ? `<nav class="tabs-bar">${TABS.map(([r, i, l]) => `<button class="${r === name ? 'on' : ''}" ${act(() => go(r))}><span>${i}</span><small>${l}</small></button>`).join('')}</nav>` : ''}`;
   mountAnimations(app);
   if (name === 'evolution') loadPhotoThumbs();
+  if (name === 'settings') navigator.storage?.persisted?.().then((ok) => { const el = document.getElementById('persistInfo'); if (el) el.textContent = ok ? '🔒 Armazenamento protegido: o iPhone não apaga seus dados automaticamente.' : 'Dica: use o app pela Tela de Início e faça backups de vez em quando para proteger seus dados.'; });
 }
 
 // Delegação de eventos (cliques e campos)
@@ -951,5 +1037,7 @@ async function start() {
   setInterval(checkReminders, 30000); checkReminders();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkReminders(); if (['home', 'diet', 'water'].includes(location.hash.split('/')[1])) render(); } });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  try { if (S.account) navigator.storage?.persist?.(); } catch (e) {}
+  maybeSyncPush();
 }
 start();

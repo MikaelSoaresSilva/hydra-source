@@ -59,7 +59,9 @@ export function emptyState() {
     checkins: [],           // {id,epochDay,answers,recs,applied}
     mealChecks: {},         // {epochDay: [mealIndex,...]}
     settings: { themeMode: 0, hideCalories: false, notifications: true, waterGoalOverride: 0, glassMl: 250 },
-    lastReminder: {}        // {scheduleId: 'YYYY-MM-DDTHH:MM'} evita repetir lembrete
+    lastReminder: {},       // {scheduleId: 'YYYY-MM-DD'} evita repetir lembrete
+    push: { enabled: false }, // {enabled,id,subscription,lastSync} lembretes push
+    lastBackupAt: 0
   };
 }
 

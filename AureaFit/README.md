@@ -22,14 +22,19 @@ Arquivos **APK só instalam em Android** — o iPhone recusa esse formato por re
 2. Toque em **Compartilhar** (quadrado com seta ↑) → **Adicionar à Tela de Início** → **Adicionar**.
 3. Abra o Áurea pelo ícone criado. Ele funciona em tela cheia e, depois da primeira abertura, **sem internet**.
 
-**Diferenças em relação ao Android (limitações do iPhone):**
-- **Lembretes:** o iPhone não deixa web apps agendarem notificações sozinhos. Com o app aberto, os lembretes aparecem normalmente; para alarmes com o app fechado, use **Calendário → "Adicionar rotina ao Calendário"**, que envia a rotina para o app Calendário do iPhone com alertas.
-- **Dados:** ficam só no iPhone (armazenamento do navegador). Faça **backup** em Configurações (arquivo `.json`, pode salvar no iCloud Drive/Arquivos). Os dados do iPhone e do Android não se misturam.
-- **Bloqueio de capturas de tela** não existe na versão web.
+**O que foi feito para contornar as limitações do iPhone:**
+- **Lembretes com o app fechado (notificações push):** o iPhone (iOS 16.4+) só aceita notificações de web apps **instalados na Tela de Início** e enviadas por um servidor. O Áurea tem um pequeno servidor no Netlify (`web/server/netlify/functions`): a usuária toca em **Ativar lembretes** (Painel, Calendário ou Configurações), recebe uma notificação de teste na hora e, a partir daí, recebe refeições, treino, água, pausa, sono e check-in no horário da rotina — com o app fechado. Ao editar horários no Calendário, o servidor é atualizado sozinho.
+  - **Privacidade:** o servidor recebe **somente** os horários e textos dos lembretes e o fuso horário. Peso, medidas, fotos, dieta, nome e e-mail **nunca** saem do iPhone. "Desativar lembretes" (ou "Excluir conta") apaga o registro do servidor.
+  - As chaves de segurança do push são geradas e guardadas pelo próprio servidor (Netlify Blobs); a chave privada nunca é copiada para lugar nenhum.
+- **Calendário (opcional):** "Adicionar rotina ao Calendário" abre a rotina direto no app Calendário do iPhone (tocar em **Adicionar Todos**), com alertas que funcionam até sem internet.
+- **Funciona offline** depois da primeira abertura.
+- **Dados protegidos:** o app pede armazenamento persistente e mostra um lembrete mensal de backup (Configurações → Exportar, para iCloud Drive/Arquivos). Os dados do iPhone e do Android não se misturam.
+- **Selo do Netlify:** no plano gratuito ele não pode ser removido; o layout reserva o canto inferior para que o selo nunca cubra botões.
+- Não existe na versão web: bloqueio de capturas de tela.
 
-**Atualizar a versão web:** `./gradlew :web:assemblePwa` gera a pasta `web/dist`; publique essa pasta em qualquer hospedagem com HTTPS (Netlify, GitHub Pages, Cloudflare Pages). O app atualiza sozinho na próxima abertura com internet.
+**Atualizar a versão web:** `./gradlew :web:assemblePwa` gera `web/server/public`; publique a pasta **`web/server`** no Netlify (contém o site e as funções). O app atualiza sozinho na próxima abertura com internet.
 
-**Testes da versão web:** percurso completo automatizado em navegador simulando iPhone 13, nos motores **Chromium e WebKit (o do Safari)**: cadastro, questionário, treino, troca de alimento, água, calendário (.ics com 17 lembretes), medidas, gráficos, check-in, troca de objetivo, backup, dados mantidos após recarregar e funcionamento **offline com o servidor desligado** — sem nenhum erro.
+**Testes da versão web:** percurso completo automatizado em navegador simulando iPhone 13, nos motores **Chromium e WebKit (o do Safari)**: cadastro, questionário, treino, troca de alimento, água, calendário (.ics com 17 lembretes), medidas, gráficos, check-in, troca de objetivo, backup, dados mantidos após recarregar e funcionamento **offline com o servidor desligado** — sem nenhum erro. Servidor de lembretes testado de ponta a ponta (chaves no servidor, teste imediato, envio no minuto certo sem repetição, fuso horário, dias da semana, remoção de aparelhos que revogaram permissão) e ativação/sincronização/desativação testadas na interface. O site publicado também foi verificado nos dois motores.
 
 ---
 

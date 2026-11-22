@@ -274,7 +274,7 @@ fun ProjectionScreen(nav: NavHostController, id: String) {
                 GlassCard(Modifier.fillMaxWidth()) { Text("Medindo as notas da foto projetada…", style = MaterialTheme.typography.bodySmall, color = Ac.TextMid) }
                 Spacer(Modifier.height(12.dp))
             } else {
-                GlassCard(Modifier.fillMaxWidth()) {
+                GlassCard(Modifier.fillMaxWidth().testTag("proj_scores")) {
                     Eyebrow("Notas medidas pelo app nas duas fotos")
                     Spacer(Modifier.height(6.dp))
                     listOf("geral" to "Geral", "pele" to "Qualidade da pele", "mandibula" to "Mandíbula", "macas" to "Maçãs do rosto", "masculinidade" to "Masculinidade", "olhos" to "Olhos").forEach { (k, label) ->
@@ -292,7 +292,7 @@ fun ProjectionScreen(nav: NavHostController, id: String) {
                 }
                 Spacer(Modifier.height(12.dp))
             }
-            GlassCard(Modifier.fillMaxWidth()) {
+            GlassCard(Modifier.fillMaxWidth().testTag("proj_changes")) {
                 Eyebrow("O que mudou na simulação")
                 Spacer(Modifier.height(6.dp))
                 BulletList(o.changes, Ac.TextHi, Ac.Cyan)

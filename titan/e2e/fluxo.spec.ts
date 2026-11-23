@@ -189,6 +189,12 @@ test('missão: começar, marcar hábito e ver o progresso no painel', async ({ p
   await expect(page.getByLabel('Dentes: escovar 2× + fio dental')).toBeChecked();
   const after = await page.locator('.card').filter({ hasText: 'Hoje' }).first().locator('strong').first().innerText();
   expect(Number(after.split('/')[0])).toBe(Number(before.split('/')[0]) + 1);
+  // espera o registro ser gravado no aparelho (IndexedDB) antes de recarregar
+  await expect.poll(() => page.evaluate(async () => {
+    const dbs = await indexedDB.databases();
+    return dbs.length > 0;
+  })).toBe(true);
+  await page.waitForTimeout(400);
   await page.reload();
   await expect(page.getByLabel('Dentes: escovar 2× + fio dental')).toBeChecked();
   await page.screenshot({ path: `test-results/missao-${info.project.name}.png`, fullPage: true });

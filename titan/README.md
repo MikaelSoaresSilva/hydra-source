@@ -98,9 +98,13 @@ Ou pelo GitHub: crie os secrets `TITAN_KEYSTORE_B64` (`base64 -w0 titan-release.
 
 **Guarde a chave (`titan-release.jks` + senha).** Atualizações precisam ser assinadas com a mesma chave; sem ela, o Android exige desinstalar a versão antiga (o que apaga os dados locais). Nunca coloque a chave no repositório.
 
+## Luta: só Boxe e MMA — v3.8
+
+Muay Thai removido dos treinos: o bloco de sábado virou "MMA em pé" (chute baixo, chute no corpo, joelhada, entrada de queda, sprawl) e o de domingo "MMA: clinch, quedas e chão" (pegada por baixo, joelhada, sprawl, fuga de quadril, ponte, levantar em base). Biblioteca: Boxe, MMA, Defesa e Quedas.
+
 ## Luta reorganizada + abdômen — v3.7
 
-`domain/fight.ts` reescrito em exercícios estruturados (séries, tempo de trabalho, descanso, por lado, foco de cada round) e `blockSteps`, que gera o roteiro completo com tempo (preparar, cada série/round/lado, descansos, trocas de exercício e de bloco). Página Luta com abas Treino · Abdômen · Golpes · Dicas; **cronômetro guiado em tela cheia** (bipe ao começar/descansar, 3-2-1, pausar/voltar/pular, "como fazer" e sinais de reflexo) e botão de cronômetro em cada exercício. Boxe + **Muay Thai** (teep, chute circular, joelhada, cotovelada, clinch, checar) com fase de retorno (semanas 1–2, 60–70%). Biblioteca de 19 golpes (3 passos + erro comum). **Abdômen A/B/C** (reto, infra, oblíquos, transverso e lombar), A no sábado e B no domingo dentro da luta, C na quarta. Sessões de 62 a 89 min.
+`domain/fight.ts` reescrito em exercícios estruturados (séries, tempo de trabalho, descanso, por lado, foco de cada round) e `blockSteps`, que gera o roteiro completo com tempo (preparar, cada série/round/lado, descansos, trocas de exercício e de bloco). Página Luta com abas Treino · Abdômen · Golpes · Dicas; **cronômetro guiado em tela cheia** (bipe ao começar/descansar, 3-2-1, pausar/voltar/pular, "como fazer" e sinais de reflexo) e botão de cronômetro em cada exercício. Boxe + MMA (na v3.7 tinha Muay Thai; trocado por MMA na v3.8) com fase de retorno (semanas 1–2, 60–70%). Biblioteca de 19 golpes (3 passos + erro comum). **Abdômen A/B/C** (reto, infra, oblíquos, transverso e lombar), A no sábado e B no domingo dentro da luta, C na quarta. Sessões de 62 a 89 min.
 
 ## Vídeos no treino facial — v3.6
 

@@ -226,7 +226,7 @@ export function Fight() {
         <div>
           <span className="kicker">Luta · {start ? `semana ${week} de ${FIGHT_WEEKS}` : 'sábado e domingo'}{session.returnPhase ? ' · retorno' : ''}</span>
           <h1>Luta em casa</h1>
-          <p className="muted" style={{ margin: 0 }}>Boxe, Muay Thai e MMA com cronômetro guiado em tudo. Até {FIGHT_MAX_MIN} min.</p>
+          <p className="muted" style={{ margin: 0 }}>Boxe e MMA com cronômetro guiado em tudo. Até {FIGHT_MAX_MIN} min.</p>
         </div>
         <Link to="/treino" className="btn ghost sm">Academia</Link>
       </div>
@@ -245,7 +245,7 @@ export function Fight() {
 
           <section className="hero" aria-label="Sessão de luta">
             <Segmented<FightDay> label="Dia da luta" value={day} onChange={setDay}
-              options={[{ value: 'sat', label: 'Sábado', sub: 'ataque · pés · reflexo' }, { value: 'sun', label: 'Domingo', sub: 'defesa · clinch · quedas' }]} />
+              options={[{ value: 'sat', label: 'Sábado', sub: 'boxe · MMA em pé · reflexo' }, { value: 'sun', label: 'Domingo', sub: 'defesa · MMA · quedas' }]} />
             <h2 style={{ marginTop: 12 }}>{session.title}</h2>
             <p className="hint" style={{ marginTop: 4 }}>{session.focus}</p>
             <div className="meta">
@@ -300,7 +300,7 @@ export function Fight() {
       {tab === 'golpes' && (
         <>
           <p className="hint" style={{ margin: 0 }}>Como fazer cada movimento, em 3 passos, com o erro mais comum. Destro: jab é a mão esquerda. Canhoto: inverta tudo.</p>
-          {(['Boxe', 'Muay Thai', 'Defesa', 'MMA', 'Quedas'] as const).map((g) => (
+          {(['Boxe', 'MMA', 'Defesa', 'Quedas'] as const).map((g) => (
             <Card key={g} title={g}>
               <ul className="list">{MOVES.filter((m) => m.group === g).map((m) => <li key={m.id}><MoveCard m={m} /></li>)}</ul>
             </Card>

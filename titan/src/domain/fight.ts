@@ -1,5 +1,5 @@
-// Luta em casa — Boxe + Muay Thai + base de MMA, sábado e domingo, no máximo 90 min.
-// Pensado para quem já treinou (Muay Thai 2 anos, boxe 1 ano) e está voltando depois de 1 ano parado.
+// Luta em casa — Boxe + MMA, sábado e domingo, no máximo 90 min.
+// Pensado para quem já treinou luta (Muay Thai 2 anos, boxe 1 ano) e está voltando depois de 1 ano parado.
 // Tudo tem cronômetro: aquecimento, cada exercício, cada round, cada descanso e as trocas entre blocos.
 import { weekday } from './dates';
 import { ropeFor, ropeSession, type RopeKind } from './recomp';
@@ -16,7 +16,7 @@ export type FightDay = 'sat' | 'sun';
 
 // ------------------------------------------------------------------ golpes e movimentos (explicação simples)
 
-export interface Move { id: string; name: string; group: 'Boxe' | 'Muay Thai' | 'Defesa' | 'MMA' | 'Quedas'; steps: string[]; error: string }
+export interface Move { id: string; name: string; group: 'Boxe' | 'Defesa' | 'MMA' | 'Quedas'; steps: string[]; error: string }
 
 export const MOVES: Move[] = [
   { id: 'base', name: 'Base e guarda', group: 'Boxe', steps: ['Pés na largura dos ombros, pé de trás virado uns 45°.', 'Joelhos levemente dobrados, peso nas pontas dos pés.', 'Mãos na altura das bochechas, cotovelos colados no corpo, queixo baixo.'], error: 'Queixo alto e cotovelos abertos: deixa o rosto e as costelas expostos.' },
@@ -24,18 +24,22 @@ export const MOVES: Move[] = [
   { id: 'direto', name: 'Direto (2)', group: 'Boxe', steps: ['Gire o pé de trás (como quem apaga um cigarro) e o quadril.', 'A mão de trás vai reta, o corpo inteiro empurra o golpe.', 'A outra mão fica colada no rosto o tempo todo.'], error: 'Bater só com o braço, sem girar o pé e o quadril: perde metade da força.' },
   { id: 'cruzado', name: 'Cruzado / gancho (3)', group: 'Boxe', steps: ['Cotovelo na altura do punho, braço em "L".', 'Gire o pé da frente e o tronco juntos; o braço só acompanha.', 'Termine com a mão de volta ao rosto.'], error: 'Abrir o braço antes de bater (o golpe fica lento e avisado).' },
   { id: 'uppercut', name: 'Uppercut (5 e 6)', group: 'Boxe', steps: ['Dobre um pouco os joelhos do lado que vai bater.', 'Suba com as pernas e o quadril, punho virado para você.', 'Golpe curto, de baixo para cima, e volta para a guarda.'], error: 'Baixar a mão para "pegar impulso": abre a guarda.' },
-  { id: 'teep', name: 'Teep (chute frontal empurrando)', group: 'Muay Thai', steps: ['Suba o joelho na frente do corpo, mãos na guarda.', 'Empurre com a sola do pé para a frente, na altura da barriga.', 'Recolha o joelho e volte para a base.'], error: 'Inclinar o tronco muito para trás e perder o equilíbrio.' },
-  { id: 'roundhouse', name: 'Chute circular (canela)', group: 'Muay Thai', steps: ['Dê um pequeno passo para fora com o pé da frente (abre o ângulo).', 'Gire na ponta do pé de apoio e o quadril inteiro; acerte com a canela.', 'O braço do mesmo lado desce para equilibrar; volte para a guarda.'], error: 'Chutar só com a perna, sem girar o quadril e o pé de apoio.' },
-  { id: 'knee', name: 'Joelhada reta', group: 'Muay Thai', steps: ['Mãos à frente como se segurasse a nuca do adversário.', 'Leve o quadril para a frente e suba o joelho.', 'Pé de apoio na ponta; volte para a base.'], error: 'Subir só a perna, sem empurrar o quadril.' },
-  { id: 'elbow', name: 'Cotovelada horizontal', group: 'Muay Thai', steps: ['Golpe curto: o cotovelo passa na altura do rosto, palma virada para baixo.', 'Gire o tronco e o pé do mesmo lado.', 'A outra mão protege o rosto.'], error: 'Distância errada: cotovelada é golpe de curta distância.' },
+  { id: 'lowkick', name: 'Chute baixo (na coxa)', group: 'MMA', steps: ['Dê um pequeno passo para fora com o pé da frente.', 'Gire na ponta do pé de apoio e o quadril; acerte a coxa com a canela.', 'Mãos na guarda o tempo todo; volte para a base.'], error: 'Chutar sem girar o pé de apoio (perde força e machuca o joelho).' },
+  { id: 'bodykick', name: 'Chute no corpo', group: 'MMA', steps: ['Mesmo movimento do chute baixo, mais alto, na altura das costelas.', 'Gire o quadril inteiro, o braço do mesmo lado desce para equilibrar.', 'Recolha a perna rápido: no MMA, chute alto dá chance de queda.'], error: 'Deixar a perna lá: o adversário segura e derruba.' },
+  { id: 'knee', name: 'Joelhada', group: 'MMA', steps: ['Mãos à frente, como se segurasse o adversário.', 'Leve o quadril para a frente e suba o joelho.', 'Pé de apoio na ponta; volte para a base.'], error: 'Subir só a perna, sem empurrar o quadril.' },
+  { id: 'elbow', name: 'Cotovelada curta', group: 'MMA', steps: ['Golpe de curta distância: o cotovelo passa na altura do rosto.', 'Gire o tronco e o pé do mesmo lado.', 'A outra mão protege o rosto.'], error: 'Tentar cotovelada de longe: é golpe colado.' },
+  { id: 'shot', name: 'Entrada de queda (penetration step)', group: 'MMA', steps: ['Mude de nível (dobre os joelhos, costas retas).', 'Dê um passo longo para a frente, o joelho de trás quase encosta no chão.', 'Cabeça erguida, mãos abraçando as pernas imaginárias; volte para a base.'], error: 'Abaixar a cabeça e olhar para o chão (leva joelhada).' },
+  { id: 'underhook', name: 'Clinch de MMA (pegada por baixo)', group: 'MMA', steps: ['Passe o braço por baixo da axila do adversário (underhook).', 'Cabeça colada no peito/ombro dele, quadril para a frente.', 'Daqui: joelhada, se soltar com cotovelada ou empurrar e sair.'], error: 'Ficar de quadril para trás: fica fácil de derrubar.' },
+  { id: 'shrimp', name: 'Fuga de quadril (shrimp)', group: 'MMA', steps: ['Deitado de lado, apoie o pé no chão.', 'Empurre o quadril para trás, como um camarão, criando espaço.', 'Mãos protegendo o rosto; repita para o outro lado.'], error: 'Empurrar com as mãos em vez de mover o quadril.' },
+  { id: 'upa', name: 'Ponte (upa)', group: 'MMA', steps: ['Deitado de costas, pés perto do quadril.', 'Suba o quadril com força e gire o ombro para um lado.', 'É assim que se tira alguém montado em você.'], error: 'Ponte sem girar: o adversário só volta para o lugar.' },
+  { id: 'gnp', name: 'Ground and pound (de joelhos)', group: 'MMA', steps: ['De joelhos, quadril baixo, postura firme.', 'Golpes curtos para baixo, alternando as mãos.', 'Volte a postura entre os golpes, sem cair para a frente.'], error: 'Inclinar demais para a frente e perder a base.' },
   { id: 'block', name: 'Bloqueio', group: 'Defesa', steps: ['Contra gancho: luva colada na têmpora, cotovelo protegendo a lateral.', 'Contra golpe no corpo: cotovelos para baixo, fechando as costelas.', 'Contra jab: aparar com a palma da mão de trás.'], error: 'Fechar os olhos ou virar o rosto ao bloquear.' },
   { id: 'slip', name: 'Esquiva (slip)', group: 'Defesa', steps: ['Gire um pouco o tronco e dobre o joelho do mesmo lado.', 'A cabeça sai só um palmo para fora da linha do golpe.', 'Olhe para a frente o tempo todo, nunca para o chão.'], error: 'Esquivar demais (curvado), sem conseguir devolver.' },
   { id: 'roll', name: 'Pêndulo (roll)', group: 'Defesa', steps: ['Dobre os joelhos e passe a cabeça por baixo do gancho, fazendo um "U".', 'Mantenha as mãos no rosto.', 'Saia do outro lado já pronto para bater.'], error: 'Abaixar só a cabeça, curvando as costas.' },
-  { id: 'check', name: 'Checar o chute (bloqueio de canela)', group: 'Defesa', steps: ['Levante o joelho do lado do chute, canela apontada para fora.', 'Mãos na guarda, tronco firme.', 'Volte o pé para a base rápido.'], error: 'Levantar o joelho reto para a frente (o chute passa por fora).' },
+  { id: 'check', name: 'Checar o chute baixo', group: 'Defesa', steps: ['Levante o joelho do lado do chute, canela apontada para fora.', 'Mãos na guarda, tronco firme.', 'Volte o pé para a base rápido.'], error: 'Levantar o joelho reto para a frente (o chute passa por fora).' },
   { id: 'sprawl', name: 'Sprawl', group: 'MMA', steps: ['Jogue as duas pernas para trás e para fora.', 'Quadril no chão, peito pesado, mãos no chão à frente.', 'Volte para a base o mais rápido possível.'], error: 'Cair de joelhos (o adversário agarra as pernas).' },
   { id: 'level', name: 'Mudança de nível', group: 'MMA', steps: ['Dobre os joelhos para baixar o corpo, costas retas.', 'Cabeça erguida, olhos para a frente.', 'É a base da queda e da defesa de queda.'], error: 'Curvar as costas em vez de dobrar os joelhos.' },
   { id: 'standup', name: 'Levantar em base', group: 'MMA', steps: ['Sentado, uma mão no chão atrás e o outro braço na frente protegendo o rosto.', 'Passe a perna por baixo do corpo, para trás.', 'Levante já em guarda, sem dar as costas.'], error: 'Ficar com as duas mãos no chão e de costas.' },
-  { id: 'clinch', name: 'Clinch (posição tailandesa)', group: 'Muay Thai', steps: ['Mãos atrás da cabeça do adversário, uma sobre a outra (não entrelace os dedos).', 'Cotovelos fechados apertando o pescoço dele.', 'Postura alta, quadril para a frente.'], error: 'Entrelaçar os dedos (machuca e é fácil de soltar).' },
   { id: 'breakfall', name: 'Queda para trás (ukemi)', group: 'Quedas', steps: ['Queixo no peito durante toda a queda.', 'Role nas costas, sem bater a cabeça.', 'Bata os dois braços no chão a 45° antes das costas chegarem.'], error: 'Pôr a mão para trás para "segurar" a queda (risco de punho e cotovelo).' },
   { id: 'sidefall', name: 'Queda lateral', group: 'Quedas', steps: ['De cócoras, deixe uma perna escorregar para o lado.', 'Caia de lado, queixo no peito.', 'Bata o braço daquele lado no chão.'], error: 'Cair em cima do ombro ou da cabeça.' },
 ];
@@ -156,7 +160,7 @@ export function reflexGap(week: number): [number, number] {
 export const REFLEX_CUES: { beeps: number; label: string; text: string }[] = [
   { beeps: 1, label: '1', text: 'Jab-direto e volta para a guarda' },
   { beeps: 2, label: '2', text: 'Esquiva para fora + direto (contra-ataque)' },
-  { beeps: 3, label: '3', text: 'Chute circular baixo (ou sprawl) e volta em base' },
+  { beeps: 3, label: '3', text: 'Chute baixo (ou sprawl) e volta em base' },
 ];
 
 // ------------------------------------------------------------------ blocos
@@ -212,14 +216,14 @@ function saturday(week: number, rope: RopeKind | null, gymDay: boolean): FightSe
       }],
     }),
     mkBlock({
-      id: 'muaythai', title: 'Muay Thai: chutes, joelhos e cotovelos', kind: 'rounds', goal: back ? 'Chutes no ar, devagar e alto só até onde o quadril deixa. Nada de força máxima nas primeiras 2 semanas.' : 'Combinar mãos e pernas, voltando sempre para a guarda.',
+      id: 'mma', title: 'MMA em pé: chutes, joelhada e entrada de queda', kind: 'rounds', goal: back ? 'Chutes baixos e devagar no ar, entrada de queda sem explosão. Nada de força máxima nas primeiras 2 semanas.' : 'Misturar mãos, chutes e entrada de queda: o adversário não sabe o que vem.',
       exercises: [{
-        id: 'muaythai', name: 'Sombra de Muay Thai', sets: 3, workSec: 180, restSec: 60, moves: ['teep', 'roundhouse', 'knee', 'elbow'],
-        how: ['Em base de Muay Thai (um pouco mais alta e de frente que no boxe).', 'Gire no pé de apoio em todo chute.', 'Volte para a guarda depois de cada golpe.'],
+        id: 'mma', name: 'Sombra de MMA', sets: 3, workSec: 180, restSec: 60, moves: ['lowkick', 'bodykick', 'knee', 'shot', 'sprawl'],
+        how: ['Base de MMA: um pouco mais larga e baixa que a do boxe, mãos um pouco mais abertas.', 'Gire no pé de apoio em todo chute e recolha a perna rápido.', 'Depois de cada ação, volte para a base.'],
         roundFocus: back
-          ? ['Teep (frontal) alternando as pernas, devagar.', 'Chute circular baixo, devagar, girando o pé de apoio.', 'Joelhada e cotovelada curtas, sem força.']
-          : late ? ['1-2 + chute circular de trás.', 'Teep + direto + joelhada.', 'Livre: mãos, chutes, joelhos e cotovelos.']
-            : ['Teep e chute circular baixo, alternando.', '1-2 + chute circular baixo.', 'Joelhada e cotovelada no clinch imaginário.'],
+          ? ['Chute baixo devagar, alternando as pernas.', 'Mudança de nível + entrada de queda, devagar.', '1-2 + joelhada, sem força.']
+          : late ? ['1-2 + chute baixo + saída lateral.', '1-2 + entrada de queda (finta de soco, desce na perna).', 'Livre: mãos, chutes, joelhada, queda e sprawl.']
+            : ['Chute baixo e chute no corpo, alternando.', 'Jab + entrada de queda + volta para a base.', '1-2 + joelhada + sprawl.'],
       }],
     }),
     mkBlock({
@@ -233,24 +237,24 @@ function saturday(week: number, rope: RopeKind | null, gymDay: boolean): FightSe
     mkBlock({
       id: 'reflex', title: 'Reflexo por som e visão', kind: 'reflex', goal: 'Reagir rápido ao sinal e voltar para a guarda.',
       exercises: [{
-        id: 'reflex', name: 'Reaja aos sinais', sets: 3, workSec: 120, restSec: 30, reflex: true, moves: ['jab', 'direto', 'slip', 'roundhouse'],
-        how: ['O celular apita 1, 2 ou 3 vezes e mostra o número.', '1 = jab-direto · 2 = esquiva + direto · 3 = chute circular baixo (ou sprawl).', 'Espere o sinal: não antecipe.'],
+        id: 'reflex', name: 'Reaja aos sinais', sets: 3, workSec: 120, restSec: 30, reflex: true, moves: ['jab', 'direto', 'slip', 'lowkick', 'sprawl'],
+        how: ['O celular apita 1, 2 ou 3 vezes e mostra o número.', '1 = jab-direto · 2 = esquiva + direto · 3 = chute baixo (ou sprawl).', 'Espere o sinal: não antecipe.'],
         roundFocus: ['Olhando a tela.', 'Só pelo som, olhando a parede.', late ? 'Olhos fechados, parado em base.' : 'Só pelo som, andando em base entre os sinais.'],
       }],
     }),
     mkBlock({
       id: 'counter', title: 'Oportunidade de golpe', kind: 'rounds', goal: 'Ver o buraco que o adversário deixa ao atacar.',
       exercises: [{
-        id: 'counter', name: 'Sombra com contra-ataques', sets: 2, workSec: 180, restSec: 60, moves: ['slip', 'direto', 'check', 'roundhouse'],
+        id: 'counter', name: 'Sombra com contra-ataques', sets: 2, workSec: 180, restSec: 60, moves: ['slip', 'direto', 'check', 'sprawl'],
         how: ['Imagine o adversário atacando.', 'Defenda e devolva NA HORA.', 'Bateu, saiu do lugar.'],
-        roundFocus: ['Ele jabeia → esquiva para fora + direto. Ele baixa a mão → cruzado por cima.', 'Ele chuta baixo → checa + 1-2. Ele avança sem bater → teep para pará-lo.'],
+        roundFocus: ['Ele jabeia → esquiva para fora + direto. Ele baixa a mão → cruzado por cima.', 'Ele chuta baixo → checa + 1-2. Ele tenta queda → sprawl + volta com 1-2.'],
       }],
     }),
   ];
   if (rope) blocks.push(ropeBlock(rope, week));
   blocks.push(absBlock('A', week));
   blocks.push(COOLDOWN);
-  return finish({ day: 'sat', week, returnPhase: back, rope, abs: 'A', blocks, title: 'Sábado · Ataque, pés e reflexo', focus: 'Boxe e Muay Thai na sombra, deslocamento, reflexo e contra-ataque. Fecha com abdômen A.',
+  return finish({ day: 'sat', week, returnPhase: back, rope, abs: 'A', blocks, title: 'Sábado · Ataque, pés e reflexo', focus: 'Boxe e MMA na sombra, deslocamento, reflexo e contra-ataque. Fecha com abdômen A.',
     note: gymDay ? 'Seu plano de 5 dias tem academia no sábado: faça a luta em outro horário (de preferência 6 h depois).' : undefined });
 }
 
@@ -274,11 +278,11 @@ function sunday(week: number, rope: RopeKind | null): FightSession {
       }],
     }),
     mkBlock({
-      id: 'clinch', title: 'Clinch e base de MMA', kind: 'rounds', goal: back ? 'Relembrar posições, sem explosão.' : 'Defender queda e voltar a ficar de pé rápido.',
+      id: 'clinch', title: 'MMA: clinch, quedas e chão', kind: 'rounds', goal: back ? 'Relembrar posições, sem explosão.' : 'Defender queda, sair de baixo e voltar a ficar de pé rápido.',
       exercises: [{
-        id: 'clinch', name: 'Clinch, sprawl e levantar', sets: 3, workSec: 180, restSec: 60, moves: ['clinch', 'knee', 'sprawl', 'level', 'standup'],
-        how: ['Postura alta no clinch, quadril para a frente.', 'No sprawl, quadril no chão e volta rápido para a base.', 'Do chão, levante sem dar as costas.'],
-        roundFocus: ['Clinch tailandês imaginário + joelhadas alternadas.', back ? 'Sprawl devagar + volta para a base.' : 'Sprawl + volta para a base + 1-2.', 'Levantar em base + mudança de nível + 1-2.'],
+        id: 'clinch', name: 'Clinch, sprawl e chão', sets: 3, workSec: 180, restSec: 60, moves: ['underhook', 'knee', 'sprawl', 'shrimp', 'upa', 'standup'],
+        how: ['No colchonete ou na cama para a parte do chão.', 'No sprawl, quadril no chão e volta rápido para a base.', 'No chão: mexa o quadril e levante sem dar as costas.'],
+        roundFocus: ['Clinch com pegada por baixo + joelhadas alternadas.', back ? 'Sprawl devagar + volta para a base.' : 'Sprawl + volta para a base + 1-2.', 'Chão: fuga de quadril dos dois lados, ponte e levantar em base.'],
       }],
     }),
     mkBlock({
@@ -295,14 +299,14 @@ function sunday(week: number, rope: RopeKind | null): FightSession {
       exercises: [{
         id: 'senses', name: 'Base de olhos fechados', sets: 2, workSec: 90, restSec: 30, moves: ['base'],
         how: ['Em base, feche os olhos.', 'Solte um 1-2 devagar e abra: a guarda ainda está no rosto?', 'Corrija e repita.'],
-        roundFocus: ['Base e 1-2 de olhos fechados.', 'Equilíbrio numa perna (troque na metade) + teep lento.'],
+        roundFocus: ['Base e 1-2 de olhos fechados.', 'Equilíbrio numa perna (troque na metade) + chute baixo lento.'],
       }],
     }),
   );
   if (rope === 'interval') blocks.push(ropeBlock(rope, week));
   blocks.push(absBlock('B', week));
   blocks.push(COOLDOWN);
-  return finish({ day: 'sun', week, returnPhase: back, rope, abs: 'B', blocks, title: 'Domingo · Defesa, clinch e aprender a apanhar', focus: 'Defesas de boxe e Muay Thai, clinch, sprawl, quedas seguras e equilíbrio. Fecha com abdômen B.' });
+  return finish({ day: 'sun', week, returnPhase: back, rope, abs: 'B', blocks, title: 'Domingo · Defesa, MMA e aprender a apanhar', focus: 'Defesas de boxe e MMA, clinch, sprawl, chão, quedas seguras e equilíbrio. Fecha com abdômen B.' });
 }
 
 function finish(s: Omit<FightSession, 'totalMinutes'>): FightSession {
@@ -393,7 +397,7 @@ export const ABS_TRUTH = [
 // ------------------------------------------------------------------ textos
 
 export const FIGHT_INTRO = {
-  title: 'Luta em casa · Boxe + Muay Thai + MMA',
+  title: 'Luta em casa · Boxe + MMA',
   text: 'Dois treinos por semana, sábado e domingo, de até 90 minutos, com cronômetro guiado em tudo. Como você já treinou (Muay Thai 2 anos, boxe 1 ano) e está parado há 1 ano, as 2 primeiras semanas são de retorno: técnica a 60–70%, sem força máxima nos chutes.',
   equipment: ['Espaço de ~2 × 2 m e um espelho (ou a câmera do celular para se filmar).', 'Corda (a mesma do cardio).', 'Colchonete ou a cama para as quedas e o abdômen.', 'Opcional: saco de pancada e luvas.'],
 };
@@ -427,5 +431,5 @@ export const ABSORB_TRUTH = {
 
 export const FIGHT_GLOSSARY: [string, string][] = [
   ['1', 'Jab (mão da frente)'], ['2', 'Direto (mão de trás)'], ['3', 'Cruzado/gancho da frente'], ['4', 'Gancho de trás'], ['5', 'Uppercut da frente'], ['6', 'Uppercut de trás'],
-  ['1b', 'Jab no corpo'], ['Teep', 'Chute frontal empurrando'], ['Checar', 'Bloquear o chute com a canela'], ['Sprawl', 'Jogar as pernas para trás contra a queda'],
+  ['1b', 'Jab no corpo'], ['Checar', 'Bloquear o chute baixo com a canela'], ['Underhook', 'Pegada por baixo da axila no clinch'], ['Shrimp', 'Fuga de quadril no chão'], ['Sprawl', 'Jogar as pernas para trás contra a queda'],
 ];

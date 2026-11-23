@@ -54,14 +54,14 @@ describe('Luta em casa', () => {
     expect(sat5.note).toMatch(/academia no sábado/);
     expect(fightSession('sat', { week: 1, protocol: 'jkk4', withRope: false }).blocks.some((b) => b.id === 'rope')).toBe(false);
   });
-  it('cobre boxe, Muay Thai, pés, reflexo, contra-ataque, defesa, clinch/MMA, aprender a apanhar, sentidos e abdômen', () => {
+  it('cobre boxe, MMA em pé, pés, reflexo, contra-ataque, defesa, MMA (clinch, quedas e chão), aprender a apanhar, sentidos e abdômen', () => {
     const ids = [...fightSession('sat', { week: 3 }).blocks, ...fightSession('sun', { week: 3 }).blocks].map((b) => b.id);
-    for (const id of ['warmup', 'boxing', 'muaythai', 'feet', 'reflex', 'counter', 'defense', 'clinch', 'absorb', 'senses', 'absA', 'absB', 'cooldown']) expect(ids).toContain(id);
+    for (const id of ['warmup', 'boxing', 'mma', 'feet', 'reflex', 'counter', 'defense', 'clinch', 'absorb', 'senses', 'absA', 'absB', 'cooldown']) expect(ids).toContain(id);
   });
   it('retorno (semanas 1–2): técnica a 60–70%, chutes devagar; depois progride', () => {
     const w1 = fightSession('sat', { week: 1 });
     expect(w1.returnPhase).toBe(true);
-    expect(w1.blocks.find((b) => b.id === 'muaythai')!.goal).toMatch(/Nada de força máxima/);
+    expect(w1.blocks.find((b) => b.id === 'mma')!.goal).toMatch(/Nada de força máxima/);
     expect(fightSession('sat', { week: RETURN_WEEKS + 1 }).returnPhase).toBe(false);
     const late = fightSession('sat', { week: 6 }).blocks.find((b) => b.id === 'boxing')!.exercises[0];
     expect(late.moves).toContain('uppercut');
@@ -73,7 +73,14 @@ describe('Luta em casa', () => {
       for (const m of e.moves ?? []) expect(MOVE_BY_ID[m], m).toBeTruthy();
     }
     for (const m of MOVES) { expect(m.steps.length).toBe(3); expect(m.error.length).toBeGreaterThan(10); }
-    expect(MOVES.filter((m) => m.group === 'Muay Thai').map((m) => m.id)).toEqual(expect.arrayContaining(['teep', 'roundhouse', 'knee', 'elbow', 'clinch']));
+    expect(MOVES.filter((m) => m.group === 'MMA').map((m) => m.id)).toEqual(expect.arrayContaining(['lowkick', 'bodykick', 'knee', 'shot', 'underhook', 'sprawl', 'shrimp', 'upa', 'standup']));
+  });
+  it('só Boxe e MMA: nenhum golpe ou bloco de Muay Thai nos treinos', () => {
+    expect(new Set(MOVES.map((m) => m.group))).toEqual(new Set(['Boxe', 'Defesa', 'MMA', 'Quedas']));
+    for (const s of all()) {
+      const txt = JSON.stringify(s.blocks);
+      expect(txt).not.toMatch(/muay|thai|tailand|teep/i);
+    }
   });
   it('semana da luta conta a partir do início e recomeça depois de 8', () => {
     expect(fightWeek(undefined, '2026-11-14')).toBe(1);

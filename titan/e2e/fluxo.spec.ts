@@ -441,23 +441,23 @@ test('luta: sábado e domingo até 90 min, reflexo por som e cardápio de R$ 500
   // Domingo: defesa, clinch e quedas
   await page.getByRole('radio', { name: /Domingo/ }).click();
   await expect(page.getByRole('heading', { name: /Aprender a apanhar \(seguro\)/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Clinch e base de MMA/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /MMA: clinch, quedas e chão/ })).toBeVisible();
   const sun = Number((await page.getByTestId('fight-total').textContent())!.replace(/\D/g, ''));
   expect(sun).toBeLessThanOrEqual(90);
 
-  // Sábado: boxe, Muay Thai, reflexo; todo exercício tem cronômetro e "como fazer"
+  // Sábado: boxe, MMA em pé, reflexo; todo exercício tem cronômetro e "como fazer"
   await page.getByRole('radio', { name: /Sábado/ }).click();
-  await expect(page.getByRole('heading', { name: /Muay Thai: chutes, joelhos e cotovelos/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /MMA em pé: chutes, joelhada e entrada de queda/ })).toBeVisible();
   const sat = Number((await page.getByTestId('fight-total').textContent())!.replace(/\D/g, ''));
   expect(sat).toBeLessThanOrEqual(90);
   const exercises = page.locator('[data-testid^="ex-"]');
   const n = await exercises.count();
   expect(n).toBeGreaterThan(15);
   expect(await page.getByRole('button', { name: /^Cronômetro: / }).count()).toBe(n); // cronômetro em TODOS
-  const mt = page.getByTestId('ex-muaythai');
+  const mt = page.getByTestId('ex-mma');
   await mt.getByRole('button', { name: 'Como fazer' }).click();
   await mt.getByText(/Golpes deste exercício/).click();
-  await expect(mt.getByText('Teep (chute frontal empurrando)')).toBeVisible();
+  await expect(mt.getByText('Entrada de queda (penetration step)')).toBeVisible();
 
   // Cronômetro de um exercício só (aquecimento: polichinelo)
   await page.getByRole('button', { name: 'Cronômetro: Polichinelo' }).click();
@@ -495,7 +495,8 @@ test('luta: sábado e domingo até 90 min, reflexo por som e cardápio de R$ 500
 
   // Golpes: explicação de cada movimento
   await page.getByRole('tab', { name: 'Golpes' }).click();
-  await expect(page.getByText('Chute circular (canela)')).toBeVisible();
+  await expect(page.getByText('Fuga de quadril (shrimp)')).toBeVisible();
+  await expect(page.getByText(/Muay Thai/)).toHaveCount(0);
   await expect(page.getByText(/Erro comum/).first()).toBeVisible();
 
   // Cardápio econômico com preço teto
